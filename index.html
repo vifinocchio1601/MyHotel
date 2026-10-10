@@ -268,6 +268,16 @@ button.option:hover:not(:disabled){border-color:var(--faint)}
 .groupe-choix{display:flex;flex-direction:column;gap:6px}
 .onglets.cinq .onglet{font-size:12.5px;padding:10px 2px;min-width:0}
 .carte > .sous-titre{margin-top:4px}
+
+/* Agenda */
+.tableau table.agenda th,.tableau table.agenda td{padding:3px 2px}
+.tableau table.agenda th:first-child{padding-right:4px;font-size:12px}
+.case{display:block;border:0;border-radius:7px;padding:6px 2px;font-size:11px;font-weight:600;min-width:30px;width:100%;text-align:center;background:none;color:var(--faint);font-family:inherit}
+.case.occ{background:var(--info-bg);color:var(--info)}
+.case.blo{background:var(--warn-bg);color:var(--warn)}
+.case.sel{outline:2px solid var(--accent);outline-offset:1px}
+.case.legende{display:inline-block;width:auto;min-width:0;padding:2px 8px}
+.agenda td.manque{color:var(--warn);font-weight:700}
 @media (min-width:760px){
   .jauges{grid-template-columns:repeat(4,minmax(0,1fr))}
   .tuiles{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -562,7 +572,7 @@ function etatInitial(){
 }
 var S=etatInitial();
 // L'état d'écran reste sur l'appareil : il ne fait pas partie de la partie
-function ecranVide(){ return {ecran:"accueil",role:"receptionniste",vue:"jour",decal:0,confirme:null,resume:null,dossier:null,choix:null,retour:null,moiVue:"fiche",planVue:"reception",finPage:"resultat",div:50,achat:{type:"double",cote:"rue",etage:"haut"},fond:{nom:"",prenom:"Vincent",devise:"$"}}; }
+function ecranVide(){ return {ecran:"accueil",role:"receptionniste",vue:"jour",decal:0,confirme:null,resume:null,dossier:null,choix:null,retour:null,moiVue:"fiche",planVue:"reception",finPage:"resultat",div:50,resa:null,achat:{type:"double",cote:"rue",etage:"haut"},fond:{nom:"",prenom:"Vincent",devise:"$"}}; }
 var U=ecranVide();
 function valide(o){ return !!(o&&o.v===V&&o.postes&&o.tarifs&&o.equipe&&o.chambres&&o.sejours); }
 function sauver(){ try{ localStorage.setItem(CLE,JSON.stringify(S)); }catch(e){} }
@@ -792,6 +802,8 @@ function nomPalier(i){ var e=etoiles(PALIERS[i].etoiles); return PALIERS[i].nom+
 function prochainPalier(){ return PALIERS[S.palier+1]||null; }
 // Les jours de l'hôtel vont de 6 h à 6 h : une arrivée à 2 h du matin compte pour la nuit en cours
 function jourHotel(t){ return minuit(t-6*HEURE); }
+// Telle heure de la pendule, tel jour : juste aussi les jours de changement d'heure. Au-delà de 24, c'est le lendemain.
+function aHeure(jour,hh){ var d=new Date(jour); return new Date(d.getFullYear(),d.getMonth(),d.getDate(),0,Math.round(hh*60),0,0).getTime(); }
 // De 22 h à 6 h, l'hôtel dort : personne n'arrive, personne ne travaille
 function nuit(t){ var hh=new Date(t).getHours(); return hh>=22||hh<6; }
 
@@ -826,13 +838,30 @@ function adequation(sj,c,prix){
 }
 function parEtat(e){ return S.sejours.filter(function(x){ return x.etat===e; }); }
 function sejourDe(c){ return c.sj?parId(S.sejours,c.sj):null; }
-// Toutes les réservations trouvent-elles une chambre assez grande ? On place chacune, par ordre d'arrivée, dans la plus petite chambre libre.
+// L'agenda : une réservation peut avoir une chambre bloquée (bloc). Une chambre bloquée ne peut pas recevoir un autre client sur ces nuits-là.
+function blocsDe(c,sauf){ return S.sejours.filter(function(x){ return x.bloc===c.id&&x.id!==sauf&&(x.etat==="reserve"||x.etat==="accueil"); }); }
+// Une chambre est-elle libre de a à b ? Ni occupée par un client encore là, ni bloquée pour une autre réservation.
+function libreSur(c,a,b,sauf){
+  var sj=sejourDe(c);
+  if(sj&&sj.id!==sauf&&sj.fin>a) return false;
+  return !blocsDe(c,sauf).some(function(x){ return x.arrive<b&&x.finPrevue>a; });
+}
+// Les chambres où l'on peut installer un client tout de suite, et celles qu'on peut bloquer pour une réservation
+function chambresPour(sj){ var t=S.horloge; return S.chambres.filter(function(c){ return !c.sj&&c.etat==="propre"&&TYPES[c.type].cap>=sj.pers&&libreSur(c,t,sj.finPrevue,sj.id); }); }
+function chambresABloquer(sj){ return S.chambres.filter(function(c){ return TYPES[c.type].cap>=sj.pers&&libreSur(c,Math.max(S.horloge,sj.arrive),sj.finPrevue,sj.id); }); }
+function aPlacer(){ return S.sejours.filter(function(x){ return x.etat==="reserve"&&!x.bloc; }); }
+// Ce qui manquera à un client dans une chambre donnée
+function manquesDe(sj,c,prix){ return sj.souhaits.filter(function(k){ return !souhaitOk(k,c,prix); }).map(function(k){ return SOUHAITS[k].toLowerCase(); }); }
+// Toutes les réservations sans chambre bloquée trouvent-elles une chambre assez grande ? On place chacune, par ordre d'arrivée, dans la plus petite chambre libre.
 // extra : un séjour de plus à caser. bloque : une chambre qu'on s'apprête à donner à un client déjà là.
 function tient(extra,bloque){
   var t=S.horloge, occ={}, l=[], ok=true;
   S.chambres.forEach(function(c){ var sj=sejourDe(c); occ[c.id]=sj?[[0,sj.fin]]:[]; });
   if(bloque) occ[bloque.ch].push([0,bloque.jusqua]);
-  S.sejours.forEach(function(x){ if((x.etat==="reserve"||x.etat==="accueil")&&!(bloque&&x.id===bloque.sj)) l.push(x); });
+  S.sejours.forEach(function(x){
+    if((x.etat!=="reserve"&&x.etat!=="accueil")||(bloque&&x.id===bloque.sj)) return;
+    if(x.bloc&&occ[x.bloc]) occ[x.bloc].push([Math.max(t,x.arrive),x.finPrevue]); else l.push(x);
+  });
   if(extra) l.push(extra);
   l.sort(function(a,b){ return a.arrive-b.arrive||b.pers-a.pers; });
   l.forEach(function(x){
@@ -1034,7 +1063,7 @@ function niveauAttendu(P){ var cap=PALIERS[S.palier].niv; return P.standing<0?1:
 function creerSejour(t,profil,passage){
   var k=profil||tirerProfil(t), P=PROFILS[k], sj=identite(Math.random()<0.5), cap=PALIERS[S.palier].niv, c=passage?null:(P.canal||CANAL_HABITUEL), pool, n, r, x, cum=0;
   sj.id=S.nSejour++; sj.profil=k; sj.pers=entre(P.pers[0],P.pers[1]); sj.nuits=entre(P.nuits[0],P.nuits[1]);
-  sj.arrive=t; sj.finPrevue=jourApres(jourHotel(t),sj.nuits)+11*HEURE; sj.etat="reserve"; sj.reserve=!passage;
+  sj.arrive=t; sj.finPrevue=aHeure(jourApres(jourHotel(t),sj.nuits),11); sj.etat="reserve"; sj.reserve=!passage;
   sj.souhaits=[];
   if(P.fixe) sj.souhaits.push(P.fixe);
   else if(sj.pers===2&&k!=="luxe"){ r=Math.random(); if(r<0.6) sj.souhaits.push("grandlit"); else if(r<0.75) sj.souhaits.push("separes"); }
@@ -1064,7 +1093,7 @@ function prendreReservations(t){
   for(i=0;i<3;i++){
     n=base*parts[i]*alea(0.7,1.3); n=Math.floor(n)+(Math.random()<n%1?1:0);
     for(j=0;j<n;j++){
-      a=jourApres(minuit(t),i)+Math.round(alea(14,21)*HEURE);
+      a=aHeure(jourApres(minuit(t),i),alea(14,21));
       if(a<=t+30*MIN) continue;
       sj=creerSejour(a,null,false);
       if(tient(sj)){ S.sejours.push(sj); pris++; } else { S.nSejour--; S.stat.complet++; }
@@ -1079,17 +1108,19 @@ function arriver(sj,t){
 }
 // Un client de passage, quand il en vient un : il doit rester de quoi le loger sans prendre la chambre d'une réservation
 function passage(t,force){
-  var max=0, sj=null, i;
+  var sj=null, i, ok;
   if(nuit(t)) return null;
-  S.chambres.forEach(function(c){ if(!c.sj&&(!force||c.etat==="propre")) max=Math.max(max,TYPES[c.type].cap); });
-  if(!max){ S.stat.complet++; return null; }
-  for(i=0;i<20&&!sj;i++){ sj=creerSejour(t,null,true); if(sj.pers>max||(!force&&!tient(sj))){ S.nSejour--; sj=null; } }
+  for(i=0;i<20&&!sj;i++){
+    sj=creerSejour(t,null,true);
+    ok=S.chambres.some(function(c){ return !c.sj&&(!force||c.etat==="propre")&&TYPES[c.type].cap>=sj.pers&&libreSur(c,t,sj.finPrevue,sj.id); })&&(force||tient(sj));
+    if(!ok){ S.nSejour--; sj=null; }
+  }
   if(!sj){ S.stat.complet++; return null; }
   arriver(sj,t); return sj;
 }
 function meilleureNote(sj){
   var m=0;
-  pretes().forEach(function(c){ if(TYPES[c.type].cap>=sj.pers) m=Math.max(m,adequation(sj,c,prixPour(sj,c))); });
+  chambresPour(sj).forEach(function(c){ m=Math.max(m,adequation(sj,c,prixPour(sj,c))); });
   return m;
 }
 function nuitee(sj,t){
@@ -1101,9 +1132,9 @@ function nuitee(sj,t){
 // Une fois la chambre attribuée, le client s'installe. Ses repas, ses passages au bar et ses demandes sont prévus pour tout le séjour.
 function loger(sj,c,t,auto){
   var prix=prixPour(sj,c), mieux=meilleureNote(sj), a=adequation(sj,c,prix);
-  sj.etat="loge"; sj.ch=c.id; c.sj=sj.id; sj.prixNuit=prix; sj.adeq=a; sj.parMoi=!auto; sj.auto=0; sj.entree=t;
+  sj.etat="loge"; sj.ch=c.id; c.sj=sj.id; sj.bloc=null; sj.prixNuit=prix; sj.adeq=a; sj.parMoi=!auto; sj.auto=0; sj.entree=t;
   sj.ratio=S.tarifs.chambre/100; sj.attente=Math.round((t-sj.arrive)/MIN);
-  sj.fin=jourApres(jourHotel(t),sj.nuits)+Math.round(alea(7,11)*HEURE);
+  sj.fin=aHeure(jourApres(jourHotel(t),sj.nuits),alea(7,11));
   if(sj.fin<t+2*HEURE) sj.fin=t+2*HEURE;
   if(new Date(t).getHours()<6) nuitee(sj,t);
   if(sj.voiture&&niv("parking")){ if(placesLibres()>0) sj.parking=true; else S.stat.rates.parking=(S.stat.rates.parking||0)+1; }
@@ -1117,19 +1148,19 @@ function programmerSejour(sj,t){
   function veut(k,oui,non){ return Math.random()<(sj.attentes.indexOf(k)>=0?oui:non); }
   for(d=0;d<=sj.nuits;d++){
     jour=jourApres(j0,d);
-    if(d>0&&veut("pdj",0.95,0.6)){ finH=d===sj.nuits?(sj.fin-jour)/HEURE-0.8:9.75; ev(jour+alea(6.6,Math.max(6.7,Math.min(9.75,finH)))*HEURE,{k:"vis",v:"pdj"}); }
+    if(d>0&&veut("pdj",0.95,0.6)){ finH=d===sj.nuits?new Date(sj.fin).getHours()+new Date(sj.fin).getMinutes()/60-0.8:9.75; ev(aHeure(jour,alea(6.6,Math.max(6.7,Math.min(9.75,finH)))),{k:"vis",v:"pdj"}); }
     if(d<sj.nuits){
-      if(veut("diner",0.8,0.25)) ev(jour+alea(19,20.8)*HEURE,{k:"vis",v:"soir"});
-      if(veut("bar",0.7,0.2)) ev(jour+alea(17.2,21.2)*HEURE,{k:"vis",v:"bar"});
-      if(Math.random()<TAUX_REQUETE) ev(jour+alea(d?8:Math.min(21.2,Math.max(8,(t-jour)/HEURE+0.4)),21.3)*HEURE,{k:"req"});
+      if(veut("diner",0.8,0.25)) ev(aHeure(jour,alea(19,20.8)),{k:"vis",v:"soir"});
+      if(veut("bar",0.7,0.2)) ev(aHeure(jour,alea(17.2,21.2)),{k:"vis",v:"bar"});
+      if(Math.random()<TAUX_REQUETE) ev(aHeure(jour,alea(d?8:Math.min(21.2,Math.max(8,new Date(t).getHours()+1)),21.3)),{k:"req"});
     }
   }
-  if(veut("spa",0.8,0.1)) ev(jourApres(j0,sj.nuits>1?1:0)+alea(10,18.5)*HEURE,{k:"vis",v:"spa"});
+  if(veut("spa",0.8,0.1)) ev(aHeure(jourApres(j0,sj.nuits>1?1:0),alea(10,18.5)),{k:"vis",v:"spa"});
   S.arrivees.sort(function(a,b){ return a.t-b.t; });
 }
 // Sans réponse du directeur, la réception attribue une chambre prête. Elle choisit souvent la meilleure, pas toujours.
 function logerSeul(sj,t){
-  var q=relaisAccueil(), l=pretes().filter(function(c){ return TYPES[c.type].cap>=sj.pers; }), bons, c, e=relaisRequete();
+  var q=relaisAccueil(), l=chambresPour(sj), bons, c, e=relaisRequete();
   if(!l.length){ sj.auto=t+5*MIN; return; }
   bons=l.filter(function(c){ return tient(null,{ch:c.id,jusqua:sj.finPrevue,sj:sj.id}); });
   // Plutôt que de prendre la chambre d'une réservation, la réception attend encore un peu qu'une autre soit refaite
@@ -1142,7 +1173,9 @@ function logerSeul(sj,t){
 }
 // Un client attend plus longtemps tant qu'une chambre à sa taille est en train d'être refaite : quatre heures s'il a réservé, deux sinon
 function peutPatienter(sj,t){
-  return t-sj.arrive<(sj.reserve?4:2)*HEURE&&S.chambres.some(function(c){ return !c.sj&&c.etat!=="propre"&&TYPES[c.type].cap>=sj.pers; });
+  var c=sj.bloc?chambre(sj.bloc):null;
+  if(c&&!c.sj&&c.etat!=="propre"&&t-sj.arrive<4*HEURE) return true;
+  return t-sj.arrive<(sj.reserve?4:2)*HEURE&&S.chambres.some(function(c){ return !c.sj&&c.etat!=="propre"&&TYPES[c.type].cap>=sj.pers&&libreSur(c,t,sj.finPrevue,sj.id); });
 }
 function ranger(sj,t,issue,note){
   var i=S.sejours.indexOf(sj); if(i>=0) S.sejours.splice(i,1);
@@ -1281,7 +1314,7 @@ function ouvrirRequete(sj,t){
 // Une chambre libre et prête où déplacer un client : n'importe laquelle d'aussi bien, une côté jardin, ou une de meilleur niveau
 function chambrePour(sj,mode){
   var c0=chambre(sj.ch), l=pretes().filter(function(c){
-    if(TYPES[c.type].cap<sj.pers) return false;
+    if(TYPES[c.type].cap<sj.pers||!libreSur(c,S.horloge,sj.finPrevue,sj.id)) return false;
     if(mode==="jardin") return c.cote==="jardin"&&c.niv>=c0.niv-1;
     if(mode==="mieux") return c.niv>c0.niv;
     return c.niv>=c0.niv;
@@ -1318,8 +1351,8 @@ function repondre(r,o,t,auto){
   if(o.supp){ m=o.supp<1?Math.round(sj.prixNuit*o.supp):o.supp; recette(t,"chambres",m,"direct"); sj.paye+=m; }
   if(o.stock&&stockDe(o.stock)>0){ sortirStock(o.stock,t,o.sv||"reception"); reappro(t); }
   if(o.recette){ m=S.tarifs[o.recette]*sj.pers; recette(t,"resto",m,"direct"); sj.paye+=m; }
-  if(o.tardif){ sj.tardif=1; sj.fin=minuit(sj.fin)+14*HEURE; sj.finPrevue=Math.max(sj.finPrevue,sj.fin); }
-  if(o.visite){ S.arrivees.push({t:Math.max(t+10*MIN,minuit(t)+Math.round(alea(19,20.5)*HEURE)),k:"vis",v:o.visite,sj:sj.id}); S.arrivees.sort(function(a,b){ return a.t-b.t; }); }
+  if(o.tardif){ sj.tardif=1; sj.fin=aHeure(sj.fin,14); sj.finPrevue=Math.max(sj.finPrevue,sj.fin); }
+  if(o.visite){ S.arrivees.push({t:Math.max(t+10*MIN,aHeure(t,alea(19,20.5))),k:"vis",v:o.visite,sj:sj.id}); S.arrivees.sort(function(a,b){ return a.t-b.t; }); }
   if(o.besoin==="chambre"||o.besoin==="jardin"||o.besoin==="mieux"){
     n=chambrePour(sj,o.besoin); c=chambre(sj.ch);
     if(n){ c.sj=null; c.etat="sale"; n.sj=sj.id; sj.ch=n.id; sj.adeq=Math.max(sj.adeq,adequation(sj,n,sj.prixNuit)); affecterMenage(t); }
@@ -1350,7 +1383,7 @@ function planifierJour(debut,apres,complet){
   function semer(combien,h1,h2,o){
     var i, t, e, k;
     combien=Math.floor(combien)+(Math.random()<combien%1?1:0);
-    for(i=0;i<combien;i++){ t=debut+Math.round(alea(h1,h2)*HEURE); if(t>apres){ e={t:t}; for(k in o) e[k]=o[k]; S.arrivees.push(e); } }
+    for(i=0;i<combien;i++){ t=aHeure(debut,alea(h1,h2)); if(t>apres){ e={t:t}; for(k in o) e[k]=o[k]; S.arrivees.push(e); } }
   }
   if(complet){
     semer(attendus(midi)*PART_PASSAGE*alea(0.7,1.3),10,21,{k:"walk"});
@@ -1373,7 +1406,7 @@ function replanifier(t){
   planifierJour(minuit(t),t,false);
 }
 function planifierEvenement(debut){
-  if(Math.random()<TAUX_EVENEMENT){ S.evts.push({t:debut+Math.round(alea(8,20)*HEURE)}); S.evts.sort(function(a,b){ return a.t-b.t; }); }
+  if(Math.random()<TAUX_EVENEMENT){ S.evts.push({t:aHeure(debut,alea(8,20))}); S.evts.sort(function(a,b){ return a.t-b.t; }); }
 }
 function monterPalier(t){
   var p=prochainPalier();
@@ -1472,7 +1505,11 @@ function avancer(jusqua){
     for(i=0;i<S.sejours.length;i++){
       x=S.sejours[i];
       if(x.etat==="reserve"){ e=x.arrive; q="arrivee"; }
-      else if(x.etat==="accueil"){ if(x.auto&&x.auto<=x.limite&&relais){ e=x.auto; q="relais"; } else { e=x.limite; q="depart"; } }
+      else if(x.etat==="accueil"){
+        a=x.bloc?chambre(x.bloc):null;
+        if(a&&!a.sj&&a.etat==="propre"){ e=S.horloge; q="bloc"; }
+        else if(!x.bloc&&x.auto&&x.auto<=x.limite&&relais){ e=x.auto; q="relais"; } else { e=x.limite; q="depart"; }
+      }
       else { e=x.fin; q="sortie"; }
       if(e<t){ t=e; quoi=q; qui=x; }
     }
@@ -1507,6 +1544,7 @@ function avancer(jusqua){
     else if(quoi==="releve"){ S.releve=prochaineReleve(t+1000); affecterMenage(t); affecterVisites(t); }
     else if(quoi==="arrivee") arriver(qui,t);
     else if(quoi==="relais") logerSeul(qui,t);
+    else if(quoi==="bloc") loger(qui,chambre(qui.bloc),t,false);
     else if(quoi==="depart"){ if(peutPatienter(qui,t)) qui.limite=t+20*MIN; else repartir(qui,t,false); }
     else if(quoi==="sortie") quitter(qui,t);
     else if(quoi==="menage") finMenage(qui,t);
@@ -1623,7 +1661,9 @@ function alertes(){
   if(n) a("",pl(n,"client attend","clients attendent")+(n>1?" leur":" sa")+" chambre à la réception.","clients","Voir les clients");
   n=S.requetes.length;
   if(n) a("",pl(n,"client a","clients ont")+" une demande.","clients","Voir les clients");
-  if(!tient()) a("warn","Une réservation à venir n'a pas de chambre assez grande de libre. Achetez une chambre, ou préparez-vous à envoyer un client ailleurs.","chambres","Voir les chambres");
+  n=aPlacer().length;
+  if(n) a("",pl(n,"réservation n'a","réservations n'ont")+" pas encore de chambre bloquée dans l'agenda.","agenda","Voir l'agenda");
+  if(!tient()) a("warn","Une réservation à venir n'a plus de chambre assez grande de libre. Libérez-en une dans l'agenda, achetez une chambre, ou préparez-vous à envoyer un client ailleurs.","agenda","Voir l'agenda");
   n=S.contestes.filter(function(c){ return !c.relance; }).length;
   if(n) a("warn","Une société conteste "+pl(n,"lot","lots")+" de factures. Sans relance, l'argent est perdu.","societes","Voir les factures");
   S.declarations.forEach(function(d){ a("warn","Déclaration de TVA du "+d.nom+" à déposer avant le "+dateLongue(d.limite-1000)+".","tva","Voir la TVA"); });
@@ -1702,12 +1742,12 @@ function ecranAccueil(){
     +(al?'<div class="alertes">'+al+'</div>':"")
     +'<div class="tuiles">'
     +tuile("g5","clients","Clients",na+" à accueillir · "+pl(nr,"demande","demandes"),"clients")
+    +tuile("g4","calendrier","Agenda",pl(aPlacer().length,"réservation","réservations")+" à placer","agenda")
     +tuile("g1","lit","Chambres",nc+" sur "+PALIERS[S.palier].chambres+" · "+pl(nl,"occupée","occupées"),"chambres")
     +tuile("g3","guide","Clientèle","Profils et souhaits","clientele")
     +tuile("g7","equipements","Équipements",ORDRE_EQUIP.filter(function(k){ return niv(k); }).length+" sur "+ORDRE_EQUIP.length+" construits","equipements")
     +tuile("g2","equipe","Équipe",pl(S.equipe.length,"personne","personnes"),"equipe")
-    +tuile("g6","calendrier","Planning",enPosteMaintenant()+" en poste","planning")
-    +tuile("g4","recrut","Recrutement","Engager du personnel","recrutement")
+    +tuile("g6","horloge","Planning",enPosteMaintenant()+" en poste","planning")
     +tuile("g2","caisse","Économat",pl(produitsConnus().filter(function(k){ return stockDe(k)<=seuilStock(); }).length,"stock bas","stocks bas"),"economat")
     +tuile("g5","tarifs","Tarifs","Chambres à "+S.tarifs.chambre+" %","tarifs")
     +tuile("g6","finances","Finances","Aujourd'hui "+signeM(jr),"finances")
@@ -1735,7 +1775,7 @@ function ligneLoge(sj){
 }
 function ligneReserve(sj){
   return '<li class="rang"><div><b>'+h(nomComplet(sj))+'</b><small>'+resumeSejour(sj)+'</small><small>'+sj.souhaits.map(souhaitNom).join(", ")+'</small></div>'
-    +'<div class="droite"><span class="puce info num">'+dateCourte(sj.arrive)+' · '+heureTxt(sj.arrive)+'</span></div></li>';
+    +'<div class="droite"><span class="puce info num">'+dateCourte(sj.arrive)+' · '+heureTxt(sj.arrive)+'</span>'+(sj.bloc&&chambre(sj.bloc)?'<span class="puce ok">Chambre '+chambre(sj.bloc).n+'</span>':'<button type="button" class="btn petit principal" data-a="resa" data-k="'+sj.id+'">Placer</button>')+'</div></li>';
 }
 function ecranClients(){
   var ordre=function(x,y){ return x.arrive-y.arrive; }, a=parEtat("accueil").sort(ordre), l=parEtat("loge").sort(function(x,y){ return x.fin-y.fin; }), r=parEtat("reserve").sort(ordre), q=S.requetes;
@@ -1747,7 +1787,7 @@ function ecranClients(){
     +'<div class="bloc"><h2>Demandes ('+q.length+')</h2>'+(q.length?'<ul class="liste">'+q.map(ligneRequete).join("")+'</ul>':'<p class="vide">Aucune demande en attente.</p>')+'</div>'
     +'<div class="bloc"><h2>En séjour ('+l.length+')</h2>'+(l.length?'<ul class="liste">'+l.map(ligneLoge).join("")+'</ul>':'<p class="vide">L\'hôtel est vide.</p>')+'</div>'
     +'<div class="bloc"><h2>Réservations à venir ('+r.length+')</h2>'+(r.length?'<ul class="liste">'+r.map(ligneReserve).join("")+'</ul>':'<p class="vide">Aucune réservation pour les jours qui viennent.</p>')
-    +'<p class="aide">De nouvelles réservations tombent chaque nuit, pour les trois jours suivants. L\'hôtel n\'en prend jamais plus qu\'il n\'a de chambres.</p></div>'
+    +'<p class="aide">De nouvelles réservations tombent chaque nuit, pour les trois jours suivants. L\'hôtel n\'en prend jamais plus qu\'il n\'a de chambres. Bloquez une chambre pour chacune dans l\'agenda : le client s\'y installera tout seul à son arrivée.</p><div class="actions"><button type="button" class="btn" data-a="aller" data-e="agenda">'+I.calendrier+'Agenda</button></div></div>'
     +'<div class="bloc"><h2>Registre</h2>'+(S.registre.length?'<ul class="liste">'+S.registre.slice(0,25).map(function(x){
       return '<li class="rang"><div><b>'+h(x.nom)+'</b><small>'+x.profil+' · '+pl(x.nuits,"nuit","nuits")+' · '+quandTxt(x.t)+'</small></div><div class="droite">'+(x.paye?'<span class="puce num">'+mt(x.paye)+'</span>':"")+notePuce(x.note)+(x.issue!=="parti"?'<span class="puce '+ISSUES[x.issue][1]+'">'+ISSUES[x.issue][0]+'</span>':"")+'</div></li>';
     }).join("")+'</ul>':'<p class="vide">Le registre se remplira avec les premiers départs.</p>')+'</div>';
@@ -1756,7 +1796,7 @@ function chambreChoixHtml(sj,c){
   var actif=U.choix===c.id, prix=prixPour(sj,c), bloque=!tient(null,{ch:c.id,jusqua:sj.finPrevue,sj:sj.id}), eq=equipementsDe(c), n=0, puces="";
   sj.souhaits.forEach(function(k){ if(souhaitOk(k,c,prix)) n++; });
   if(forme("physionomiste")) puces+='<span class="puce '+(n===sj.souhaits.length?"ok":n?"warn":"bad")+'">'+n+' sur '+pl(sj.souhaits.length,"souhait","souhaits")+'</span>';
-  if(bloque) puces+='<span class="puce warn">Prendrait la chambre d\'une réservation</span>';
+  if(bloque) puces+='<span class="puce warn">Une réservation à placer en aurait besoin</span>';
   if(c.defaut) puces+='<span class="puce bad">Refaite sans linge frais</span>';
   return '<li class="cand'+(actif?" actif":"")+'"><button type="button" data-a="choisir" data-k="'+c.id+'" aria-expanded="'+actif+'"><span class="cand-nom">Chambre '+c.n+' · '+TYPES[c.type].nom+'<span class="puce">Niveau '+c.niv+'</span></span>'
     +'<span class="equips">'+COTES[c.cote].nom+' · '+ETAGES[c.etage].toLowerCase()+' · '+TYPES[c.type].lit+'</span>'
@@ -1768,20 +1808,76 @@ function chambreChoixHtml(sj,c){
 function ecranFiche(){
   var sj=parId(S.sejours,U.dossier), n=maintenant(), l, enCours, autres, q;
   if(!sj||sj.etat!=="accueil"){ U.ecran="clients"; U.dossier=null; U.choix=null; if(!U.retour) U.retour={c:"",m:"Ce client n'attend plus à la réception."}; return ecranClients(); }
-  l=pretes().filter(function(c){ return TYPES[c.type].cap>=sj.pers; });
-  enCours=S.chambres.filter(function(c){ return !c.sj&&c.etat!=="propre"&&TYPES[c.type].cap>=sj.pers; });
-  autres=S.sejours.filter(function(x){ return x.id!==sj.id&&(x.etat==="reserve"||x.etat==="accueil")&&x.arrive<sj.finPrevue; }).sort(function(x,y){ return x.arrive-y.arrive; });
+  l=chambresPour(sj);
+  enCours=S.chambres.filter(function(c){ return !c.sj&&TYPES[c.type].cap>=sj.pers&&l.indexOf(c)<0; });
+  autres=S.sejours.filter(function(x){ return x.id!==sj.id&&!x.bloc&&(x.etat==="reserve"||x.etat==="accueil")&&x.arrive<sj.finPrevue; }).sort(function(x,y){ return x.arrive-y.arrive; });
   q=relaisAccueil();
   return barre()+entete(nomComplet(sj),resumeSejour(sj),"clients","Clients")
     +'<div class="badges"><span class="puce warn num">repart dans <span data-reste="'+sj.limite+'">'+resteTxt(sj.limite)+'</span></span>'
     +(q&&sj.auto>n?'<span class="puce num">'+(enPosteRole(ACCUEIL).length?"relais de la réception":"boîte à clés")+' dans <span data-reste="'+sj.auto+'">'+resteTxt(sj.auto)+'</span></span>':"")
     +'<span class="puce">'+CANAUX[sj.canal]+'</span></div>'
     +'<div class="carte"><h2>Ce que souhaite le client</h2>'+souhaitsHtml(sj.souhaits)+'<p class="aide">Il s\'attend à une chambre de niveau '+sj.att+' au moins'+(sj.attentes.length?", et compte aussi sur :":".")+'</p>'+attentesHtml(sj.attentes)+'</div>'
-    +(autres.length?'<div class="carte"><h2>À loger aussi d\'ici son départ</h2><ul class="liste">'+autres.slice(0,6).map(function(x){ return '<li class="rang"><div><b>'+h(nomComplet(x))+'</b><small>'+resumeSejour(x)+'</small></div><div class="droite"><span class="puce num">'+(x.etat==="accueil"?"à la réception":dateCourte(x.arrive)+" · "+heureTxt(x.arrive))+'</span></div></li>'; }).join("")+'</ul></div>':"")
-    +'<div class="carte"><h2>Chambres prêtes</h2>'+(l.length?'<p class="aide">Touchez une chambre pour la choisir. Un client seul dans une grande chambre paie le prix d\'une chambre à sa taille.</p><ul class="liste">'+l.map(function(c){ return chambreChoixHtml(sj,c); }).join("")+'</ul>':'<p class="vide">Aucune chambre prête pour '+pl(sj.pers,"personne","personnes")+'.</p>')
-    +(enCours.length?'<ul class="liste">'+enCours.map(function(c){ return '<li class="rang"><div><b>Chambre '+c.n+'</b><small>'+descChambre(c)+' · niveau '+c.niv+'</small></div><div class="droite">'+etatChambreHtml(c)+'</div></li>'; }).join("")+'</ul>':"")+'</div>'
+    +(autres.length?'<div class="carte"><h2>Sans chambre bloquée d\'ici son départ</h2><ul class="liste">'+autres.slice(0,6).map(function(x){ return '<li class="rang"><div><b>'+h(nomComplet(x))+'</b><small>'+resumeSejour(x)+'</small></div><div class="droite"><span class="puce num">'+(x.etat==="accueil"?"à la réception":dateCourte(x.arrive)+" · "+heureTxt(x.arrive))+'</span></div></li>'; }).join("")+'</ul></div>':"")
+    +'<div class="carte"><h2>Chambres prêtes</h2>'+(l.length?'<p class="aide">Touchez une chambre pour la choisir. Un client seul dans une grande chambre paie le prix d\'une chambre à sa taille.</p><ul class="liste">'+l.map(function(c){ return chambreChoixHtml(sj,c); }).join("")+'</ul>':'<p class="vide">Aucune chambre prête et libre pour '+pl(sj.pers,"personne","personnes")+' sur '+pl(sj.nuits,"nuit","nuits")+'.</p>')
+    +(enCours.length?'<ul class="liste">'+enCours.map(function(c){ return '<li class="rang"><div><b>Chambre '+c.n+'</b><small>'+descChambre(c)+' · niveau '+c.niv+'</small></div><div class="droite">'+(c.etat==="propre"?blocageHtml(c,sj):etatChambreHtml(c))+'</div></li>'; }).join("")+'</ul>':"")+'</div>'
     +'<div class="carte"><h2>Pas de chambre pour ce client ?</h2><p class="aide">'+(sj.reserve?"Il avait réservé : l'hôtel paie sa nuit ailleurs, et sa réputation en souffre.":"Il n'avait pas réservé : il ira voir ailleurs, sans frais pour l'hôtel.")+'</p>'
     +'<div class="actions"><button type="button" class="btn danger" data-a="refuser">'+(U.confirme==="refuser"?"Confirmer":"L'envoyer dans un autre hôtel")+'</button></div></div>';
+}
+// Pourquoi une chambre propre n'est pas proposée à ce client : elle est bloquée pour un autre pendant son séjour
+function blocageHtml(c,sj){
+  var b=blocsDe(c,sj.id).filter(function(x){ return x.arrive<sj.finPrevue; }).sort(function(x,y){ return x.arrive-y.arrive; })[0];
+  return b?'<span class="puce warn num">Bloquée dès '+dateCourte(b.arrive)+' · '+h(b.nom)+'</span>':'<span class="puce">Indisponible</span>';
+}
+function periodeSejour(sj){ return "du "+dateCourte(sj.arrive)+" au "+dateCourte(sj.finPrevue); }
+function chambreBlocHtml(sj,c){
+  var prix=prixPour(sj,c), eq=equipementsDe(c), n=sj.souhaits.length-manquesDe(sj,c,prix).length, actuel=sj.bloc===c.id;
+  return '<li class="cand'+(actuel?" actif":"")+'"><button type="button" data-a="bloquer" data-k="'+c.id+'"><span class="cand-nom">Chambre '+c.n+' · '+TYPES[c.type].nom+'<span class="puce">Niveau '+c.niv+'</span></span>'
+    +'<span class="equips">'+COTES[c.cote].nom+' · '+ETAGES[c.etage].toLowerCase()+' · '+TYPES[c.type].lit+'</span>'
+    +'<span class="equips">'+(eq.length?eq.join(", "):"Sans équipement particulier")+'</span>'
+    +'<span class="cand-prix"><b>'+mt(prix)+'</b> la nuit au tarif du jour</span>'
+    +(actuel||forme("physionomiste")?'<span class="badges">'+(actuel?'<span class="puce ok">Bloquée pour ce client</span>':"")+(forme("physionomiste")?'<span class="puce '+(n===sj.souhaits.length?"ok":n?"warn":"bad")+'">'+n+' sur '+pl(sj.souhaits.length,"souhait","souhaits")+'</span>':"")+'</span>':"")+'</button></li>';
+}
+// La grille de l'agenda : une ligne par chambre, une colonne par nuit, sur sept jours
+function grilleAgenda(){
+  var j0=jourHotel(maintenant()), jours=[], i, tete, corps, bas, sel=U.resa, attente=aPlacer();
+  for(i=0;i<7;i++) jours.push(jourApres(j0,i));
+  tete='<tr><th></th>'+jours.map(function(j,i){ var d=new Date(j+12*HEURE); return '<th class="'+(i?"":"ici")+'">'+JOURS_COURTS[(d.getDay()+6)%7]+'<small>'+d.getDate()+'</small></th>'; }).join("")+'</tr>';
+  corps=S.chambres.map(function(c){
+    var occ=sejourDe(c), blocs=blocsDe(c,-1);
+    return '<tr><th>Ch. '+c.n+'<small>'+TYPES[c.type].cap+' pers.</small></th>'+jours.map(function(j){
+      var soir=aHeure(j,14), matin=aHeure(j,35), b=null;
+      if(occ&&occ.fin>aHeure(j,24)) return '<td><span class="case occ" title="'+h(nomComplet(occ))+'">'+h(occ.nom.slice(0,4))+'</span></td>';
+      blocs.forEach(function(x){ if(x.arrive<matin&&x.finPrevue>soir) b=x; });
+      if(b) return '<td><button type="button" class="case blo'+(sel===b.id?" sel":"")+'" data-a="resa" data-k="'+b.id+'" title="'+h(nomComplet(b))+'">'+h(b.nom.slice(0,4))+'</button></td>';
+      return '<td><span class="case vide">·</span></td>';
+    }).join("")+'</tr>';
+  }).join("");
+  bas='<tr><th>À placer</th>'+jours.map(function(j){ var n=0; attente.forEach(function(x){ if(x.arrive<aHeure(j,35)&&x.finPrevue>aHeure(j,14)) n++; }); return '<td class="'+(n?"manque":"zero")+'">'+(n||"–")+'</td>'; }).join("")+'</tr>';
+  return '<div class="tableau"><table class="grille agenda"><thead>'+tete+'</thead><tbody>'+corps+bas+'</tbody></table></div>';
+}
+function ecranAgenda(){
+  var ordre=function(x,y){ return x.arrive-y.arrive; }, libres=aPlacer().sort(ordre), places=S.sejours.filter(function(x){ return x.etat==="reserve"&&x.bloc; }).sort(ordre);
+  var sj=U.resa?parId(S.sejours,U.resa):null, l, choix="";
+  if(sj&&sj.etat!=="reserve"){ sj=null; U.resa=null; }
+  if(sj){
+    l=chambresABloquer(sj);
+    choix='<div class="carte"><div class="carte-haut"><h3>Une chambre pour '+h(nomComplet(sj))+'<small>'+resumeSejour(sj)+' · '+periodeSejour(sj)+'</small></h3><button type="button" class="btn petit" data-a="resa" data-k="'+sj.id+'">Fermer</button></div>'
+      +souhaitsHtml(sj.souhaits)+'<p class="aide">S\'attend à une chambre de niveau '+sj.att+' au moins'+(sj.attentes.length?", et compte aussi sur :":".")+'</p>'+attentesHtml(sj.attentes)
+      +(l.length?'<p class="aide">Touchez la chambre à bloquer. Elle ne sera plus proposée à d\'autres pour ces nuits-là.</p><ul class="liste">'+l.map(function(c){ return chambreBlocHtml(sj,c); }).join("")+'</ul>':'<p class="vide">Aucune chambre assez grande n\'est libre sur ces dates. Libérez-en une, ou achetez-en une.</p>')
+      +(sj.bloc?'<div class="actions"><button type="button" class="btn danger" data-a="debloquer" data-k="'+sj.id+'">Libérer la chambre '+(chambre(sj.bloc)?chambre(sj.bloc).n:"")+'</button></div>':"")+'</div>';
+  }
+  return barre()+entete("Agenda",pl(libres.length,"réservation","réservations")+" à placer · "+pl(places.length,"placée","placées"))
+    +(U.retour?'<div class="alertes"><div class="alerte '+U.retour.c+'"><span>'+h(U.retour.m)+'</span></div></div>':"")
+    +'<div class="carte"><h2>Les sept prochaines nuits</h2>'+grilleAgenda()+'<p class="aide"><span class="case occ legende">Nom</span> client en séjour · <span class="case blo legende">Nom</span> chambre bloquée pour une réservation. Touchez une chambre bloquée pour la changer.</p></div>'
+    +choix
+    +'<div class="bloc"><h2>À placer ('+libres.length+')</h2>'+(libres.length?'<ul class="liste">'+libres.map(function(x){
+      return '<li class="rang'+(U.resa===x.id?" moi":"")+'"><div><b>'+h(nomComplet(x))+'</b><small>'+resumeSejour(x)+' · '+periodeSejour(x)+'</small><small>'+x.souhaits.map(souhaitNom).join(", ")+'</small></div><div class="droite"><span class="puce info num">arrive '+dateCourte(x.arrive)+' · '+heureTxt(x.arrive)+'</span><button type="button" class="btn petit principal" data-a="resa" data-k="'+x.id+'">Choisir une chambre</button></div></li>';
+    }).join("")+'</ul>':'<p class="vide">Toutes les réservations ont leur chambre.</p>')+'</div>'
+    +'<div class="bloc"><h2>Placées ('+places.length+')</h2>'+(places.length?'<ul class="liste">'+places.map(function(x){
+      var c=chambre(x.bloc);
+      return '<li class="rang'+(U.resa===x.id?" moi":"")+'"><div><b>'+h(nomComplet(x))+'</b> · chambre '+(c?c.n:"?")+'<small>'+resumeSejour(x)+' · '+periodeSejour(x)+'</small></div><div class="droite"><button type="button" class="btn petit" data-a="resa" data-k="'+x.id+'">Changer</button><button type="button" class="btn petit danger" data-a="debloquer" data-k="'+x.id+'">Libérer</button></div></li>';
+    }).join("")+'</ul>':'<p class="vide">Aucune chambre n\'est bloquée pour le moment.</p>')+'</div>'
+    +'<p class="aide">Une chambre bloquée n\'est plus proposée aux autres clients pour ces nuits-là : un client sans réservation ne peut pas s\'y installer si son séjour déborde sur la réservation. À l\'arrivée, le client qui a une chambre bloquée s\'y installe tout seul, dès qu\'elle est prête. Sans chambre bloquée, il attend à la réception que vous lui en donniez une.</p>';
 }
 function detailOption(sj,o){
   var l=[];
@@ -2210,7 +2306,7 @@ function ecranReglages(){
     +'<div class="carte"><h2>Les règles en bref</h2>'
     +'<p class="aide"><b>Temps réel.</b> Une nuit d\'hôtel est une vraie nuit. Les clients arrivent entre 14 h et 21 h et repartent entre 7 h et 11 h. De 22 h à 6 h, l\'hôtel dort : aucune arrivée, aucune demande, personne au travail. L\'hôtel continue de tourner quand le jeu est fermé.</p>'
     +'<p class="aide"><b>Accueil.</b> Chaque client arrive avec deux ou trois souhaits et s\'attend à un certain niveau de chambre. Vous lisez sa fiche et vous lui donnez une chambre prête. Plus elle lui convient, plus il repart content. Sans réponse au bout de 15 minutes, la réception prend le relais ; aux chambres d\'hôtes, une boîte à clés dépanne. Sans personne à la réception, le client repart au bout d\'une heure.</p>'
-    +'<p class="aide"><b>Réservations.</b> Chaque nuit, des réservations tombent pour les trois jours suivants. L\'hôtel n\'en prend pas plus qu\'il n\'a de chambres assez grandes. Si vous donnez à un autre la chambre qu\'il fallait à une réservation, le client arrive sans chambre : l\'hôtel paie sa nuit ailleurs et sa réputation en souffre.</p>'
+    +'<p class="aide"><b>Réservations et agenda.</b> Chaque nuit, des réservations tombent pour les trois jours suivants. L\'hôtel n\'en prend pas plus qu\'il n\'a de chambres assez grandes. Dans l\'agenda, vous bloquez une chambre pour chaque réservation : elle n\'est plus proposée aux autres clients pour ces nuits-là, et le client s\'y installe tout seul à son arrivée. Sans chambre bloquée, il attend à la réception ; et s\'il ne reste plus de chambre à sa taille, l\'hôtel paie sa nuit ailleurs et sa réputation en souffre.</p>'
     +'<p class="aide"><b>Demandes.</b> Pendant le séjour, les clients ont des demandes et des réclamations. Vous choisissez la réponse. La meilleure dépend de ce que l\'hôtel a sous la main : un technicien en poste, une chambre prête, du stock. Sans réponse en 40 minutes, le client s\'en souvient.</p>'
     +'<p class="aide"><b>Chambres.</b> Vous commencez avec deux chambres doubles de niveau 1. Chaque palier permet d\'en acheter davantage. Une chambre a un type (simple, double, twin, familiale), un côté, un étage, et un niveau de 1 à 10 : chaque niveau ajoute un équipement et relève son prix.</p>'
     +'<p class="aide"><b>Ménage.</b> Après un départ, la chambre est à refaire avant d\'être relouée : une demi-heure pour une femme de chambre en poste, deux heures si c\'est vous. Chaque chambre refaite prend un jeu de linge et un lot de produits d\'accueil.</p>'
@@ -2242,7 +2338,7 @@ function ajouterChambre(type,cote,etage){
   S.nChambre++; S.chambres.push(c); return c;
 }
 var A={
-  aller:function(d){ if(d.e==="societes"||d.e==="tva"||d.e==="exercice"){ U.finPage=d.e; d={e:"finances"}; } U.ecran=d.e; U.confirme=null; U.retour=null; U.dossier=null; U.choix=null; if(d.e==="recrutement"){ candidatsDe(roleCourant()); return true; } return false; },
+  aller:function(d){ U.resa=null; if(d.e==="societes"||d.e==="tva"||d.e==="exercice"){ U.finPage=d.e; d={e:"finances"}; } U.ecran=d.e; U.confirme=null; U.retour=null; U.dossier=null; U.choix=null; if(d.e==="recrutement"){ candidatsDe(roleCourant()); return true; } return false; },
   devise:function(d){ U.fond.devise=d.k; return false; },
   fonder:function(){
     var t=Date.now(), heure=new Date(t).getHours();
@@ -2263,13 +2359,22 @@ var A={
     if(!sj){ U.retour={c:"warn",m:nuit(t)?"L'hôtel dort : personne n'arrive entre 22 h et 6 h.":"Aucune chambre prête pour un client de passage en ce moment."}; U.ecran="clients"; return true; }
     U.dossier=sj.id; U.ecran="fiche"; return true;
   },
+  resa:function(d){ U.resa=U.resa===+d.k&&U.ecran==="agenda"?null:+d.k; U.ecran="agenda"; U.retour=null; return false; },
+  bloquer:function(d){
+    var sj=parId(S.sejours,U.resa), c=chambre(+d.k), prix, manque;
+    if(!sj||sj.etat!=="reserve"||!c||chambresABloquer(sj).indexOf(c)<0) return false;
+    sj.bloc=c.id; prix=prixPour(sj,c); manque=manquesDe(sj,c,prix);
+    U.retour={c:!manque.length&&c.niv>=sj.att?"ok":"",m:"Chambre "+c.n+" bloquée pour "+nomComplet(sj)+", "+periodeSejour(sj)+". "+(!manque.length&&c.niv>=sj.att?"Tout ce qui est souhaité s'y trouve.":(manque.length?"Il manquera : "+manque.join(", ")+". ":"")+(c.niv<sj.att?"Le client s'attend à une chambre de niveau "+sj.att+" au moins.":""))};
+    U.resa=null; return true;
+  },
+  debloquer:function(d){ var sj=parId(S.sejours,+d.k); if(!sj||!sj.bloc) return false; sj.bloc=null; U.retour=null; return true; },
   fiche:function(d){ U.dossier=+d.k; U.choix=null; U.retour=null; U.ecran="fiche"; return false; },
   choisir:function(d){ U.choix=U.choix===+d.k?null:+d.k; return false; },
   loger:function(){
     var sj=parId(S.sejours,U.dossier), c=chambre(U.choix), t=maintenant(), r, manque, txt, bien, complet;
-    if(!sj||sj.etat!=="accueil"||!c||c.sj||c.etat!=="propre"||TYPES[c.type].cap<sj.pers) return false;
+    if(!sj||sj.etat!=="accueil"||!c||chambresPour(sj).indexOf(c)<0) return false;
     r=loger(sj,c,t,false);
-    manque=sj.souhaits.filter(function(k){ return !souhaitOk(k,c,r.prix); }).map(function(k){ return SOUHAITS[k].toLowerCase(); });
+    manque=manquesDe(sj,c,r.prix);
     complet=!manque.length&&c.niv>=sj.att; bien=r.a>=r.mieux-5;
     txt=nomComplet(sj)+" s'installe en chambre "+c.n+", à "+mt(r.prix)+" la nuit. ";
     if(complet) txt+="Tout ce qui était souhaité s'y trouve.";
@@ -2506,7 +2611,7 @@ function revenir(){
 
 /* ------------------------------------------------------------------ Boucle */
 var app=document.getElementById("app"), dernier="", dernierBattement=Date.now();
-var ECRANS={accueil:ecranAccueil,clients:ecranClients,fiche:ecranFiche,requete:ecranRequete,chambres:ecranChambres,clientele:ecranClientele,equipements:ecranEquipements,economat:ecranEconomat,planning:ecranPlanning,equipe:ecranEquipe,recrutement:ecranRecrutement,tarifs:ecranTarifs,finances:ecranFinances,journal:ecranJournal,moi:ecranMoi,reglages:ecranReglages};
+var ECRANS={agenda:ecranAgenda,accueil:ecranAccueil,clients:ecranClients,fiche:ecranFiche,requete:ecranRequete,chambres:ecranChambres,clientele:ecranClientele,equipements:ecranEquipements,economat:ecranEconomat,planning:ecranPlanning,equipe:ecranEquipe,recrutement:ecranRecrutement,tarifs:ecranTarifs,finances:ecranFinances,journal:ecranJournal,moi:ecranMoi,reglages:ecranReglages};
 function rendre(){
   var y=window.scrollY, cle=S.fondeLe?U.ecran:"fondation";
   app.innerHTML='<div class="ecran">'+(S.fondeLe?(ECRANS[U.ecran]||ecranAccueil)():ecranFondation())+'</div>'+(S.fondeLe?navigation():"");
@@ -2571,7 +2676,7 @@ if(chaud&&chaud.snapshot) chaud.snapshot(function(){ return {S:S,U:U}; });
 if(chaud&&chaud.ready) chaud.ready(demarrer); else demarrer(chaud&&chaud.data);
 window.__hotel={etat:function(){ return S; },ecran:function(e){ U.ecran=e; rendre(); },agir:function(a,d){ var r=A[a](d||{}); rendre(); return r; },faire:function(a,d){ return A[a](d||{}); },avancer:function(ms){ S.decalage=(S.decalage||0)+ms; return avancer(maintenant()); },regles:{REQUETES:REQUETES},vue:function(){ return U; },
   sauter:function(ms){ S.decalage=(S.decalage||0)+ms; var c=avancer(maintenant()); rendre(); return c; },
-  calc:{resultatExercice:resultatExercice,soldeTva:soldeTva,demandeCible:demandeCible,bilan:bilan,creances:creances,tient:tient,adequation:adequation,prixPour:prixPour,pretes:pretes,reputation:reputation,attendus:attendus,periode:periode,optionsDe:optionsDe,couvMenage:couvMenage,recettesDe:recettesDe,depensesDe:depensesDe}};
+  calc:{chambresABloquer:chambresABloquer,chambresPour:chambresPour,resultatExercice:resultatExercice,soldeTva:soldeTva,demandeCible:demandeCible,bilan:bilan,creances:creances,tient:tient,adequation:adequation,prixPour:prixPour,pretes:pretes,reputation:reputation,attendus:attendus,periode:periode,optionsDe:optionsDe,couvMenage:couvMenage,recettesDe:recettesDe,depensesDe:depensesDe}};
 })();
 </script>
 <script>if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});</script>
