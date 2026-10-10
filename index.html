@@ -1,0 +1,2424 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>MyHotel</title>
+<meta name="theme-color" content="#0f1a17" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#edf2ee" media="(prefers-color-scheme: light)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MyHotel">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Mise en page : la tablette du directeur, pensée d'abord pour le téléphone. Une colonne : barre d'état avec l'horloge réelle,
+   quatre jauges, puis l'écran courant. Une barre d'onglets fixe en bas donne accès aux cinq écrans les plus utilisés.
+   Même famille que MyHospital ; ici le fond est vert bouteille et l'accent laiton, comme un hall d'hôtel. */
+:root{
+  color-scheme:dark;
+  --bg:#0f1a17; --surface:#16251f; --surface-2:#1d3028; --line:#2b4338;
+  --ink:#e9f1ec; --muted:#98ab9f; --faint:#6f8478;
+  --accent:#d3a44e; --accent-2:#b98933; --on-accent:#1c1404; --on-tile:#ffffff;
+  --ok:#5fca92; --ok-bg:#153a2a; --warn:#e5b54a; --warn-bg:#3b3016; --bad:#f2786f; --bad-bg:#40201e; --info:#7fb9e6; --info-bg:#17324a; --nuit:#b7a2ee; --nuit-bg:#2c2649;
+  --tri-rouge:#e5484d; --tri-orange:#f08c3a; --tri-jaune:#e6c13d; --tri-vert:#46b97a; --tri-bleu:#4c9be8;
+  --c1:#3f8fe0; --c1b:#2a6ab3; --c2:#3fa796; --c2b:#2c7f73; --c3:#d9647a; --c3b:#a8425a; --c4:#8468cf; --c4b:#6144ad;
+  --c5:#c8922f; --c5b:#96671a; --c6:#4f9d5d; --c6b:#35743f; --c7:#cf7f55; --c7b:#9c5632; --c8:#7d8794; --c8b:#535c68;
+  --voile:rgba(5,14,11,.62);
+  --f-ui:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --f-doc:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --r-lg:20px; --r:14px; --r-sm:10px;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    color-scheme:light;
+    --bg:#edf2ee; --surface:#ffffff; --surface-2:#f1f6f2; --line:#d5e0d8;
+    --ink:#13241c; --muted:#52675b; --faint:#7f9186;
+    --accent:#8a6410; --accent-2:#6f500b; --on-accent:#ffffff;
+    --ok:#1b7a4a; --ok-bg:#dff3e7; --warn:#8a5a00; --warn-bg:#fdefd2; --bad:#b3261e; --bad-bg:#fde5e2; --info:#1f5c99; --info-bg:#e4eef8; --nuit:#5a3fae; --nuit-bg:#ebe6fa;
+    --tri-rouge:#d1343a; --tri-orange:#dd7420; --tri-jaune:#c79a12; --tri-vert:#2f9a5f; --tri-bleu:#2f7fd0;
+    --voile:rgba(19,36,28,.38);
+  }
+}
+:root[data-theme="light"]{
+  color-scheme:light;
+  --bg:#edf2ee; --surface:#ffffff; --surface-2:#f1f6f2; --line:#d5e0d8;
+  --ink:#13241c; --muted:#52675b; --faint:#7f9186;
+  --accent:#8a6410; --accent-2:#6f500b; --on-accent:#ffffff;
+  --ok:#1b7a4a; --ok-bg:#dff3e7; --warn:#8a5a00; --warn-bg:#fdefd2; --bad:#b3261e; --bad-bg:#fde5e2; --info:#1f5c99; --info-bg:#e4eef8; --nuit:#5a3fae; --nuit-bg:#ebe6fa;
+  --tri-rouge:#d1343a; --tri-orange:#dd7420; --tri-jaune:#c79a12; --tri-vert:#2f9a5f; --tri-bleu:#2f7fd0;
+  --voile:rgba(19,36,28,.38);
+}
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-ui);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+h1,h2,h3,h4,p,ul,ol,dl,dd{margin:0}
+ul,ol{padding:0;list-style:none}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation}
+button:disabled{cursor:not-allowed;opacity:.45}
+svg{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.ecran{max-width:920px;margin-inline:auto;padding-inline:16px;padding-block:14px 112px;display:flex;flex-direction:column;gap:20px}
+
+/* Barre d'état */
+.barre{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:13px}
+.marque{display:flex;align-items:center;gap:10px;font-weight:600;color:var(--ink);font-size:15px;min-width:0}
+.marque span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.logo{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:var(--accent);color:var(--on-accent);font-weight:700;font-size:18px;flex:none}
+.puce{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:12.5px;font-weight:500;color:var(--muted);white-space:nowrap}
+.puce svg{width:14px;height:14px}
+.puce.ok{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.puce.warn{background:var(--warn-bg);color:var(--warn);border-color:transparent}
+.puce.bad{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+.puce.info{background:var(--info-bg);color:var(--info);border-color:transparent}
+.puce.num{font-variant-numeric:tabular-nums}
+
+/* Titres */
+.titre{display:flex;flex-direction:column;gap:4px}
+.titre h1{font-size:clamp(26px,7vw,36px);line-height:1.12;font-weight:700;letter-spacing:-.02em;text-wrap:balance;overflow-wrap:anywhere}
+.titre p{color:var(--muted)}
+h2{font-size:12.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--faint)}
+.retour{display:inline-flex;align-items:center;gap:4px;background:none;border:0;padding:6px 8px 6px 0;color:var(--muted);font-weight:500;align-self:flex-start}
+.retour:hover{color:var(--ink)}
+.aide{color:var(--muted);font-size:13.5px}
+
+/* Jauges */
+.jauges{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.jauge{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:11px 13px;display:flex;flex-direction:column;gap:5px;min-width:0}
+.jauge-nom{font-size:12.5px;color:var(--muted);font-weight:500}
+.jauge-val{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em;overflow-wrap:anywhere}
+.piste{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}
+.plein{height:100%;border-radius:3px;background:var(--warn);transition:width .5s ease}
+.n2 .plein{background:var(--ok)} .n0 .plein{background:var(--bad)} .nn .plein{background:var(--accent)}
+.n0 .jauge-val{color:var(--bad)}
+.jauge-bas{font-size:12px;color:var(--faint);min-height:18px}
+
+/* Tuiles */
+.tuiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tuile{display:flex;flex-direction:column;align-items:flex-start;gap:10px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;min-width:0;transition:border-color .15s,transform .15s}
+.tuile:hover{border-color:var(--faint);transform:translateY(-1px)}
+.tuile-icone{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;color:var(--on-tile);flex:none}
+.tuile-icone svg{width:24px;height:24px}
+.g1{background:linear-gradient(160deg,var(--c1),var(--c1b))} .g2{background:linear-gradient(160deg,var(--c2),var(--c2b))}
+.g3{background:linear-gradient(160deg,var(--c3),var(--c3b))} .g4{background:linear-gradient(160deg,var(--c4),var(--c4b))}
+.g5{background:linear-gradient(160deg,var(--c5),var(--c5b))} .g6{background:linear-gradient(160deg,var(--c6),var(--c6b))}
+.g7{background:linear-gradient(160deg,var(--c7),var(--c7b))} .g8{background:linear-gradient(160deg,var(--c8),var(--c8b))}
+.tuile-texte{display:flex;flex-direction:column;gap:1px;min-width:0}
+.tuile-nom{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.tuile-chiffre{color:var(--muted);font-size:13.5px}
+
+/* Boutons */
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border-radius:var(--r-sm);background:var(--surface);border:1px solid var(--line);font-weight:600;color:var(--ink);min-height:42px}
+.btn:hover:not(:disabled){border-color:var(--faint)}
+.btn svg{width:17px;height:17px}
+.btn.principal{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.principal:hover:not(:disabled){background:var(--accent-2);border-color:var(--accent-2)}
+.btn.danger{color:var(--bad)}
+.btn.large{padding:14px 20px;font-size:16px;width:100%}
+.btn.petit{padding:6px 12px;font-size:13.5px;min-height:34px}
+
+/* Alertes */
+.alertes{display:flex;flex-direction:column;gap:8px}
+.alerte{border-radius:var(--r-sm);padding:10px 14px;font-size:14px;font-weight:500;background:var(--info-bg);color:var(--info);display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.alerte.warn{background:var(--warn-bg);color:var(--warn)} .alerte.bad{background:var(--bad-bg);color:var(--bad)} .alerte.ok{background:var(--ok-bg);color:var(--ok)}
+.alerte .btn{background:transparent;border-color:currentColor;color:inherit}
+
+/* Cartes et listes */
+.bloc{display:flex;flex-direction:column;gap:10px;min-width:0}
+.carte{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.carte-haut{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.carte-haut h3{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.carte-haut small{display:block;color:var(--muted);font-size:13.5px;font-weight:400}
+.entete{display:flex;gap:12px;align-items:center;min-width:0}
+.entete .tuile-icone{width:40px;height:40px;border-radius:12px}
+.entete .tuile-icone svg{width:20px;height:20px}
+.liste{display:flex;flex-direction:column;gap:8px}
+.rang{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;min-width:0}
+.rang > div:first-child{min-width:0;flex:1 1 180px}
+.rang b{font-weight:600}
+.rang small{display:block;color:var(--muted);font-size:13px}
+.rang .droite{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rang.moi{border-color:var(--info)}
+.vide{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:18px;color:var(--muted)}
+.badges{display:flex;gap:6px;flex-wrap:wrap}
+.reglage{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.reglage > span{color:var(--muted);font-size:14px}
+.pas{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:var(--surface-2)}
+.pas button{width:44px;height:42px;background:none;border:0;font-size:20px;font-weight:600;color:var(--ink)}
+.pas button:hover:not(:disabled){background:var(--line)}
+.pas output{min-width:86px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums;padding:0 6px}
+.progres{display:flex;flex-direction:column;gap:5px}
+.progres-haut{display:flex;justify-content:space-between;gap:10px;font-size:14px}
+.progres-haut span{color:var(--muted);font-variant-numeric:tabular-nums;text-align:right}
+
+/* Triage (échelle de Manchester) */
+.tri{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 8px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:12.5px;font-weight:600;white-space:nowrap}
+.tri i{width:9px;height:9px;border-radius:50%;background:var(--tri-vert)}
+.t-rouge i{background:var(--tri-rouge)} .t-orange i{background:var(--tri-orange)} .t-jaune i{background:var(--tri-jaune)} .t-bleu i{background:var(--tri-bleu)}
+.dossier{font-family:var(--f-doc);font-size:11.5px;color:var(--faint);letter-spacing:.02em}
+
+/* Onglets et tableaux */
+.onglets{display:flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:var(--surface)}
+.onglet{flex:1;padding:10px 6px;background:none;border:0;border-right:1px solid var(--line);font-weight:600;color:var(--muted);font-size:14px}
+.onglet:last-child{border-right:0}
+.onglet.actif{background:var(--accent);color:var(--on-accent)}
+.periode{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.periode b{font-size:16px;text-align:center;flex:1;min-width:0}
+.periode .btn{padding:8px 12px}
+.puces-choix{display:flex;gap:8px;flex-wrap:wrap}
+.choix{padding:8px 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-weight:600;font-size:14px;color:var(--muted)}
+.choix.actif{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.tableau{overflow-x:auto}
+.tableau table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+.tableau th,.tableau td{padding:8px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+.tableau th:first-child,.tableau td:first-child{text-align:left;padding-left:0;white-space:normal}
+.tableau th:last-child,.tableau td:last-child{padding-right:0}
+.tableau thead th{color:var(--faint);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.tableau tr.sous td{color:var(--faint);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;padding-top:14px;border-bottom:0}
+.tableau tr.total td{font-weight:700}
+.tableau td.avant{color:var(--muted)}
+.tableau tbody tr:last-child td{border-bottom:0}
+.tableau.serre th,.tableau.serre td{padding:8px 4px;font-size:13px}
+.tableau.serre thead th{font-size:10.5px;letter-spacing:.03em}
+.plus-c{color:var(--ok)} .moins-c{color:var(--bad)}
+.journal li{padding:10px 0;border-bottom:1px solid var(--line);font-size:14px;display:flex;flex-direction:column;gap:2px}
+.journal li:last-child{border-bottom:0}
+.journal time{color:var(--faint);font-size:12.5px;font-variant-numeric:tabular-nums}
+.journal .warn{color:var(--warn)} .journal .bad{color:var(--bad)} .journal .ok{color:var(--ok)}
+
+/* Fondation */
+.champ{display:flex;flex-direction:column;gap:6px;min-width:0}
+.champ label,.champ > span{font-size:13px;color:var(--muted);font-weight:500}
+.champ input[type=text]{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:12px;width:100%;font-size:16px}
+
+/* Barre d'onglets du bas */
+.bas{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;z-index:5}
+.bas > div{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));width:min(560px,100%)}
+.bas button{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:0;padding:6px 2px;color:var(--muted);font-size:11.5px;font-weight:600;border-radius:10px;position:relative;min-width:0}
+.bas button.actif{color:var(--accent)}
+.bas svg{width:22px;height:22px}
+.pastille{position:absolute;top:1px;left:calc(50% + 6px);min-width:18px;height:18px;border-radius:9px;background:var(--tri-orange);color:var(--on-tile);font-size:11px;font-weight:700;display:grid;place-items:center;padding:0 5px}
+
+/* Planning : une semaine type par personne, un bouton par jour */
+.semaine{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.jour{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 0;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);min-width:0;color:var(--faint)}
+.jour small{font-size:11px;font-weight:600;color:var(--muted)}
+.jour b{font-size:12.5px;font-weight:700}
+.jour.p-M{background:var(--warn-bg);border-color:transparent;color:var(--warn)}
+.jour.p-A{background:var(--info-bg);border-color:transparent;color:var(--info)}
+.jour.p-N{background:var(--nuit-bg);border-color:transparent;color:var(--nuit)}
+.jour.ici{outline:2px solid var(--accent);outline-offset:1px}
+.tableau table.grille th,.tableau table.grille td{text-align:center;padding:8px 2px}
+.tableau table.grille th:first-child{text-align:left;white-space:nowrap;color:var(--ink);font-size:13px;text-transform:none;letter-spacing:0}
+.grille th small{display:block;font-weight:400;color:var(--faint);font-size:11px}
+.grille td.zero{color:var(--faint)}
+.grille td.ici{background:var(--info-bg);color:var(--info);font-weight:700}
+.grille thead th.ici{color:var(--accent)}
+
+/* Pharmacie et traitement */
+.choix small{font-weight:500;opacity:.8}
+.choix.rupture:not(.actif){border-color:var(--bad);color:var(--bad)}
+.sous-titre{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.bascule{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:var(--surface-2)}
+.bascule button{padding:9px 16px;background:none;border:0;font-weight:600;color:var(--muted)}
+.bascule button.actif{background:var(--accent);color:var(--on-accent)}
+
+/* Fiches */
+.signes{display:flex;gap:6px;flex-wrap:wrap}
+.signe{padding:4px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:13px;font-weight:600}
+.signe.ctx{background:var(--info-bg);color:var(--info);border-color:transparent}
+.signe.oui{border-color:var(--accent)}
+.signe.non{color:var(--faint);font-weight:500}
+.test{display:flex;flex-direction:column;gap:3px;padding:11px 12px;border-radius:var(--r-sm);background:var(--surface-2);border:1px solid var(--line);text-align:left;width:100%;min-width:0}
+button.test:hover:not(:disabled){border-color:var(--faint)}
+.test b{font-weight:600;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.test b span{color:var(--muted);font-weight:500;font-size:13px;text-align:right}
+.test small{font-size:13.5px;color:var(--muted)}
+.test.fait{background:var(--surface)}
+.test.anormal small{color:var(--warn);font-weight:600}
+.cand{border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface-2);min-width:0}
+.cand.actif{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.cand > button{display:flex;flex-direction:column;gap:8px;width:100%;text-align:left;background:none;border:0;padding:12px}
+.cand-nom{font-weight:700;font-size:15.5px;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+.cand .fiche{padding:0 12px 12px;display:flex;flex-direction:column;gap:10px}
+.cand .fiche.seule{padding-top:12px}
+.cand .fiche ul{display:flex;flex-direction:column;gap:4px}
+.cand .fiche li{font-size:13.5px;color:var(--muted)}
+.cand .fiche li b{color:var(--ink);font-weight:600}
+
+
+/* Chambres, clients et équipements */
+.etoiles{color:var(--accent);letter-spacing:.06em;white-space:nowrap}
+.equips{font-size:13px;color:var(--muted)}
+.cand-prix{font-size:13.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.cand-prix b{color:var(--ink);font-weight:700}
+.option{display:flex;flex-direction:column;gap:3px;padding:12px;border-radius:var(--r-sm);background:var(--surface-2);border:1px solid var(--line);text-align:left;width:100%;min-width:0}
+button.option:hover:not(:disabled){border-color:var(--faint)}
+.option b{font-weight:600}
+.option small{font-size:13px;color:var(--muted)}
+.parole{font-size:16px;font-weight:600;line-height:1.4}
+.groupe-choix{display:flex;flex-direction:column;gap:6px}
+@media (min-width:760px){
+  .jauges{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .tuiles{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .btn.large{width:auto}
+  .deux{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+}
+@media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
+</style>
+
+<style>html{background:var(--bg);overscroll-behavior-y:none}</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ------------------------------------------------------------------ Règles de l'hôtel */
+var V=1, CLE="myhotel-v1", CLE_APP="myhotel-appareil";
+var MIN=60000, HEURE=3600000, JOUR=86400000, TRANCHE=20*MIN, PAIE_DIRECTEUR=100;
+var CAISSE_DEPART=5000, TAUX_DECOUVERT=0.002, TAUX_EVENEMENT=0.4, DECOUVERT_MAX=3000;
+var JOURNAL_MAX=120, REGISTRE_MAX=60, AVIS_MAX=40, JOURS_GARDES=40;
+var DEVISES=["$","€","£","fl","¥"];
+// Les paliers : il faut assez de séjours terminés et une réputation suffisante.
+// Chaque palier autorise plus de chambres, des chambres de meilleur niveau et des équipements plus poussés.
+var PALIERS=[
+  {nom:"Chambres d'hôtes",etoiles:0,min:0,rep:0,charges:15,chambres:5,niv:3,prime:0},
+  {nom:"Petit hôtel",etoiles:2,min:10,rep:50,charges:60,chambres:12,niv:5,prime:1500},
+  {nom:"Hôtel",etoiles:3,min:45,rep:58,charges:160,chambres:25,niv:7,prime:4000},
+  {nom:"Grand hôtel",etoiles:4,min:150,rep:65,charges:380,chambres:45,niv:9,prime:9000},
+  {nom:"Palace",etoiles:5,min:400,rep:72,charges:800,chambres:80,niv:10,prime:20000}];
+// Une chambre : un type (qui fixe le nombre de personnes), un côté, un étage, et un niveau de 1 à 10.
+var TYPES={
+  simple:{nom:"Simple",lit:"un lit d'une personne",cap:1,prix:60,achat:500},
+  double:{nom:"Double",lit:"un grand lit",cap:2,prix:80,achat:700},
+  twin:{nom:"Twin",lit:"deux lits séparés",cap:2,prix:80,achat:700},
+  familiale:{nom:"Familiale",lit:"un grand lit et deux petits lits",cap:4,prix:120,achat:1000}};
+var ORDRE_TYPES=["simple","double","twin","familiale"];
+var COTES={rue:{nom:"Côté rue",mult:1,achat:1},jardin:{nom:"Côté jardin",mult:1.12,achat:1.2}};
+var ETAGES={rez:"Rez-de-chaussée",haut:"À l'étage"};
+// Les dix niveaux d'une chambre : chacun ajoute un équipement, relève le prix habituel de la nuit, et coûte plus cher que le précédent
+var NIV_MAX=10;
+var NIVEAUX=[null,
+  {nom:"Chambre simple",mult:1,cout:0},
+  {nom:"Literie de qualité",cle:"literie",mult:1.15,cout:150},
+  {nom:"Wi-Fi et télévision",cle:"wifi",mult:1.35,cout:250},
+  {nom:"Salle de bain rénovée",cle:"sdb",mult:1.6,cout:400},
+  {nom:"Climatisation",cle:"clim",mult:1.9,cout:650},
+  {nom:"Minibar et coffre-fort",cle:"minibar",mult:2.4,cout:1000},
+  {nom:"Bureau et coin salon",cle:"bureau",mult:3,cout:1600},
+  {nom:"Balcon",cle:"balcon",mult:4,cout:2600},
+  {nom:"Baignoire balnéo",cle:"baignoire",mult:5.5,cout:4200},
+  {nom:"Suite de prestige",cle:"suite",mult:8,cout:7000}];
+var NIV_DE={};
+NIVEAUX.forEach(function(x,i){ if(x&&x.cle) NIV_DE[x.cle]=i; });
+var ENTRETIEN_CHAMBRE=3, SEUIL_BUDGET=95;
+// Ce qu'un client peut souhaiter pour sa chambre, et ce qu'il attend de l'hôtel
+var SOUHAITS={calme:"Au calme",rez:"Au rez-de-chaussée",haut:"À l'étage",grandlit:"Un grand lit",separes:"Lits séparés",budget:"Petit budget",
+  literie:"Une bonne literie",wifi:"Le Wi-Fi",sdb:"Une belle salle de bain",clim:"La climatisation",minibar:"Un minibar",bureau:"Un bureau pour travailler",balcon:"Un balcon",baignoire:"Une baignoire",suite:"Une suite"};
+var REPONSES={calme:"une chambre côté jardin",rez:"une chambre au rez-de-chaussée",haut:"une chambre à l'étage",grandlit:"une chambre double ou familiale",separes:"une chambre twin",budget:"une nuit à petit prix"};
+var ATTENTES={pdj:["Petit-déjeuner","resto",1],parking:["Parking","parking",1],diner:["Dîner sur place","resto",2],bar:["Un bar","bar",1],spa:["Un spa","spa",1],piscine:["Une piscine","piscine",1]};
+// Les profils de clients : personnes, nuits, souhaits habituels, attentes, exigence (-1 à 3), et qui paie
+var PROFILS={
+  affaires:{nom:"Voyageur d'affaires",pers:[1,1],nuits:[1,2],poids:22,sem:1.5,we:0.3,souhaits:["wifi","bureau","calme","literie","clim","haut"],attentes:["pdj","parking","diner","bar"],standing:1,canal:{entreprise:0.6,plateforme:0.2,direct:0.2}},
+  couple:{nom:"Couple",pers:[2,2],nuits:[1,2],poids:22,sem:0.8,we:1.6,fixe:"grandlit",souhaits:["calme","balcon","baignoire","sdb","clim","minibar","haut"],attentes:["pdj","diner","spa","bar","piscine"],standing:1},
+  famille:{nom:"Famille",pers:[3,4],nuits:[1,3],poids:14,sem:0.8,we:1.3,souhaits:["rez","calme","clim","wifi","sdb"],attentes:["pdj","parking","piscine","diner"],standing:0},
+  amis:{nom:"Deux amis",pers:[2,2],nuits:[1,2],poids:12,sem:0.8,we:1.4,fixe:"separes",souhaits:["wifi","clim","minibar","calme"],attentes:["bar","pdj","parking"],standing:0},
+  senior:{nom:"Retraités",pers:[1,2],nuits:[1,3],poids:14,sem:1.2,we:0.8,souhaits:["rez","calme","literie","sdb","baignoire"],attentes:["pdj","diner","parking"],standing:1},
+  routard:{nom:"Voyageur à petit budget",pers:[1,1],nuits:[1,1],poids:12,sem:1,we:1,fixe:"budget",souhaits:["wifi","literie"],attentes:["pdj"],standing:-1,canal:{plateforme:0.7,direct:0.3}},
+  luxe:{nom:"Client fortuné",pers:[1,2],nuits:[1,3],poids:8,sem:1,we:1.2,palier:3,souhaits:["suite","baignoire","balcon","calme","minibar","haut"],attentes:["spa","diner","bar","piscine","parking","pdj"],standing:3}
+};
+var CANAL_HABITUEL={direct:0.45,plateforme:0.4,entreprise:0.15};
+var CANAUX={direct:"Réservation directe",plateforme:"Plateforme de réservation",entreprise:"Payé par sa société",passage:"Sans réservation"};
+// Les saisons (0 hiver, 1 printemps, 2 été, 3 automne) changent l'affluence et la clientèle
+var SAISONS=[
+  {nom:"Hiver",txt:"une clientèle d'affaires et de courts séjours",f:0.85,m:{affaires:1.2,famille:0.7,routard:0.6}},
+  {nom:"Printemps",txt:"des couples et des retraités en week-end",f:1,m:{couple:1.3,senior:1.4}},
+  {nom:"Été",txt:"des familles et des vacanciers",f:1.25,m:{famille:2.2,routard:1.5,couple:1.2,affaires:0.6}},
+  {nom:"Automne",txt:"des séminaires et des voyageurs d'affaires",f:0.95,m:{affaires:1.4,senior:1.3,famille:0.7}}];
+var ROTATION=0.6, PART_PASSAGE=0.2, COMMISSION=0.15;
+var PATIENCE_ACCUEIL=60, DELAI_RELAIS=15*MIN, DELAI_REQ=40*MIN, RELAIS_REQ=12*MIN, TAUX_REQUETE=0.45;
+var DUREE_MENAGE=30, DUREE_MENAGE_MOI=90, PAR_FEMME=12, PAR_ACCUEIL=25;
+// Les équipements de l'hôtel : cinq niveaux chacun. cap donne les tables, places ou cabines de chaque niveau.
+var EQUIP={
+  resto:{nom:"Restaurant",palier:0,compte:"resto",ic:"couverts",g:"g7",couts:[1500,4000,9000,20000,45000],cap:[4,6,10,14,18],unite:["table","tables"],
+    niveaux:["Salle de petit-déjeuner","Brasserie","Restaurant","Restaurant réputé","Table gastronomique"],
+    txt:"Au niveau 1, le petit-déjeuner. Dès le niveau 2, déjeuner et dîner, ouverts aux clients de l'extérieur. Chaque niveau ajoute des tables et relève le prix habituel."},
+  bar:{nom:"Bar",palier:1,compte:"bar",ic:"verre",g:"g4",couts:[2000,4000,8000,15000,28000],cap:[4,8,12,18,26],unite:["place","places"],
+    niveaux:["Comptoir","Bar de l'hôtel","Bar lounge","Bar à cocktails","Bar réputé"],
+    txt:"Ouvert en fin d'après-midi et en soirée, aux clients de l'hôtel comme à ceux de l'extérieur. Il faut un barman."},
+  spa:{nom:"Spa",palier:2,compte:"spa",ic:"lotus",g:"g2",couts:[6000,10000,18000,30000,50000],cap:[1,2,3,4,6],unite:["cabine","cabines"],
+    niveaux:["Cabine de massage","Sauna et massages","Espace bien-être","Spa","Grand spa"],
+    txt:"Des soins en journée, donnés par des praticiens. Très attendu des couples et de la clientèle fortunée."},
+  piscine:{nom:"Piscine",palier:3,compte:"equipements",ic:"vagues",g:"g1",couts:[15000,22000,32000,45000,65000],
+    niveaux:["Bassin extérieur","Piscine chauffée","Piscine couverte","Piscine et jacuzzi","Complexe aquatique"],
+    txt:"Pas de recette directe : elle attire plus de monde et plaît aux familles, aux couples et à la clientèle fortunée."},
+  parking:{nom:"Parking",palier:0,compte:"parking",ic:"voiture",g:"g8",couts:[800,1500,3000,6000,12000],cap:[3,7,14,25,45],unite:["place","places"],
+    niveaux:["Cour","Parking","Parking fermé","Parking couvert","Parking souterrain"],
+    txt:"Chaque client venu en voiture paie sa place à la nuit. Sans place libre, il repart moins satisfait."},
+  seminaire:{nom:"Salles de séminaire",palier:2,compte:"seminaire",ic:"ecran",g:"g6",couts:[5000,8000,14000,24000,40000],cap:[10,20,35,55,90],unite:["participant","participants"],
+    niveaux:["Salle de réunion","Salle de séminaire","Deux salles","Centre d'affaires","Centre de congrès"],
+    txt:"En semaine, des sociétés louent la salle à la journée, au prix par participant. La facture est payée plus tard. Il faut un serveur pour les pauses."},
+  hall:{nom:"Hall et réception",palier:0,compte:"equipements",ic:"cloche",g:"g5",couts:[600,1500,3500,8000,18000],
+    niveaux:["Comptoir d'accueil","Hall aménagé","Salon d'accueil","Grand hall","Hall de prestige"],
+    txt:"Chaque niveau : les clients patientent 15 % plus longtemps à l'arrivée, et un réceptionniste accueille 20 % de clients en plus."},
+  buanderie:{nom:"Buanderie",palier:0,compte:"equipements",ic:"machine",g:"g2",couts:[700,1600,3500,7500,16000],
+    niveaux:["Lave-linge","Buanderie","Buanderie équipée","Lingerie","Blanchisserie"],
+    txt:"Chaque niveau : le ménage d'une chambre va 10 % plus vite, le linge coûte 8 % de moins, et une personne des étages couvre 15 % de chambres en plus."}
+};
+var ORDRE_EQUIP=["resto","parking","hall","buanderie","bar","spa","seminaire","piscine"];
+var EQUIP_MAX=5, PART_ENTRETIEN=0.005;
+// Les prix habituels suivent le niveau de l'équipement
+var REF={pdj:12,repas:28,bar:9,spa:60,parking:10,seminaire:45};
+var MULT_REF={pdj:[1,1,1,1.15,1.3,1.6],repas:[1,1,1,1.25,1.6,2.3],bar:[1,1,1.1,1.3,1.6,2],spa:[1,1,1.1,1.25,1.5,1.9],seminaire:[1,1,1.1,1.2,1.35,1.5],parking:[1,1,1,1.2,1.5,2]};
+var EQUIP_DE={pdj:"resto",repas:"resto",bar:"bar",spa:"spa",parking:"parking",seminaire:"seminaire"};
+var PAS_PRIX={chambre:5,pdj:1,repas:1,bar:1,spa:5,parking:1,seminaire:5};
+var NOMS_PRIX={chambre:"Chambres",pdj:"Petit-déjeuner, par personne",repas:"Repas au restaurant, par personne",bar:"Consommation au bar, par personne",spa:"Soin au spa",parking:"Place de parking, par nuit",seminaire:"Séminaire, par participant"};
+// Un hôtel cher se fait une réputation : la fréquentation glisse peu à peu vers un niveau qui dépend du prix
+var ELASTICITE=2, INERTIE_PRIX=0.25, CLES_DEMANDE={chambre:"chambre",resto:"repas",bar:"bar",spa:"spa",seminaire:"seminaire"};
+// Les passages au restaurant, au bar et au spa : durée et patience en minutes réelles
+var SV={
+  pdj:{sv:"resto",nom:"Petit-déjeuner",duree:25,patience:20,prix:"pdj",stock:"pdj"},
+  midi:{sv:"resto",nom:"Déjeuner",duree:50,patience:25,prix:"repas",stock:"denrees"},
+  soir:{sv:"resto",nom:"Dîner",duree:60,patience:25,prix:"repas",stock:"denrees"},
+  bar:{sv:"bar",nom:"Verre au bar",duree:35,patience:15,prix:"bar",stock:"boissons"},
+  spa:{sv:"spa",nom:"Soin au spa",duree:50,patience:30,prix:"spa",stock:"soins"}};
+// Clients de l'extérieur attendus par jour, selon le niveau de l'équipement
+var EXT={midi:[0,0,5,8,12,16],soir:[0,0,6,10,15,20],bar:[0,6,12,18,26,36],spa:[0,3,5,8,11,15]};
+// Combien de tables ou de clients une personne peut tenir en même temps
+var CHARGE={serveur:4,cuisinier:6,chef:8,barman:6,praticien:1,femme:1,gouvernante:1};
+var FEMMES=["femme","gouvernante"], CUISINE=["cuisinier","chef"], ACCUEIL=["receptionniste","concierge"];
+// L'économat : ce que l'hôtel consomme. La taille des lots suit le palier.
+var PRODUITS={
+  linge:{nom:"Linge propre",unite:"jeux",cout:4},accueil:{nom:"Produits d'accueil",unite:"lots",cout:2},pdj:{nom:"Petits-déjeuners",unite:"portions",cout:3},
+  denrees:{nom:"Denrées du restaurant",unite:"couverts",cout:8},boissons:{nom:"Boissons",unite:"verres",cout:3},soins:{nom:"Produits de soin",unite:"soins",cout:6}};
+var ORDRE_PRODUITS=["linge","accueil","pdj","denrees","boissons","soins"];
+var STOCK_DEPART=8, LOTS=[10,20,40,80,150], FOIS_GROS=5, REMISE_GROS=0.85, SURCOUT_AUTO=1.15, DELAI_LIVRAISON=30*MIN;
+// Les demandes des clients pendant leur séjour. Chaque réponse a un effet (e) sur la satisfaction ; la meilleure dépend
+// de ce que l'hôtel a sous la main : personnel en poste, chambre libre, stock.
+var REQUETES={
+  wifi:{txt:"Le Wi-Fi ne marche pas dans ma chambre.",si:function(sj,c){ return c.niv>=3; },o:[
+    {nom:"Envoyer le technicien",besoin:"technicien",e:10},
+    {nom:"Redémarrer la borne vous-même",e:5},
+    {nom:"Lui proposer une autre chambre",besoin:"chambre",e:3},
+    {nom:"Présenter des excuses",e:-10}]},
+  douche:{txt:"L'eau de la douche reste froide.",o:[
+    {nom:"Envoyer le technicien",besoin:"technicien",e:10},
+    {nom:"Lui proposer une autre chambre",besoin:"chambre",e:7},
+    {nom:"Offrir 30 % sur la nuit",remise:0.3,e:2},
+    {nom:"Présenter des excuses",e:-14}]},
+  bruit:{txt:"Du bruit m'empêche de dormir.",o:[
+    {nom:"Lui proposer une chambre côté jardin",besoin:"jardin",e:11},
+    {nom:"Aller demander le calme vous-même",e:6},
+    {nom:"Offrir 20 % sur la nuit",remise:0.2,e:3},
+    {nom:"Répondre que vous n'y pouvez rien",e:-12}]},
+  proprete:{txt:"Ma chambre a été mal nettoyée.",o:[
+    {nom:"Envoyer une femme de chambre",besoin:"femme",e:9},
+    {nom:"Refaire la chambre vous-même",e:6},
+    {nom:"Offrir 20 % sur la nuit",remise:0.2,e:1},
+    {nom:"Répondre que la chambre a été faite",e:-12}]},
+  oreiller:{txt:"Je voudrais un oreiller et une couverture en plus.",o:[
+    {nom:"Les faire monter tout de suite",stock:"linge",sv:"etages",e:7},
+    {nom:"Promettre pour demain",e:-3},
+    {nom:"Répondre qu'il n'y en a plus",e:-9}]},
+  tardif:{txt:"Pourrais-je garder la chambre jusqu'à 14 h le jour du départ ?",si:function(sj){ return !sj.tardif; },o:[
+    {nom:"Accepter, gratuitement",tardif:1,e:9},
+    {nom:"Accepter, contre 30 % d'une nuit",tardif:1,supp:0.3,e:2},
+    {nom:"Refuser : départ avant 11 h",e:-5}]},
+  diner:{txt:"Où pourrais-je dîner ce soir ?",o:[
+    {nom:"Réserver une table au restaurant de l'hôtel",besoin:"resto2",visite:"soir",e:6},
+    {nom:"Recommander une bonne adresse en ville",e:4},
+    {nom:"Répondre que vous ne savez pas",e:-7}]},
+  taxi:{txt:"Il me faut un taxi demain à 6 h.",o:[
+    {nom:"Confier la course au concierge",besoin:"concierge",e:9},
+    {nom:"Réserver le taxi vous-même",e:6},
+    {nom:"Lui donner un numéro à appeler",e:0}]},
+  fete:{txt:"Nous fêtons un anniversaire pendant ce séjour.",si:function(sj){ return sj.pers>=2; },o:[
+    {nom:"Le surclasser dans une meilleure chambre",besoin:"mieux",e:13},
+    {nom:"Offrir une bouteille en chambre",stock:"boissons",sv:"bar",e:9},
+    {nom:"Écrire un mot de félicitations",e:3},
+    {nom:"Ne rien faire",e:-2}]},
+  repas:{txt:"Je voudrais manger quelque chose dans ma chambre.",o:[
+    {nom:"Faire préparer un plat chaud",besoin:"cuisinier",stock:"denrees",sv:"resto",recette:"repas",e:8},
+    {nom:"Monter un plateau froid",stock:"pdj",sv:"resto",recette:"pdj",e:4},
+    {nom:"Répondre que la cuisine est fermée",e:-5}]},
+  cle:{txt:"J'ai perdu la clé de ma chambre.",o:[
+    {nom:"Refaire une clé, sans frais",cout:5,e:6},
+    {nom:"Refaire une clé et la facturer",supp:15,e:-2},
+    {nom:"Lui demander de mieux chercher",e:-8}]},
+  deception:{txt:"Cette chambre ne vaut pas son prix.",si:function(sj){ return sj.adeq<55; },o:[
+    {nom:"Le surclasser dans une meilleure chambre",besoin:"mieux",e:14},
+    {nom:"Offrir 20 % sur tout le séjour",remise:0.2,sejour:1,e:8},
+    {nom:"Offrir le petit-déjeuner",besoin:"resto1",stock:"pdj",sv:"resto",e:5},
+    {nom:"Répondre que le prix était affiché",e:-10}]}
+};
+// L'argent personnel du directeur : formations, placement en bourse, prêt à l'hôtel, dons et vie personnelle
+var FORMATIONS=[
+  ["physionomiste","Physionomiste",300,"Sur la fiche d'arrivée, chaque chambre indique combien de souhaits du client elle remplit."],
+  ["negociateur","Négociation",500,"Les commandes de l'économat coûtent 10 % de moins."],
+  ["recruteur","Recrutement",500,"Cinq candidats au lieu de quatre, et davantage de confirmés et de seniors."],
+  ["meneur","Management",800,"Le moral de toute l'équipe gagne 8 points."],
+  ["gestionnaire","Gestion",1000,"Les charges du bâtiment baissent de 15 %."],
+  ["communicant","Communication",1200,"L'hôtel attire 10 % de clients en plus."]];
+var BIENS=[["velo","Vélo électrique",200],["montre","Belle montre",400],["vacances","Vacances au soleil",800],["voiture","Petite voiture",2000],["berline","Berline",5000],
+  ["appartement","Appartement en ville",10000],["voilier","Voilier",15000],["maison","Maison avec jardin",25000],["villa","Villa au bord de la mer",60000]];
+// Les dons cumulés donnent droit à une plaque, qui améliore un peu la satisfaction de tous les clients
+var PLAQUES=[[500,"Une plaque dans le hall",1],[3000,"Un salon à votre nom",2],[10000,"Une aile à votre nom",4]];
+var TAUX_MIN=2, TAUX_MAX=7, TAUX_PRET=5;
+// L'expérience : un point par chambre faite ou par client servi, quelques points par poste travaillé.
+var SEUILS_XP=[0,60,250], XP_STAGE=50, XP_POSTE_TACHE=1, XP_POSTE_AUTRE=4;
+// Absences : chaque nuit, une personne peut tomber malade (1 à 3 jours) ou demander un congé (2 à 5 jours, dans 3 jours).
+var TAUX_MALADIE=0.02, TAUX_CONGE=0.012, PRIME_INTERIM=1.5, DELAI_CONGE=3, QUALITE_INTERIM=1.06;
+// L'hôtel est assuré : une prime chaque jour selon le palier, et l'assurance prend en charge 70 % des indemnités
+var PRIME_ASSURANCE=[5,15,35,70,130], FRANCHISE=0.3, FRAIS_JUSTICE=300;
+// Les métiers : salaire habituel par poste de 8 heures, compte de rattachement, atouts utiles, postes proposés d'office
+var ROLES={
+  receptionniste:{nom:"Réceptionniste",f:"Réceptionniste",pluriel:"Réceptionnistes",salaire:60,service:"reception",palier:0,atouts:["contact","rigoureux"],postes:["A","M"]},
+  femme:{nom:"Valet de chambre",f:"Femme de chambre",pluriel:"Femmes et valets de chambre",salaire:50,service:"etages",palier:0,atouts:["endurant","rigoureux"],postes:["M","A"]},
+  technicien:{nom:"Technicien",f:"Technicienne",pluriel:"Techniciens",salaire:70,service:"etages",palier:0,atouts:["mains","rigoureux"],postes:["M","A"]},
+  serveur:{nom:"Serveur",f:"Serveuse",pluriel:"Serveurs",salaire:55,service:"resto",palier:0,atouts:["contact","endurant"],postes:["M","A"]},
+  cuisinier:{nom:"Cuisinier",f:"Cuisinière",pluriel:"Cuisiniers",salaire:80,service:"resto",palier:1,atouts:["mains","sangfroid"],postes:["A","M"]},
+  barman:{nom:"Barman",f:"Barmaid",pluriel:"Barmans",salaire:60,service:"bar",palier:1,atouts:["contact","sangfroid"],postes:["A"]},
+  gouvernante:{nom:"Gouvernant",f:"Gouvernante",pluriel:"Gouvernante",salaire:95,service:"etages",palier:2,unique:true,atouts:["rigoureux","instruit"],postes:["M"]},
+  chef:{nom:"Chef de cuisine",f:"Cheffe de cuisine",pluriel:"Chef de cuisine",salaire:140,service:"resto",palier:2,unique:true,atouts:["mains","sangfroid"],postes:["A","M"]},
+  praticien:{nom:"Praticien de spa",f:"Praticienne de spa",pluriel:"Praticiens de spa",salaire:75,service:"spa",palier:2,atouts:["mains","patient"],postes:["M","A"]},
+  concierge:{nom:"Concierge",f:"Concierge",pluriel:"Concierges",salaire:90,service:"reception",palier:3,atouts:["contact","instruit"],postes:["A","M"]}
+};
+var ORDRE_ROLES=["receptionniste","concierge","femme","gouvernante","technicien","serveur","cuisinier","chef","barman","praticien"];
+var AIDE_ROLE={
+  receptionniste:"Accueille les clients et répond à leurs demandes quand vous n'êtes pas là. Un réceptionniste accueille environ "+PAR_ACCUEIL+" arrivées par jour travaillé.",
+  concierge:"Répond aux demandes mieux qu'un réceptionniste, et peut se charger des courses des clients.",
+  femme:"Refait une chambre en une demi-heure après un départ, et entretient environ "+PAR_FEMME+" chambres occupées par jour travaillé.",
+  gouvernante:"Dirige les étages : le ménage va plus vite et il est mieux fait. Elle refait aussi des chambres. Une seule par hôtel.",
+  technicien:"Répare ce qui tombe en panne dans les chambres. Sans lui, vous n'avez que des excuses à offrir.",
+  serveur:"Tient jusqu'à quatre tables à la fois, et sert le petit-déjeuner et les pauses des séminaires.",
+  cuisinier:"Indispensable pour le déjeuner et le dîner. Tient jusqu'à six tables à la fois.",
+  chef:"Cuisine comme un cuisinier, tient huit tables, et relève le travail de toute la salle. Un seul par hôtel.",
+  barman:"Tient le bar en fin d'après-midi et en soirée, jusqu'à six clients à la fois.",
+  praticien:"Donne les soins du spa, un client à la fois."};
+// Le planning : trois postes de 8 heures. Chaque personne a une semaine type, un poste ou un repos par jour.
+var POSTES={M:{nom:"Matin",court:"Mat",h:"6 h – 14 h"},A:{nom:"Après-midi",court:"Apm",h:"14 h – 22 h"},N:{nom:"Nuit",court:"Nuit",h:"22 h – 6 h"},R:{nom:"Repos",court:"–",h:""}};
+var CYCLE_POSTES={M:"A",A:"N",N:"R",R:"M"}, PRIME_NUIT=1.25;
+var JOURS_COURTS=["Lu","Ma","Me","Je","Ve","Sa","Di"], JOURS_NOMS=["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"];
+var GROUPES_PLANNING=[
+  ["reception","Réception","Réception prévue",["receptionniste","concierge"]],
+  ["etages","Étages","Étages et technique prévus",["femme","gouvernante","technicien"]],
+  ["salle","Salle et spa","Restaurant, bar et spa prévus",["serveur","cuisinier","chef","barman","praticien"]]];
+var ATOUTS={instruit:"Instruit",contact:"Sens du contact",patient:"Patient",sangfroid:"Sang-froid",endurant:"Endurant",rigoureux:"Rigoureux",mains:"Habile de ses mains",chiffres:"Bon avec les chiffres"};
+// L'expérience : un junior coûte moins cher, un senior travaille plus vite et mieux
+var EXP=[{nom:"Junior",paie:0.85,qualite:0.88,vitesse:1.15,age:[20,28]},{nom:"Confirmé",f:"Confirmée",paie:1,qualite:1,vitesse:1,age:[28,45]},{nom:"Senior",paie:1.2,qualite:1.12,vitesse:0.85,age:[45,62]}];
+// Livre de comptes. La première lettre d'un poste dit ce qu'il est : r recette ; s o m e x charges payées ;
+// g a w charges sans sortie d'argent (marchandises sorties du stock, amortissements, créances perdues) ;
+// k achat d'immobilisation ou de stock ; c facture envoyée à une société, d paiement reçu ; p prêt du directeur, q remboursement.
+var SENS={r:1,p:1,d:1,g:0,a:0,w:0}, TYPES_CHARGE="sogmeaxw";
+var TYPES_D=[["s","Salaires"],["o","Cotisations patronales"],["g","Marchandises et linge consommés"],["m","Commissions des plateformes"],["e","Charges et entretien"],["a","Amortissements"],["x","Amendes, intérêts et indemnités"],["w","Créances perdues"]];
+// Les sociétés paient les séjours de leurs voyageurs et leurs séminaires sur facture, par lots, 5 à 8 jours plus tard, et en contestent parfois une partie.
+var DELAI_FACTURE=[5,8], TAUX_CONTESTE=0.25, DELAI_RELANCE=5, LIMITE_CONTESTE=20;
+// L'employeur paie 25 % de cotisations sur les salaires. Les achats durables sont amortis sur cinq ans.
+var TAUX_COTISATIONS=0.25, DUREE_AMORT=5*365;
+var COMPTES_SERVICES=[["chambres","Hébergement"],["resto","Restaurant"],["bar","Bar"],["spa","Spa"],["parking","Parking"],["seminaire","Séminaires"],["reception","Réception"],["etages","Étages et technique"],["economat","Économat"],["entreprises","Factures aux sociétés"],["equipements","Équipements"],["direction","Direction"],["batiment","Bâtiment"],["litiges","Assurance, indemnités et justice"],["pret","Intérêts versés au directeur"],["divers","Primes, dons et divers"]];
+var ISSUES={parti:["Séjour terminé","ok"],reparti:["Reparti sans chambre","bad"],deloge:["Envoyé ailleurs","bad"]};
+var PRENOMS_F=["Élise","Noor","Camille","Inès","Solange","Ludmila","Odette","Jeanne","Maëlle","Clémence","Yasmine","Agathe","Margaux","Salomé","Apolline","Hortense","Lucie","Nadia","Roxane","Zélie","Bérénice","Colette","Fanny","Garance","Ilona","Justine","Karima","Léonie","Mathilde","Ophélie"];
+var PRENOMS_M=["Bastien","Théo","Gaspard","Honoré","Victor","Marius","Armand","Cédric","Lucien","Octave","Rémi","Samir","Tristan","Ulysse","Valentin","Yanis","Achille","Baptiste","Corentin","Damien","Émile","Félix","Gabin","Hugo","Ismaël","Joachim","Karim","Léandre","Maxence","Noé"];
+var NOMS=["Marchetti","Roche","El Amrani","Vasseur","Lemoine","Bertin","Okafor","Delcourt","Petit","Fontaine","Keller","Novak","Maréchal","Aubry","Vanel","Brunel","Castan","Dufresne","Esteban","Ferrand","Garnier","Haddad","Imbert","Jouvet","Kowalski","Lacombe","Morel","Nguyen","Ostrowski","Perrin","Quentin","Ribeiro","Sorel","Tessier","Urbain","Vidal","Weiss","Yildiz","Zamora","Bellamy"];
+
+/* ------------------------------------------------------------------ État */
+function moiVide(){ return {argent:0,gagne:0,actif:0,tranche:0,formations:{},place:0,taux:4.5,gainsPlace:0,pret:0,interets:0,gainsPret:0,dons:0,biens:{}}; }
+function statVide(){ return {arrives:0,departs:0,repartis:0,deloges:0,complet:0,couverts:0,visites:{},rates:{},ruptures:{},sansReponse:0}; }
+function etatInitial(){
+  var postes={}, k;
+  for(k in ROLES) postes[k]={salaire:ROLES[k].salaire,heures:8};
+  return {v:V,nom:"",prenom:"Vincent",devise:"$",fondeLe:0,horloge:0,modif:0,jour:1,caisse:CAISSE_DEPART,palier:0,portes:true,
+    chambres:[],nChambre:1,equip:{},postes:postes,tarifs:{chambre:100,pdj:REF.pdj,repas:REF.repas,bar:REF.bar,spa:REF.spa,parking:REF.parking,seminaire:REF.seminaire},
+    equipe:[],nEquipe:1,candidats:{},nCandidat:1,sejours:[],nSejour:1,visites:[],nVisite:1,requetes:[],nRequete:1,arrivees:[],evts:[],
+    avis:[55,55,55,55,55,55,55,55,55,55],finis:0,stat:statVide(),accueil:{ok:0,moyen:0,auto:0,autoMoyen:0},req:{ok:0,moyen:0,auto:0,sans:0},
+    stock:{},commandes:[],auto:true,demandes:[],nDemande:1,demande:{},plaintes:[],nPlainte:1,bordereaux:[],contestes:[],nBord:1,immos:[],frac:{},valStock:{},
+    registre:[],journal:[],cj:{},cm:{},prochaineCloture:0,
+    moi:moiVide(),releve:0,decalage:0};
+}
+var S=etatInitial();
+// L'état d'écran reste sur l'appareil : il ne fait pas partie de la partie
+function ecranVide(){ return {ecran:"accueil",role:"receptionniste",vue:"jour",decal:0,confirme:null,resume:null,dossier:null,choix:null,retour:null,moiVue:"fiche",planVue:"reception",finPage:"resultat",achat:{type:"double",cote:"rue",etage:"haut"},fond:{nom:"",prenom:"Vincent",devise:"$"}}; }
+var U=ecranVide();
+function valide(o){ return !!(o&&o.v===V&&o.postes&&o.tarifs&&o.equipe&&o.chambres&&o.sejours); }
+function sauver(){ try{ localStorage.setItem(CLE,JSON.stringify(S)); }catch(e){} }
+// Une partie enregistrée par une version plus ancienne reçoit les rubriques apparues depuis
+function migrer(){
+  var neuf=etatInitial(), k;
+  for(k in neuf) if(S[k]===undefined) S[k]=neuf[k];
+  neuf=statVide(); for(k in neuf) if(S.stat[k]===undefined) S.stat[k]=neuf[k];
+  neuf=moiVide(); for(k in neuf) if(S.moi[k]===undefined) S.moi[k]=neuf[k];
+  for(k in ROLES) if(!S.postes[k]) S.postes[k]={salaire:ROLES[k].salaire,heures:8};
+  for(k in REF) if(S.tarifs[k]===undefined) S.tarifs[k]=REF[k];
+  if(!S.releve) S.releve=prochaineReleve(S.horloge||Date.now());
+}
+function charger(){ try{ var t=localStorage.getItem(CLE); if(!t) return null; var o=JSON.parse(t); return valide(o)?o:null; }catch(e){ return null; } }
+
+/* ------------------------------------------------------------------ Outils */
+function h(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function nombre(n){ return Math.round(n).toLocaleString("fr-FR"); }
+function mt(n){ return (n<0?"−":"")+nombre(Math.abs(n))+" "+S.devise; }
+function signeM(n){ return (n>0?"+":n<0?"−":"")+nombre(Math.abs(n))+" "+S.devise; }
+function borne(n,a,b){ return Math.max(a,Math.min(b,n)); }
+function alea(a,b){ return a+Math.random()*(b-a); }
+function entre(a,b){ return Math.floor(alea(a,b+1)); }
+function tirer(t){ return t[Math.floor(Math.random()*t.length)]; }
+function pl(n,s,p){ return n+" "+(n>1?p:s); }
+function parId(liste,id){ for(var i=0;i<liste.length;i++) if(liste[i].id===id) return liste[i]; return null; }
+function maintenant(){ return Date.now()+(S.decalage||0); }
+function minuit(t){ var d=new Date(t); d.setHours(0,0,0,0); return d.getTime(); }
+function prochainMinuit(t){ var d=new Date(t); d.setHours(24,0,0,0); return d.getTime(); }
+function deux(n){ return (n<10?"0":"")+n; }
+function cleJour(t){ var d=new Date(t); return d.getFullYear()+"-"+deux(d.getMonth()+1)+"-"+deux(d.getDate()); }
+function cleMois(t){ var d=new Date(t); return d.getFullYear()+"-"+deux(d.getMonth()+1); }
+function heureTxt(t){ var d=new Date(t); return deux(d.getHours())+":"+deux(d.getMinutes()); }
+function dateLongue(t){ return new Date(t).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"}); }
+function dateCourte(t){ return new Date(t).toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"}); }
+function horlogeTxt(t){ var d=new Date(t); return dateCourte(t)+" · "+deux(d.getHours())+":"+deux(d.getMinutes())+":"+deux(d.getSeconds()); }
+function quandTxt(t){ return (cleJour(t)===cleJour(maintenant())?"":dateCourte(t)+" · ")+heureTxt(t); }
+function dureeTxt(ms){
+  var s=Math.max(0,Math.round(ms/1000)), j=Math.floor(s/86400), hh=Math.floor(s%86400/3600), m=Math.floor(s%3600/60);
+  if(j) return j+" j "+hh+" h";
+  if(hh) return hh+" h "+deux(m);
+  if(m) return m+" min";
+  return s+" s";
+}
+function resteTxt(fin){ return dureeTxt(fin-maintenant()); }
+function jourApres(t,n){ var d=new Date(t); return new Date(d.getFullYear(),d.getMonth(),d.getDate()+n).getTime(); }
+function jourSemaine(t){ return (new Date(t).getDay()+6)%7; }
+// Le poste en cours : j est le jour du planning (0 = lundi). Avant 6 h, c'est encore la nuit de la veille.
+function posteDe(t){ var d=new Date(t), hh=d.getHours(), j=(d.getDay()+6)%7; return hh<6?{j:(j+6)%7,k:"N"}:{j:j,k:hh<14?"M":hh<22?"A":"N"}; }
+function prochaineReleve(t){
+  var d=new Date(t), heures=[6,14,22,30], i, x;
+  for(i=0;i<4;i++){ x=new Date(d.getFullYear(),d.getMonth(),d.getDate(),heures[i],0,0,0).getTime(); if(x>t) return x; }
+  return t+8*HEURE;
+}
+function nomComplet(x){ return x.prenom+" "+x.nom; }
+function nomRole(x){ return x.femme?ROLES[x.role].f:ROLES[x.role].nom; }
+function nomExp(x){ var e=EXP[x.exp]; return x.femme&&e.f?e.f:e.nom; }
+
+/* ------------------------------------------------------------------ Comptes */
+function inscrire(t,poste,montant){
+  var j=cleJour(t), m=cleMois(t), sens=SENS[poste.charAt(0)];
+  montant=Math.round(montant); if(!montant) return;
+  if(!S.cj[j]) S.cj[j]={}; if(!S.cm[m]) S.cm[m]={};
+  S.cj[j][poste]=(S.cj[j][poste]||0)+montant; S.cm[m][poste]=(S.cm[m][poste]||0)+montant;
+  S.caisse+=montant*(sens===undefined?-1:sens);
+}
+// Pour les petits montants à virgule (amortissement du jour, coût d'un médicament) : on garde le reste pour la fois suivante
+function inscrireF(t,poste,montant){
+  var total=(S.frac[poste]||0)+montant, entier=Math.floor(total);
+  if(entier>=1){ inscrire(t,poste,entier); total-=entier; }
+  S.frac[poste]=total;
+}
+// Une facture : la recette est acquise. Un client ordinaire paie sur place ; pour une société, la facture part sur le lot du jour.
+function facturer(t,poste,prix,canal){
+  var k=cleJour(t), b=null;
+  prix=Math.round(prix); if(!prix) return;
+  inscrire(t,poste,prix);
+  if(canal!=="entreprise") return;
+  inscrire(t,"c:entreprises",prix);
+  S.bordereaux.forEach(function(x){ if(x.jour===k) b=x; });
+  if(!b){ b={id:S.nBord++,jour:k,t:t,m:0,n:0,ech:jourApres(t,entre(DELAI_FACTURE[0],DELAI_FACTURE[1]))}; S.bordereaux.push(b); }
+  b.m+=prix; b.n++;
+}
+function creances(){ var n=0; S.bordereaux.forEach(function(b){ n+=b.m; }); S.contestes.forEach(function(c){ n+=c.m; }); return n; }
+// Chaque nuit : les sociétés paient les lots arrivés à échéance, en contestent parfois une partie, et les relances aboutissent
+function reglements(t){
+  S.bordereaux=S.bordereaux.filter(function(b){
+    var mc=0;
+    if(b.ech>t) return true;
+    if(Math.random()<TAUX_CONTESTE) mc=Math.round(b.m*alea(0.05,0.15));
+    inscrire(t,"d:entreprises",b.m-mc);
+    if(mc>0){ S.contestes.push({id:S.nBord++,jour:b.jour,t:b.t,m:mc,limite:jourApres(t,LIMITE_CONTESTE),relance:0}); noter(t,"warn","Une société conteste "+mt(mc)+" sur les factures du "+dateLongue(b.t)+". Relancez-la dans Finances."); }
+    return false;
+  });
+  S.contestes=S.contestes.filter(function(c){
+    if(c.relance&&c.relance<=t){ inscrire(t,"d:entreprises",c.m); noter(t,"ok","Après relance, la société règle "+mt(c.m)+" de factures contestées."); return false; }
+    if(!c.relance&&c.limite<=t){ inscrire(t,"w:entreprises",c.m); noter(t,"bad",mt(c.m)+" de factures contestées sont perdus : la société n'a pas été relancée à temps."); return false; }
+    return true;
+  });
+}
+// Un achat durable sort de la caisse, mais n'est pas une charge : il s'amortit jour après jour.
+// Une chambre et ses améliorations forment un seul bien, un équipement et ses niveaux aussi.
+function immobiliser(t,sv,cle,nom,prix){
+  var im=null;
+  inscrire(t,"k:"+sv,prix);
+  S.immos.forEach(function(x){ if(x.cle===cle) im=x; });
+  if(im) im.v+=prix; else S.immos.push({cle:cle,nom:nom,sv:sv,v:prix,c:0,t:t});
+}
+function amortir(t){
+  S.immos.forEach(function(im){ var d; if(im.c>=im.v) return; d=Math.min(im.v/DUREE_AMORT,im.v-im.c); im.c+=d; inscrireF(t,"a:"+im.sv,d); });
+}
+function valeurStock(){ var n=0, k; for(k in S.valStock) n+=S.valStock[k]; S.commandes.forEach(function(c){ n+=c.v||0; }); return n; }
+function bilan(){
+  var b={brut:0,amort:0,stock:valeurStock(),creances:creances(),tresorerie:Math.max(0,S.caisse),decouvert:Math.max(0,-S.caisse),pret:S.moi.pret};
+  S.immos.forEach(function(im){ b.brut+=im.v; b.amort+=im.c; });
+  b.actif=b.brut-b.amort+b.stock+b.creances+b.tresorerie; b.propres=b.actif-b.pret-b.decouvert;
+  return b;
+}
+function additionner(src,cles){ var tot={}, i, k, o; for(i=0;i<cles.length;i++){ o=src[cles[i]]; if(o) for(k in o) tot[k]=(tot[k]||0)+o[k]; } return tot; }
+function recettesDe(tot){ var k, n=0; for(k in tot) if(k.charAt(0)==="r") n+=tot[k]; return n; }
+function depensesDe(tot){ var k, n=0; for(k in tot) if(TYPES_CHARGE.indexOf(k.charAt(0))>=0) n+=tot[k]; return n; }
+function typeDe(tot,type){ var k, n=0; for(k in tot) if(k.charAt(0)===type) n+=tot[k]; return n; }
+function serviceDe(tot,sv){ var k, r=0, d=0; for(k in tot) if(k.slice(2)===sv){ if(k.charAt(0)==="r") r+=tot[k]; else if(TYPES_CHARGE.indexOf(k.charAt(0))>=0) d+=tot[k]; } return {r:r,d:d}; }
+function resultatJour(){ var c=S.cj[cleJour(maintenant())]||{}; return recettesDe(c)-depensesDe(c); }
+function noter(t,classe,texte){ S.journal.unshift({t:t,c:classe,m:texte}); if(S.journal.length>JOURNAL_MAX) S.journal.length=JOURNAL_MAX; }
+
+// Une marchandise sort du stock à son coût moyen d'achat : c'est à ce moment qu'elle devient une charge du service qui la consomme
+function sortirStock(k,t,sv){
+  var n=stockDe(k), cu=n>0?(S.valStock[k]||0)/n:0;
+  S.stock[k]=n-1; S.valStock[k]=Math.max(0,(S.valStock[k]||0)-cu); inscrireF(t,"g:"+sv,cu);
+}
+
+/* ------------------------------------------------------------------ L'hôtel à un instant donné */
+function reputation(){ var n=0, i; for(i=0;i<S.avis.length;i++) n+=S.avis[i]; return S.avis.length?n/S.avis.length:50; }
+function avis(note){ S.avis.push(borne(Math.round(note),0,100)); if(S.avis.length>AVIS_MAX) S.avis.shift(); }
+function niv(k){ return (S.equip&&S.equip[k])||0; }
+function capEquip(){ return Math.min(EQUIP_MAX,S.palier+1); }
+function entretienDe(k){ var n=0, i; for(i=0;i<niv(k);i++) n+=EQUIP[k].couts[i]*PART_ENTRETIEN; return Math.round(n); }
+function entretienEquip(){ var n=0, k; for(k in EQUIP) n+=entretienDe(k); return n; }
+function capDe(k){ var n=niv(k); return n&&EQUIP[k].cap?EQUIP[k].cap[n-1]:0; }
+function saisonDe(t){ var m=new Date(t).getMonth(); return m===11||m<2?0:m<5?1:m<8?2:3; }
+function forme(k){ return !!(S.moi.formations&&S.moi.formations[k]); }
+function bonusPlaque(){ var n=0; PLAQUES.forEach(function(x){ if(S.moi.dons>=x[0]) n=x[2]; }); return n; }
+function chargesBatiment(){ return Math.round((PALIERS[S.palier].charges+S.chambres.length*ENTRETIEN_CHAMBRE)*(forme("gestionnaire")?0.85:1)); }
+function chargesJour(){ return chargesBatiment()+entretienEquip()+PRIME_ASSURANCE[S.palier]; }
+function etoiles(n){ return n?new Array(n+1).join("★"):""; }
+function nomPalier(i){ var e=etoiles(PALIERS[i].etoiles); return PALIERS[i].nom+(e?" "+e:""); }
+function prochainPalier(){ return PALIERS[S.palier+1]||null; }
+// Les jours de l'hôtel vont de 6 h à 6 h : une arrivée à 2 h du matin compte pour la nuit en cours
+function jourHotel(t){ return minuit(t-6*HEURE); }
+
+// Chambres
+function chambre(id){ return parId(S.chambres,id); }
+function prixRef(c){ return Math.round(TYPES[c.type].prix*COTES[c.cote].mult*NIVEAUX[c.niv].mult); }
+function prixChambre(c){ return Math.round(prixRef(c)*S.tarifs.chambre/100); }
+function typePour(n){ return n<=1?"simple":n===2?"double":"familiale"; }
+// Un client logé dans une chambre plus grande que nécessaire paie le prix d'une chambre à sa taille
+function prixPour(sj,c){ return Math.min(prixChambre(c),Math.round(TYPES[typePour(sj.pers)].prix*COTES[c.cote].mult*NIVEAUX[c.niv].mult*S.tarifs.chambre/100)); }
+function prixAchat(type,cote){ return Math.round(TYPES[type].achat*COTES[cote].achat/50)*50; }
+function pretes(){ return S.chambres.filter(function(c){ return !c.sj&&c.etat==="propre"; }); }
+function occupees(){ var n=0; S.chambres.forEach(function(c){ if(c.sj) n++; }); return n; }
+function equipementsDe(c){ var l=[], i; for(i=2;i<=c.niv;i++) l.push(NIVEAUX[i].nom); return l; }
+function descChambre(c){ return TYPES[c.type].nom+" · "+COTES[c.cote].nom.toLowerCase()+" · "+ETAGES[c.etage].toLowerCase(); }
+function souhaitOk(k,c,prix){
+  if(k==="calme") return c.cote==="jardin";
+  if(k==="rez") return c.etage==="rez";
+  if(k==="haut") return c.etage==="haut";
+  if(k==="grandlit") return c.type==="double"||c.type==="familiale";
+  if(k==="separes") return c.type==="twin";
+  if(k==="budget") return prix<=SEUIL_BUDGET;
+  return c.niv>=NIV_DE[k];
+}
+// À quel point une chambre convient à un client, de 0 à 100 : ses souhaits, et le niveau auquel il s'attend
+function adequation(sj,c,prix){
+  var n=60;
+  sj.souhaits.forEach(function(k){ n+=souhaitOk(k,c,prix)?10:-8; });
+  if(c.niv>=sj.att) n+=Math.min(10,4+(c.niv-sj.att)*3); else n-=Math.min(24,(sj.att-c.niv)*6);
+  if(c.defaut) n-=10;
+  return borne(n,0,100);
+}
+function parEtat(e){ return S.sejours.filter(function(x){ return x.etat===e; }); }
+function sejourDe(c){ return c.sj?parId(S.sejours,c.sj):null; }
+// Toutes les réservations trouvent-elles une chambre assez grande ? On place chacune, par ordre d'arrivée, dans la plus petite chambre libre.
+// extra : un séjour de plus à caser. bloque : une chambre qu'on s'apprête à donner à un client déjà là.
+function tient(extra,bloque){
+  var t=S.horloge, occ={}, l=[], ok=true;
+  S.chambres.forEach(function(c){ var sj=sejourDe(c); occ[c.id]=sj?[[0,sj.fin]]:[]; });
+  if(bloque) occ[bloque.ch].push([0,bloque.jusqua]);
+  S.sejours.forEach(function(x){ if((x.etat==="reserve"||x.etat==="accueil")&&!(bloque&&x.id===bloque.sj)) l.push(x); });
+  if(extra) l.push(extra);
+  l.sort(function(a,b){ return a.arrive-b.arrive||b.pers-a.pers; });
+  l.forEach(function(x){
+    var a=Math.max(t,x.arrive), b=x.finPrevue, mieux=null;
+    S.chambres.forEach(function(c){
+      if(TYPES[c.type].cap<x.pers) return;
+      if(occ[c.id].some(function(i){ return i[0]<b&&i[1]>a; })) return;
+      if(!mieux||TYPES[c.type].cap<TYPES[mieux.type].cap) mieux=c;
+    });
+    if(mieux) occ[mieux.id].push([a,b]); else ok=false;
+  });
+  return ok;
+}
+function placesLibres(){ var n=capDe("parking"); S.sejours.forEach(function(x){ if(x.etat==="loge"&&x.parking) n--; }); return n; }
+function attenteOk(k,sj){ return k==="parking"?!!sj.parking:niv(ATTENTES[k][1])>=ATTENTES[k][2]; }
+
+// Économat
+function stockDe(k){ return S.stock[k]||0; }
+function produitsConnus(){
+  return ORDRE_PRODUITS.filter(function(k){
+    if(k==="pdj") return niv("resto")>=1;
+    if(k==="denrees") return niv("resto")>=2;
+    if(k==="boissons") return niv("bar")>=1||niv("seminaire")>=1;
+    if(k==="soins") return niv("spa")>=1;
+    return true;
+  });
+}
+function lot(){ return LOTS[S.palier]; }
+function seuilStock(){ return Math.round(lot()*0.3); }
+function prixLot(k,n,auto){ return Math.round(PRODUITS[k].cout*n*(n>=lot()*FOIS_GROS?REMISE_GROS:1)*(auto?SURCOUT_AUTO:1)*(forme("negociateur")?0.9:1)*(k==="linge"?1-0.08*niv("buanderie"):1)); }
+function enCommande(k){ var n=0; S.commandes.forEach(function(c){ if(c.p===k) n+=c.n; }); return n; }
+function commander(k,n,t,auto){
+  var prix=prixLot(k,n,auto);
+  if(!PRODUITS[k]||S.caisse-prix<-DECOUVERT_MAX) return false;
+  inscrire(t,"k:economat",prix); S.commandes.push({t:t+DELAI_LIVRAISON,p:k,n:n,v:prix}); S.commandes.sort(function(a,b){ return a.t-b.t; });
+  return true;
+}
+// Réapprovisionnement automatique : un lot dès qu'un stock est bas, plus cher qu'une commande faite à la main
+function reappro(t){
+  if(!S.auto) return;
+  produitsConnus().forEach(function(k){ if(stockDe(k)<=seuilStock()&&!enCommande(k)) commander(k,lot(),t,true); });
+}
+function manquer(k){ S.stat.ruptures[k]=(S.stat.ruptures[k]||0)+1; }
+
+// Prix et fréquentation
+function refDe(k){ return k==="chambre"?100:Math.round(REF[k]*MULT_REF[k][niv(EQUIP_DE[k])]); }
+function demandeCible(d){
+  var k=CLES_DEMANDE[d], R=S.tarifs[k]/Math.max(1,refDe(k));
+  return Math.max(0.2,R<=1?1+0.4*(1-R):1/(1+ELASTICITE*(R-1)*(R-1)));
+}
+function demande(d){ return S.demande&&S.demande[d]!==undefined?S.demande[d]:1; }
+function ajusterDemande(){
+  var d;
+  if(!S.demande) S.demande={};
+  for(d in CLES_DEMANDE) S.demande[d]=demande(d)+(demandeCible(d)-demande(d))*INERTIE_PRIX;
+}
+// Arrivées attendues par jour : elles suivent le nombre de chambres, la réputation, la saison et les prix
+function attendus(t){ return S.chambres.length*ROTATION*(0.5+reputation()/100)*SAISONS[saisonDe(t)].f*demande("chambre")*(forme("communicant")?1.1:1)*(1+0.03*niv("piscine")); }
+
+// Personnel
+function absentLe(e,t){ return !!(e.absent&&t>=e.absent.debut&&t<e.absent.fin); }
+// Vrai quand c'est un intérimaire qui tient le poste de la personne
+function remplace(e,t){ return absentLe(e,t===undefined?S.horloge:t)&&!!e.absent.interim; }
+function present(e,t){ return !absentLe(e,t)||!!e.absent.interim; }
+function enPoste(e,t){
+  var q;
+  t=t===undefined?S.horloge:t; q=posteDe(t);
+  return !!e.plan&&e.plan[q.j]===q.k&&present(e,t);
+}
+function humeur(e){ return e.humeur&&S.horloge<e.humeur.fin?e.humeur.v:0; }
+function paieInterim(e,k){ return k==="R"?0:Math.round(S.postes[e.role].salaire*PRIME_INTERIM*(k==="N"?PRIME_NUIT:1)); }
+function nb(role){ var n=0, i; for(i=0;i<S.equipe.length;i++) if(S.equipe[i].role===role) n++; return n; }
+function nbGroupe(l){ var n=0; S.equipe.forEach(function(e){ if(l.indexOf(e.role)>=0) n++; }); return n; }
+function enPosteRole(l,t){ return S.equipe.filter(function(e){ return l.indexOf(e.role)>=0&&enPoste(e,t); }); }
+function enPosteMaintenant(){ var n=0; S.equipe.forEach(function(e){ if(enPoste(e)) n++; }); return n; }
+// Ceux d'un groupe de métiers qui travaillent aujourd'hui, quel que soit leur poste
+function auTravail(l){ var j=posteDe(S.horloge).j, n=0; S.equipe.forEach(function(e){ if(l.indexOf(e.role)>=0&&e.plan[j]!=="R"&&present(e,S.horloge)) n++; }); return n; }
+function nbPostes(e,k){ var n=0; e.plan.forEach(function(x){ if(k?x===k:x!=="R") n++; }); return n; }
+function prevusLe(l,j,k,t){ var n=0; S.equipe.forEach(function(e){ if(l.indexOf(e.role)>=0&&e.plan[j]===k&&(!t||present(e,t))) n++; }); return n; }
+// Ce qu'une personne a en main : tables en cours de service et chambres en cours de ménage
+function charge(e){
+  var n=0;
+  S.visites.forEach(function(v){ if(v.etat==="service"&&v.staff.indexOf(e.id)>=0) n++; });
+  S.chambres.forEach(function(c){ if(c.etat==="menage"&&c.men&&c.men.qui===e.id) n++; });
+  return n;
+}
+function estTache(e){ return !!CHARGE[e.role]; }
+// La meilleure personne en poste qui a encore une main libre, parmi une liste de métiers
+function dispo(l,t){
+  var m=null;
+  S.equipe.forEach(function(e){
+    if(l.indexOf(e.role)<0||!enPoste(e,t)||charge(e)>=(CHARGE[e.role]||1)) return;
+    if(!m||qualite(e)>qualite(m)) m=e;
+  });
+  return m;
+}
+// Le moral de chacun dépend de son salaire comparé à l'habitude, du nombre de postes par semaine et du nombre de nuits
+function moralDe(e){
+  var n=nbPostes(e), nuits=nbPostes(e,"N"), ratio=S.postes[e.role].salaire/ROLES[e.role].salaire;
+  return Math.round(borne(70+80*(ratio-1)-Math.max(0,n-5)*12+Math.max(0,5-n)*2-Math.max(0,nuits-3)*4+(forme("meneur")?8:0)+humeur(e),0,100));
+}
+function moral(role){
+  var l=S.equipe.filter(function(e){ return e.role===role; }), n=0;
+  if(!l.length) return Math.round(borne(70+80*(S.postes[role].salaire/ROLES[role].salaire-1)+(forme("meneur")?8:0),0,100));
+  l.forEach(function(e){ n+=moralDe(e); });
+  return Math.round(n/l.length);
+}
+// Une semaine type pour une nouvelle recrue : cinq postes, là où son métier est le moins couvert, en commençant par aujourd'hui
+function planAuto(e){
+  var plan=["R","R","R","R","R","R","R"], choix=ROLES[e.role].postes;
+  var auj=jourSemaine(S.horloge||Date.now()), pref=null, i, j, mieux;
+  for(i=0;i<5;i++){
+    mieux=null;
+    for(j=0;j<7;j++){
+      if(plan[j]!=="R") continue;
+      choix.forEach(function(k,rang){
+        var cov=0, sc;
+        S.equipe.forEach(function(x){ if(x!==e&&x.role===e.role&&x.plan&&x.plan[j]===k) cov++; });
+        sc=cov*10+(pref&&k!==pref?1:0)+rang*0.3+((j-auj+7)%7)*0.01;
+        if(!mieux||sc<mieux.sc) mieux={sc:sc,j:j,k:k};
+      });
+    }
+    plan[mieux.j]=mieux.k; pref=pref||mieux.k;
+  }
+  return plan;
+}
+function qualite(e){
+  var q=remplace(e)?QUALITE_INTERIM:(EXP[e.exp].qualite+0.04*e.na)*(0.85+0.3*moralDe(e)/100);
+  if(e.role==="femme"&&nb("gouvernante")) q+=0.06;
+  if((e.role==="cuisinier"||e.role==="serveur")&&nb("chef")) q+=0.06;
+  return q;
+}
+// L'entretien des chambres occupées et l'accueil : assez de monde pour la journée ? Le directeur compte pour un peu.
+function couvMenage(){
+  var occ=occupees();
+  return occ?Math.min(1,(auTravail(FEMMES)*PAR_FEMME*(1+0.15*niv("buanderie"))*(nb("gouvernante")?1.15:1)+5)/occ):1;
+}
+function arriveesDuJour(){
+  var fin=S.prochaineCloture, n=S.stat.arrives;
+  S.sejours.forEach(function(x){ if(x.etat==="reserve"&&x.arrive<fin) n++; });
+  S.arrivees.forEach(function(a){ if(a.k==="walk"&&a.t<fin) n++; });
+  return n;
+}
+function couvAccueil(){ return Math.min(1,(auTravail(ACCUEIL)*PAR_ACCUEIL*(1+0.2*niv("hall"))+6)/Math.max(1,arriveesDuJour())); }
+// Qui accueille quand le directeur ne répond pas : la réception en poste. Aux chambres d'hôtes, une boîte à clés dépanne.
+function relaisAccueil(){
+  var q=0;
+  S.equipe.forEach(function(e){ if(ACCUEIL.indexOf(e.role)>=0&&enPoste(e)) q=Math.max(q,qualite(e)+(e.role==="concierge"?0.08:0)); });
+  if(!q&&S.palier===0) q=0.7;
+  return q;
+}
+function relaisRequete(){
+  var m=null;
+  function rang(e){ return (e.role==="concierge"?10:0)+qualite(e); }
+  S.equipe.forEach(function(e){ if(ACCUEIL.indexOf(e.role)>=0&&enPoste(e)&&(!m||rang(e)>rang(m))) m=e; });
+  return m;
+}
+function gagnerXp(e,n,t){
+  if(e.exp>=2) return;
+  e.xp=(e.xp||0)+n;
+  while(e.exp<2&&e.xp>=SEUILS_XP[e.exp+1]){
+    e.exp++;
+    noter(t,"ok",nomComplet(e)+" ("+nomRole(e).toLowerCase()+") a pris de l'expérience : "+(e.femme?"elle":"il")+" passe "+nomExp(e).toLowerCase()+". Son travail s'améliore et son salaire suit.");
+  }
+}
+function prixStage(e){ return Math.round(ROLES[e.role].salaire*3/10)*10; }
+function stagePossible(e){ return e.exp<2&&(!e.stage||maintenant()-e.stage>=JOUR); }
+function paieDe(e){ return Math.round(S.postes[e.role].salaire*EXP[e.exp].paie); }
+function paiePoste(e,k){ return k==="R"?0:Math.round(paieDe(e)*(k==="N"?PRIME_NUIT:1)); }
+function masseJour(t){ var j=jourSemaine(t), n=0; S.equipe.forEach(function(e){ n+=paiePoste(e,e.plan[j]); }); return n; }
+function paieSemaine(e){ var n=0; e.plan.forEach(function(k){ n+=paiePoste(e,k); }); return n; }
+
+/* ------------------------------------------------------------------ Personnes */
+function identite(femme){ return {femme:femme,prenom:tirer(femme?PRENOMS_F:PRENOMS_M),nom:tirer(NOMS)}; }
+function creerCandidat(role){
+  var r=Math.random(), exp=forme("recruteur")?(r<0.15?0:r<0.6?1:2):(r<0.35?0:r<0.75?1:2), c=identite(Math.random()<0.5), cles=Object.keys(ATOUTS), a=tirer(cles), b=tirer(cles), na=0;
+  while(b===a) b=tirer(cles);
+  [a,b].forEach(function(x){ if(ROLES[role].atouts.indexOf(x)>=0) na++; });
+  c.id=S.nCandidat++; c.role=role; c.exp=exp; c.age=entre(EXP[exp].age[0],EXP[exp].age[1]); c.atouts=[a,b]; c.na=na;
+  return c;
+}
+function candidatsDe(role){
+  if(!S.candidats[role]||!S.candidats[role].length){ S.candidats[role]=[]; for(var i=0;i<(forme("recruteur")?5:4);i++) S.candidats[role].push(creerCandidat(role)); }
+  return S.candidats[role];
+}
+/* ------------------------------------------------------------------ Les clients */
+function melanger(l){ return l.slice().sort(function(){ return Math.random()-0.5; }); }
+function tirerProfil(t){
+  var d=new Date(t).getDay(), we=d===5||d===6||d===0, sa=SAISONS[saisonDe(t)], total=0, r, i;
+  var cles=Object.keys(PROFILS).filter(function(k){ return (PROFILS[k].palier||0)<=S.palier; });
+  function poids(k){ var P=PROFILS[k]; return P.poids*(we?P.we:P.sem)*(sa.m[k]||1)*(k==="famille"||k==="couple"||k==="luxe"?1+0.06*niv("piscine"):1); }
+  cles.forEach(function(k){ total+=poids(k); });
+  r=Math.random()*total;
+  for(i=0;i<cles.length;i++){ r-=poids(cles[i]); if(r<=0) return cles[i]; }
+  return cles[0];
+}
+// Le niveau de chambre auquel un client s'attend dépend de son profil et de ce que le palier permet
+function niveauAttendu(P){ var cap=PALIERS[S.palier].niv; return P.standing<0?1:borne(Math.round(cap*(P.standing===0?0.3:P.standing===1?0.5:0.85)),1,cap); }
+function creerSejour(t,profil,passage){
+  var k=profil||tirerProfil(t), P=PROFILS[k], sj=identite(Math.random()<0.5), cap=PALIERS[S.palier].niv, c=passage?null:(P.canal||CANAL_HABITUEL), pool, n, r, x, cum=0;
+  sj.id=S.nSejour++; sj.profil=k; sj.pers=entre(P.pers[0],P.pers[1]); sj.nuits=entre(P.nuits[0],P.nuits[1]);
+  sj.arrive=t; sj.finPrevue=jourApres(jourHotel(t),sj.nuits)+11*HEURE; sj.etat="reserve"; sj.reserve=!passage;
+  sj.souhaits=[];
+  if(P.fixe) sj.souhaits.push(P.fixe);
+  else if(sj.pers===2&&k!=="luxe"){ r=Math.random(); if(r<0.6) sj.souhaits.push("grandlit"); else if(r<0.75) sj.souhaits.push("separes"); }
+  pool=melanger(P.souhaits.filter(function(s){ return NIV_DE[s]===undefined||NIV_DE[s]<=cap; }));
+  n=Math.max(1,(Math.random()<0.5?2:3)-sj.souhaits.length);
+  sj.souhaits=sj.souhaits.concat(pool.slice(0,n));
+  pool=melanger(P.attentes.filter(function(a){ var A=ATTENTES[a]; return EQUIP[A[1]].palier<=S.palier&&A[2]<=capEquip(); }));
+  sj.attentes=pool.slice(0,Math.random()<0.3?0:Math.random()<0.6?1:2);
+  sj.voiture=sj.attentes.indexOf("parking")>=0;
+  sj.att=niveauAttendu(P);
+  sj.canal="passage";
+  if(c){ sj.canal="direct"; r=Math.random(); for(x in c){ cum+=c[x]; if(r<cum){ sj.canal=x; break; } } }
+  sj.plus=0; sj.paye=0; sj.facturees=0;
+  return sj;
+}
+function nomProfil(sj){
+  if(sj.profil==="senior") return sj.pers>1?"Couple de retraités":(sj.femme?"Retraitée":"Retraité");
+  if(sj.profil==="luxe") return sj.pers>1?"Couple fortuné":(sj.femme?"Cliente fortunée":"Client fortuné");
+  if(sj.profil==="affaires"&&sj.femme) return "Voyageuse d'affaires";
+  if(sj.profil==="amis"&&sj.femme) return "Deux amies";
+  if(sj.profil==="routard"&&sj.femme) return "Voyageuse à petit budget";
+  return PROFILS[sj.profil].nom;
+}
+// Chaque nuit, de nouvelles réservations arrivent pour les trois jours à venir. L'hôtel n'en prend pas plus qu'il n'a de chambres.
+function prendreReservations(t){
+  var base=attendus(t)*(1-PART_PASSAGE), parts=[0.4,0.35,0.25], i, j, n, a, sj, pris=0;
+  for(i=0;i<3;i++){
+    n=base*parts[i]*alea(0.7,1.3); n=Math.floor(n)+(Math.random()<n%1?1:0);
+    for(j=0;j<n;j++){
+      a=jourApres(minuit(t),i)+Math.round(alea(14,21.5)*HEURE);
+      if(a<=t+30*MIN) continue;
+      sj=creerSejour(a,null,false);
+      if(tient(sj)){ S.sejours.push(sj); pris++; } else { S.nSejour--; S.stat.complet++; }
+    }
+  }
+  return pris;
+}
+function arriver(sj,t){
+  S.stat.arrives++;
+  sj.etat="accueil"; sj.arrive=t; sj.pat=Math.round(PATIENCE_ACCUEIL*(1+0.15*niv("hall")))*MIN; sj.limite=t+sj.pat; sj.auto=t+DELAI_RELAIS;
+  if(S.sejours.indexOf(sj)<0) S.sejours.push(sj);
+}
+// Un client de passage, quand il en vient un : il doit rester de quoi le loger sans prendre la chambre d'une réservation
+function passage(t,force){
+  var max=0, sj=null, i;
+  S.chambres.forEach(function(c){ if(!c.sj&&(!force||c.etat==="propre")) max=Math.max(max,TYPES[c.type].cap); });
+  if(!max){ S.stat.complet++; return null; }
+  for(i=0;i<20&&!sj;i++){ sj=creerSejour(t,null,true); if(sj.pers>max||(!force&&!tient(sj))){ S.nSejour--; sj=null; } }
+  if(!sj){ S.stat.complet++; return null; }
+  arriver(sj,t); return sj;
+}
+function meilleureNote(sj){
+  var m=0;
+  pretes().forEach(function(c){ if(TYPES[c.type].cap>=sj.pers) m=Math.max(m,adequation(sj,c,prixPour(sj,c))); });
+  return m;
+}
+function nuitee(sj,t){
+  sj.facturees++;
+  facturer(t,"r:chambres",sj.prixNuit,sj.canal); sj.paye+=sj.prixNuit;
+  if(sj.canal==="plateforme") inscrire(t,"m:chambres",sj.prixNuit*COMMISSION);
+  if(sj.parking){ facturer(t,"r:parking",S.tarifs.parking,sj.canal); sj.paye+=S.tarifs.parking; }
+}
+// Une fois la chambre attribuée, le client s'installe. Ses repas, ses passages au bar et ses demandes sont prévus pour tout le séjour.
+function loger(sj,c,t,auto){
+  var prix=prixPour(sj,c), mieux=meilleureNote(sj), a=adequation(sj,c,prix);
+  sj.etat="loge"; sj.ch=c.id; c.sj=sj.id; sj.prixNuit=prix; sj.adeq=a; sj.parMoi=!auto; sj.auto=0; sj.entree=t;
+  sj.ratio=S.tarifs.chambre/100; sj.attente=Math.round((t-sj.arrive)/MIN);
+  sj.fin=jourApres(jourHotel(t),sj.nuits)+Math.round(alea(7,11)*HEURE);
+  if(sj.fin<t+2*HEURE) sj.fin=t+2*HEURE;
+  if(new Date(t).getHours()<6) nuitee(sj,t);
+  if(sj.voiture&&niv("parking")){ if(placesLibres()>0) sj.parking=true; else S.stat.rates.parking=(S.stat.rates.parking||0)+1; }
+  if(auto){ S.accueil.auto++; if(a<mieux-5) S.accueil.autoMoyen++; } else if(a>=mieux-5) S.accueil.ok++; else S.accueil.moyen++;
+  programmerSejour(sj,t);
+  return {a:a,mieux:mieux,prix:prix};
+}
+function programmerSejour(sj,t){
+  var j0=jourHotel(t), d, jour, finH;
+  function ev(quand,o){ if(quand>t+5*MIN&&quand<sj.fin-25*MIN){ o.t=Math.round(quand); o.sj=sj.id; S.arrivees.push(o); } }
+  function veut(k,oui,non){ return Math.random()<(sj.attentes.indexOf(k)>=0?oui:non); }
+  for(d=0;d<=sj.nuits;d++){
+    jour=jourApres(j0,d);
+    if(d>0&&veut("pdj",0.95,0.6)){ finH=d===sj.nuits?(sj.fin-jour)/HEURE-0.8:9.75; ev(jour+alea(6.6,Math.max(6.7,Math.min(9.75,finH)))*HEURE,{k:"vis",v:"pdj"}); }
+    if(d<sj.nuits){
+      if(veut("diner",0.8,0.25)) ev(jour+alea(19,21.2)*HEURE,{k:"vis",v:"soir"});
+      if(veut("bar",0.7,0.2)) ev(jour+alea(17.2,21.6)*HEURE,{k:"vis",v:"bar"});
+      if(Math.random()<TAUX_REQUETE) ev(jour+alea(d?8:Math.max(8,(t-jour)/HEURE+0.4),22.8)*HEURE,{k:"req"});
+    }
+  }
+  if(veut("spa",0.8,0.1)) ev(jourApres(j0,sj.nuits>1?1:0)+alea(10,18.5)*HEURE,{k:"vis",v:"spa"});
+  S.arrivees.sort(function(a,b){ return a.t-b.t; });
+}
+// Sans réponse du directeur, la réception attribue une chambre prête. Elle choisit souvent la meilleure, pas toujours.
+function logerSeul(sj,t){
+  var q=relaisAccueil(), l=pretes().filter(function(c){ return TYPES[c.type].cap>=sj.pers; }), bons, c, e=relaisRequete();
+  if(!l.length){ sj.auto=t+5*MIN; return; }
+  bons=l.filter(function(c){ return tient(null,{ch:c.id,jusqua:sj.finPrevue,sj:sj.id}); });
+  // Plutôt que de prendre la chambre d'une réservation, la réception attend encore un peu qu'une autre soit refaite
+  if(!bons.length&&sj.limite-t>10*MIN&&S.chambres.some(function(c){ return !c.sj&&c.etat!=="propre"&&TYPES[c.type].cap>=sj.pers&&tient(null,{ch:c.id,jusqua:sj.finPrevue,sj:sj.id}); })){ sj.auto=t+5*MIN; return; }
+  if(bons.length) l=bons;
+  l.sort(function(a,b){ return adequation(sj,b,prixPour(sj,b))-adequation(sj,a,prixPour(sj,a)); });
+  c=Math.random()<borne(0.55+(q-1)*0.5+0.04*niv("hall"),0.3,0.95)?l[0]:tirer(l);
+  loger(sj,c,t,true);
+  if(e){ e.faits=(e.faits||0)+1; if(!remplace(e,t)) gagnerXp(e,1,t); }
+}
+// Un client attend plus longtemps tant qu'une chambre à sa taille est en train d'être refaite : quatre heures s'il a réservé, deux sinon
+function peutPatienter(sj,t){
+  return t-sj.arrive<(sj.reserve?4:2)*HEURE&&S.chambres.some(function(c){ return !c.sj&&c.etat!=="propre"&&TYPES[c.type].cap>=sj.pers; });
+}
+function ranger(sj,t,issue,note){
+  var i=S.sejours.indexOf(sj); if(i>=0) S.sejours.splice(i,1);
+  S.registre.unshift({t:t,nom:nomComplet(sj),profil:nomProfil(sj),pers:sj.pers,nuits:sj.nuits,issue:issue,paye:Math.round(sj.paye||0),note:note===undefined?null:Math.round(note)});
+  if(S.registre.length>REGISTRE_MAX) S.registre.length=REGISTRE_MAX;
+  S.requetes=S.requetes.filter(function(r){ return r.sj!==sj.id; });
+  S.arrivees=S.arrivees.filter(function(a){ return a.sj!==sj.id; });
+  S.visites=S.visites.filter(function(v){ return !(v.sj===sj.id&&v.etat==="attente"); });
+}
+function noteSejour(sj){
+  var n=55+(sj.adeq-60)*0.5, P=sj.profil;
+  sj.attentes.forEach(function(k){ n+=attenteOk(k,sj)?4:-6; });
+  n+=borne(sj.plus||0,-30,25);
+  n-=Math.min(15,(sj.attente||0)/Math.max(1,sj.pat/MIN)*8);
+  n-=(1-couvMenage())*15+(1-couvAccueil())*8;
+  if(sj.parMoi) n+=3;
+  if(sj.ratio>1.3) n-=Math.min(15,(sj.ratio-1.3)*30);
+  if(P==="famille"||P==="couple"||P==="luxe") n+=niv("piscine")*1.5;
+  n+=bonusPlaque();
+  return borne(n,0,100);
+}
+function porterPlainte(nom,t,chance,montant,motif){
+  if(Math.random()>=chance) return;
+  S.plaintes.push({id:S.nPlainte++,t:t,nom:nom,motif:motif,montant:Math.max(50,Math.round(montant/50)*50),limite:jourApres(t,7)});
+  noter(t,"bad","Réclamation contre l'hôtel : "+motif+" ("+nom+"). À vous de décider, dans le Journal.");
+}
+function quitter(sj,t){
+  var c=chambre(sj.ch), note;
+  while(sj.facturees<sj.nuits) nuitee(sj,t);
+  note=noteSejour(sj);
+  avis(note); S.finis++; S.stat.departs++;
+  if(c){ c.sj=null; c.etat="sale"; }
+  if(note<25) porterPlainte(nomComplet(sj),t,0.25,sj.paye,"séjour très décevant, remboursement demandé");
+  ranger(sj,t,"parti",note);
+  affecterMenage(t); monterPalier(t);
+}
+// Un client à qui personne n'a donné de chambre s'en va. S'il avait réservé, l'hôtel le reloge ailleurs à ses frais.
+function repartir(sj,t,parMoi){
+  var m;
+  if(sj.reserve){
+    m=Math.round(TYPES[typePour(sj.pers)].prix*NIVEAUX[sj.att].mult);
+    inscrire(t,"x:litiges",m); S.stat.deloges++; avis(parMoi?25:10);
+    noter(t,"bad",nomComplet(sj)+" avait réservé et n'a pas eu de chambre : l'hôtel paie sa nuit ailleurs ("+mt(m)+").");
+    porterPlainte(nomComplet(sj),t,parMoi?0.1:0.3,m*sj.nuits,"réservation non honorée");
+    ranger(sj,t,"deloge");
+  } else { S.stat.repartis++; avis(parMoi?45:25); ranger(sj,t,"reparti"); }
+}
+function indemniser(x,t,auto){
+  var m=partHotel(x.montant/2);
+  S.plaintes.splice(S.plaintes.indexOf(x),1); inscrire(t,"x:litiges",m);
+  noter(t,"","Accord à l'amiable avec "+x.nom+" : l'hôtel verse "+mt(m)+", l'assurance paie le reste."+(auto?" La réclamation était restée sans réponse.":""));
+}
+function partHotel(m){ return Math.round(m*FRANCHISE); }
+function juger(x,t){
+  S.plaintes.splice(S.plaintes.indexOf(x),1);
+  if(Math.random()<0.55){ inscrire(t,"x:litiges",partHotel(x.montant)+FRAIS_JUSTICE); avis(10); noter(t,"bad","Tribunal : l'hôtel est condamné ("+x.nom+"). Sa part, après l'assurance : "+mt(partHotel(x.montant))+", plus "+mt(FRAIS_JUSTICE)+" de frais."); }
+  else { inscrire(t,"x:litiges",FRAIS_JUSTICE); noter(t,"ok","Tribunal : l'hôtel est mis hors de cause ("+x.nom+"). Il reste "+mt(FRAIS_JUSTICE)+" de frais."); }
+}
+
+/* ------------------------------------------------------------------ Le ménage */
+// Après un départ, la chambre doit être refaite. Sans personne aux étages, le directeur s'en charge : deux heures, une chambre à la fois.
+function affecterMenage(t){
+  var moiPris=S.chambres.some(function(c){ return c.etat==="menage"&&c.men&&c.men.qui===0; }), enP=enPosteRole(FEMMES,t).length, fait=false;
+  S.chambres.forEach(function(c){
+    var e, d;
+    if(c.etat!=="sale"||c.sj) return;
+    e=dispo(FEMMES,t);
+    if(!e){ if(enP||moiPris) return; moiPris=true; }
+    d=(e?DUREE_MENAGE*(remplace(e,t)?1:EXP[e.exp].vitesse)*(nb("gouvernante")?0.9:1):DUREE_MENAGE_MOI)*(1+0.04*(c.niv-1))*(1-0.1*niv("buanderie"));
+    c.etat="menage"; c.men={debut:t,fin:t+Math.max(5,Math.round(d))*MIN,qui:e?e.id:0}; c.defaut=0; fait=true;
+    if(stockDe("linge")>0) sortirStock("linge",t,"etages"); else { c.defaut=1; manquer("linge"); }
+    if(stockDe("accueil")>0) sortirStock("accueil",t,"etages"); else manquer("accueil");
+  });
+  if(fait) reappro(t);
+}
+function finMenage(c,t){
+  var e=c.men&&c.men.qui?parId(S.equipe,c.men.qui):null;
+  if(e){ e.faits=(e.faits||0)+1; if(!remplace(e,t)) gagnerXp(e,1,t); }
+  c.etat="propre"; c.men=null; affecterMenage(t);
+}
+
+/* ------------------------------------------------------------------ Restaurant, bar et spa */
+function enService(sv){ var n=0; S.visites.forEach(function(v){ if(v.sv===sv&&v.etat==="service") n++; }); return n; }
+function enFile(sv){ var n=0; S.visites.forEach(function(v){ if(v.sv===sv&&v.etat==="attente") n++; }); return n; }
+function moiCharge(){ var n=0; S.visites.forEach(function(v){ if(v.etat==="service"&&v.moi) n++; }); return n; }
+function ouvertPour(k){ return niv(SV[k].sv)>=(k==="midi"||k==="soir"?2:1); }
+function creerVisite(t,k,n,sj){
+  S.visites.push({id:S.nVisite++,k:k,sv:SV[k].sv,n:n,sj:sj||null,arrive:t,limite:t+SV[k].patience*MIN,etat:"attente",staff:[]});
+}
+// Chaque table attend une place libre et le personnel qu'il lui faut. Sans serveur en poste, le directeur sert lui-même le petit-déjeuner, deux tables à la fois.
+function affecterVisites(t){
+  var file=S.visites.filter(function(v){ return v.etat==="attente"; }).sort(function(a,b){ return a.arrive-b.arrive; }), fait=false;
+  file.forEach(function(v){
+    var X=SV[v.k], a=null, b=null, moi=false, d, i;
+    if(enService(v.sv)>=capDe(v.sv)) return;
+    if(v.sv==="resto"){
+      a=dispo(["serveur"],t);
+      if(v.k==="pdj"){ if(!a){ if(enPosteRole(["serveur"],t).length||moiCharge()>=2) return; moi=true; } }
+      else { b=dispo(CUISINE,t); if(!a||!b) return; }
+    } else if(v.sv==="bar"){ a=dispo(["barman"],t); if(!a) return; }
+    else { a=dispo(["praticien"],t); if(!a) return; }
+    d=X.duree*(moi?1.2:remplace(a,t)?1:(1+EXP[a.exp].vitesse)/2);
+    v.etat="service"; v.debut=t; v.fin=t+Math.max(10,Math.round(d))*MIN; v.staff=[a,b].filter(Boolean).map(function(e){ return e.id; });
+    v.moi=moi; v.q=moi?0.95:b?(qualite(a)+qualite(b))/2:qualite(a); v.att=(t-v.arrive)/MIN; fait=true;
+    for(i=0;i<v.n;i++){ if(stockDe(X.stock)>0) sortirStock(X.stock,t,v.sv); else { v.rupture=1; manquer(X.stock); break; } }
+  });
+  if(fait) reappro(t);
+}
+function oterVisite(v){ var i=S.visites.indexOf(v); if(i>=0) S.visites.splice(i,1); }
+function finVisite(v,t){
+  var X=SV[v.k], prix=Math.round(S.tarifs[X.prix]*v.n*(v.rupture?0.5:1)), sj=v.sj?parId(S.sejours,v.sj):null, note;
+  facturer(t,"r:"+v.sv,prix,"direct");
+  v.staff.forEach(function(id){ var e=parId(S.equipe,id); if(e){ e.faits=(e.faits||0)+1; if(!remplace(e,t)) gagnerXp(e,1,t); } });
+  note=borne(70+(v.q-1)*60-Math.min(25,v.att/X.patience*25)-(v.rupture?25:0)+(niv(v.sv)-1)*2,0,100);
+  if(sj){ sj.plus=(sj.plus||0)+(note>=60?3:-5); sj.paye+=prix; }
+  else if(Math.random()<0.25) avis(note);
+  S.stat.visites[v.sv]=(S.stat.visites[v.sv]||0)+1;
+  if(v.sv==="resto") S.stat.couverts+=v.n;
+  oterVisite(v); affecterVisites(t);
+}
+function visiteRatee(v,t){
+  var sj=v.sj?parId(S.sejours,v.sj):null;
+  S.stat.rates[v.sv]=(S.stat.rates[v.sv]||0)+1;
+  if(sj) sj.plus=(sj.plus||0)-6; else if(Math.random()<0.25) avis(20);
+  oterVisite(v);
+}
+
+/* ------------------------------------------------------------------ Les demandes des clients */
+function ouvrirRequete(sj,t){
+  var c=chambre(sj.ch), cles=Object.keys(REQUETES).filter(function(k){ return !REQUETES[k].si||REQUETES[k].si(sj,c); });
+  if(S.requetes.some(function(r){ return r.sj===sj.id; })) return;
+  S.requetes.push({id:S.nRequete++,sj:sj.id,k:tirer(cles),t:t,limite:t+DELAI_REQ,auto:t+RELAIS_REQ});
+}
+// Une chambre libre et prête où déplacer un client : n'importe laquelle d'aussi bien, une côté jardin, ou une de meilleur niveau
+function chambrePour(sj,mode){
+  var c0=chambre(sj.ch), l=pretes().filter(function(c){
+    if(TYPES[c.type].cap<sj.pers) return false;
+    if(mode==="jardin") return c.cote==="jardin"&&c.niv>=c0.niv-1;
+    if(mode==="mieux") return c.niv>c0.niv;
+    return c.niv>=c0.niv;
+  }), bons;
+  if(mode==="jardin"&&c0.cote==="jardin") return null;
+  bons=l.filter(function(c){ return tient(null,{ch:c.id,jusqua:sj.finPrevue,sj:sj.id}); });
+  if(bons.length) l=bons;
+  l.sort(function(a,b){ return adequation(sj,b,sj.prixNuit)-adequation(sj,a,sj.prixNuit); });
+  return l[0]||null;
+}
+// Renvoie la raison pour laquelle une réponse est impossible, ou une chaîne vide
+function optionDispo(r,o){
+  var sj=parId(S.sejours,r.sj), b=o.besoin;
+  if(!sj) return "Le client est parti";
+  if(b==="technicien"&&!enPosteRole(["technicien"]).length) return nb("technicien")?"Aucun technicien en poste":"Il faut un technicien";
+  if(b==="femme"&&!enPosteRole(FEMMES).length) return nbGroupe(FEMMES)?"Personne aux étages en ce moment":"Il faut une femme de chambre";
+  if(b==="cuisinier"&&!enPosteRole(CUISINE).length) return nbGroupe(CUISINE)?"Aucun cuisinier en poste":"Il faut un cuisinier";
+  if(b==="concierge"&&!enPosteRole(["concierge"]).length) return nb("concierge")?"Aucun concierge en poste":"Il faut un concierge";
+  if(b==="resto2"&&niv("resto")<2) return "L'hôtel n'a pas de restaurant";
+  if(b==="resto1"&&niv("resto")<1) return "L'hôtel ne sert pas le petit-déjeuner";
+  if((b==="chambre"||b==="jardin"||b==="mieux")&&!chambrePour(sj,b)) return "Aucune chambre prête qui convienne";
+  if(o.stock&&stockDe(o.stock)<1) return "Rupture : "+PRODUITS[o.stock].nom.toLowerCase();
+  return "";
+}
+function optionsDe(r){ return REQUETES[r.k].o.filter(function(o){ return !optionDispo(r,o); }).sort(function(a,b){ return b.e-a.e; }); }
+function oterRequete(r){ var i=S.requetes.indexOf(r); if(i>=0) S.requetes.splice(i,1); }
+function repondre(r,o,t,auto){
+  var sj=parId(S.sejours,r.sj), mieux=optionsDe(r)[0], c, n, m, bon;
+  oterRequete(r);
+  if(!sj) return null;
+  bon=!!mieux&&o.e>=mieux.e;
+  if(o.cout) inscrire(t,"e:reception",o.cout);
+  if(o.remise){ m=Math.round(sj.prixNuit*o.remise*(o.sejour?sj.nuits:1)); inscrire(t,"r:chambres",-m); sj.paye-=m; }
+  if(o.supp){ m=o.supp<1?Math.round(sj.prixNuit*o.supp):o.supp; inscrire(t,"r:chambres",m); sj.paye+=m; }
+  if(o.stock&&stockDe(o.stock)>0){ sortirStock(o.stock,t,o.sv||"reception"); reappro(t); }
+  if(o.recette){ m=S.tarifs[o.recette]*sj.pers; inscrire(t,"r:resto",m); sj.paye+=m; }
+  if(o.tardif){ sj.tardif=1; sj.fin=minuit(sj.fin)+14*HEURE; sj.finPrevue=Math.max(sj.finPrevue,sj.fin); }
+  if(o.visite){ S.arrivees.push({t:Math.max(t+10*MIN,minuit(t)+Math.round(alea(19,20.5)*HEURE)),k:"vis",v:o.visite,sj:sj.id}); S.arrivees.sort(function(a,b){ return a.t-b.t; }); }
+  if(o.besoin==="chambre"||o.besoin==="jardin"||o.besoin==="mieux"){
+    n=chambrePour(sj,o.besoin); c=chambre(sj.ch);
+    if(n){ c.sj=null; c.etat="sale"; n.sj=sj.id; sj.ch=n.id; sj.adeq=Math.max(sj.adeq,adequation(sj,n,sj.prixNuit)); affecterMenage(t); }
+  }
+  sj.plus=(sj.plus||0)+o.e;
+  if(auto) S.req.auto++; else if(bon) S.req.ok++; else S.req.moyen++;
+  return {bon:bon,mieux:mieux};
+}
+// Sans réponse du directeur, le concierge ou la réception s'en charge, avec ce qu'il y a de possible
+function repondreSeul(r,t){
+  var e=relaisRequete(), l=optionsDe(r), q;
+  if(!e||!l.length){ r.auto=0; return; }
+  q=qualite(e)+(e.role==="concierge"?0.15:0);
+  repondre(r,Math.random()<borne(0.55+(q-1)*0.5,0.35,0.95)||l.length<2?l[0]:l[1],t,true);
+  e.faits=(e.faits||0)+1; if(!remplace(e,t)) gagnerXp(e,1,t);
+}
+function requetePerdue(r,t){
+  var sj=parId(S.sejours,r.sj);
+  if(sj) sj.plus=(sj.plus||0)-10;
+  S.req.sans++; S.stat.sansReponse++; oterRequete(r);
+}
+
+/* ------------------------------------------------------------------ Le calendrier */
+// Les clients de passage et les clients extérieurs d'une journée. Le restaurant, le bar et le spa ne reçoivent du monde
+// de l'extérieur que pendant les postes où ils ont du personnel prévu.
+function planifierJour(debut,apres,complet){
+  var j=jourSemaine(debut+12*HEURE), midi=debut+12*HEURE, rep=0.5+reputation()/100, n=niv("resto");
+  function semer(combien,h1,h2,o){
+    var i, t, e, k;
+    combien=Math.floor(combien)+(Math.random()<combien%1?1:0);
+    for(i=0;i<combien;i++){ t=debut+Math.round(alea(h1,h2)*HEURE); if(t>apres){ e={t:t}; for(k in o) e[k]=o[k]; S.arrivees.push(e); } }
+  }
+  if(complet){
+    semer(attendus(midi)*PART_PASSAGE*alea(0.7,1.3),10,22,{k:"walk"});
+    if(niv("seminaire")&&j<5&&Math.random()<Math.min(0.85,(0.25+0.07*niv("seminaire"))*demande("seminaire")*rep)) semer(1,9,9.2,{k:"sem"});
+  }
+  if(n>=2){
+    if(prevusLe(["serveur"],j,"M",midi)&&prevusLe(CUISINE,j,"M",midi)) semer(EXT.midi[n]*rep*demande("resto")*alea(0.8,1.2),12,13.6,{k:"vis",v:"midi"});
+    if(prevusLe(["serveur"],j,"A",midi)&&prevusLe(CUISINE,j,"A",midi)) semer(EXT.soir[n]*rep*demande("resto")*alea(0.8,1.2),19,21.3,{k:"vis",v:"soir"});
+  }
+  if(niv("bar")&&prevusLe(["barman"],j,"A",midi)) semer(EXT.bar[niv("bar")]*rep*demande("bar")*alea(0.8,1.2),17,21.6,{k:"vis",v:"bar"});
+  if(niv("spa")){
+    if(prevusLe(["praticien"],j,"M",midi)) semer(EXT.spa[niv("spa")]*0.45*rep*demande("spa")*alea(0.8,1.2),10,13.3,{k:"vis",v:"spa"});
+    if(prevusLe(["praticien"],j,"A",midi)) semer(EXT.spa[niv("spa")]*0.55*rep*demande("spa")*alea(0.8,1.2),14,18.8,{k:"vis",v:"spa"});
+  }
+  S.arrivees.sort(function(a,b){ return a.t-b.t; });
+}
+// Quand le planning ou les équipements changent, les clients extérieurs encore à venir sont recalculés
+function replanifier(t){
+  S.arrivees=S.arrivees.filter(function(a){ return !(a.k==="vis"&&!a.sj); });
+  planifierJour(minuit(t),t,false);
+}
+function planifierEvenement(debut){
+  if(Math.random()<TAUX_EVENEMENT){ S.evts.push({t:debut+Math.round(alea(8,20)*HEURE)}); S.evts.sort(function(a,b){ return a.t-b.t; }); }
+}
+function monterPalier(t){
+  var p=prochainPalier();
+  while(p&&S.finis>=p.min&&reputation()>=p.rep){
+    S.palier++;
+    inscrire(t,"r:divers",p.prime);
+    noter(t,"ok",S.nom+" devient « "+nomPalier(S.palier)+" ». L'office du tourisme verse une prime de "+mt(p.prime)+". Vous pouvez avoir jusqu'à "+p.chambres+" chambres, et les améliorer jusqu'au niveau "+p.niv+".");
+    p=prochainPalier();
+    reappro(t);
+  }
+}
+// La journée d'un séminaire : la société paie sur facture, les pauses demandent un serveur et des boissons
+function seminaire(t){
+  var cap=capDe("seminaire"), n, prix, i, ok;
+  if(!cap) return;
+  n=entre(Math.max(4,Math.round(cap*0.4)),cap); prix=n*S.tarifs.seminaire;
+  ok=prevusLe(["serveur"],posteDe(t).j,"M",t)>0;
+  facturer(t,"r:seminaire",prix,"entreprise");
+  for(i=0;i<Math.ceil(n/4);i++){ if(stockDe("boissons")>0) sortirStock("boissons",t,"seminaire"); else { ok=false; manquer("boissons"); break; } }
+  avis(ok?82:42); reappro(t);
+  noter(t,ok?"ok":"warn","Séminaire de "+n+" participants : "+mt(prix)+" facturés à la société."+(ok?"":" Sans serveur ni boissons pour les pauses, les participants sont repartis déçus."));
+}
+// De temps en temps, un événement vient bousculer la journée
+function declencher(t){
+  var choix=["car","inspection","panne"], k, i, m, sj, n=0;
+  if(reputation()>=65) choix.push("presse");
+  if(niv("resto")>=2&&nbGroupe(CUISINE)) choix.push("critique");
+  k=tirer(choix);
+  if(k==="car"){
+    for(i=0;i<4;i++){ sj=passage(t,true); if(sj) n++; }
+    S.stat.complet=Math.max(0,S.stat.complet-(4-n));
+    if(n) noter(t,"warn","Un car de touristes est tombé en panne devant l'hôtel : "+pl(n,"voyageur demande","voyageurs demandent")+" une chambre pour la nuit.");
+  } else if(k==="inspection"){
+    if(couvMenage()>=0.8){ avis(90); avis(90); avis(90); noter(t,"ok","Inspection d'hygiène : l'hôtel est irréprochable. Sa réputation en profite."); }
+    else { m=150*(S.palier+1); inscrire(t,"x:divers",m); noter(t,"bad","Inspection d'hygiène : les chambres ne sont pas assez bien tenues. Amende de "+mt(m)+"."); }
+  } else if(k==="panne"){
+    m=enPosteRole(["technicien"],t).length?80:300; inscrire(t,"e:batiment",m);
+    noter(t,"warn","Panne de chaudière. "+(m<300?"Votre technicien s'en charge : "+mt(m)+" de pièces.":"Sans technicien en poste, il faut un dépanneur : "+mt(m)+"."));
+  } else if(k==="presse"){
+    avis(95); avis(95); noter(t,"ok","Un magazine de voyage recommande "+S.nom+". Sa réputation en profite.");
+  } else {
+    m=0; S.equipe.forEach(function(e){ if(CUISINE.indexOf(e.role)>=0) m=Math.max(m,qualite(e)); });
+    if(m>=1){ avis(92); avis(92); avis(92); noter(t,"ok","Un critique gastronomique a dîné au restaurant, et il en dit du bien."); }
+    else { avis(40); noter(t,"warn","Un critique gastronomique a dîné au restaurant. Son article est tiède : la cuisine manque de métier."); }
+  }
+}
+// À minuit : paie, charges, nuitées, amortissements, démissions, règlements des sociétés, puis préparation de la journée suivante
+function cloturer(t){
+  var tj=t-1000, k, c, res, garde, vieux;
+  S.equipe.forEach(function(e){
+    var k=e.plan[jourSemaine(tj)], abs=absentLe(e,tj);
+    var paie=paiePoste(e,k)+(abs&&e.absent.interim?paieInterim(e,k):0);
+    inscrire(tj,"s:"+ROLES[e.role].service,paie); inscrire(tj,"o:"+ROLES[e.role].service,paie*TAUX_COTISATIONS);
+    if(k!=="R"&&!abs) gagnerXp(e,estTache(e)?XP_POSTE_TACHE:XP_POSTE_AUTRE,tj);
+  });
+  inscrire(tj,"e:batiment",chargesBatiment());
+  for(k in EQUIP) inscrire(tj,"e:"+EQUIP[k].compte,entretienDe(k));
+  inscrire(tj,"e:litiges",PRIME_ASSURANCE[S.palier]);
+  S.sejours.forEach(function(sj){ if(sj.etat==="loge"&&sj.facturees<sj.nuits) nuitee(sj,tj); });
+  amortir(tj);
+  if(S.caisse<0) inscrire(tj,"x:divers",Math.max(1,-S.caisse*TAUX_DECOUVERT));
+  financesPerso(tj);
+  S.equipe.slice().forEach(function(e){
+    var m=moralDe(e);
+    if(m<30&&!charge(e)&&Math.random()<(30-m)/100){
+      S.equipe.splice(S.equipe.indexOf(e),1); S.demandes=S.demandes.filter(function(x){ return x.qui!==e.id; });
+      noter(tj,"bad",nomComplet(e)+" ("+nomRole(e).toLowerCase()+") démissionne : le salaire et le planning ne lui conviennent plus.");
+    }
+  });
+  c=S.cj[cleJour(tj)]||{}; res=recettesDe(c)-depensesDe(c);
+  noter(tj,res>=0?"ok":"warn","Jour "+S.jour+" : "+pl(S.stat.arrives,"arrivée","arrivées")+", "+pl(S.stat.departs,"départ","départs")+", "+pl(occupees(),"chambre occupée","chambres occupées")+" cette nuit"+(S.stat.couverts?", "+pl(S.stat.couverts,"couvert","couverts"):"")+(S.stat.deloges?", "+pl(S.stat.deloges,"client envoyé","clients envoyés")+" ailleurs":"")+". Résultat de la journée : "+signeM(res)+".");
+  S.stat=statVide(); S.jour++;
+  garde=cleJour(t-JOURS_GARDES*JOUR);
+  for(vieux in S.cj) if(vieux<garde) delete S.cj[vieux];
+  monterPalier(t);
+  absences(t); reglements(t); ajusterDemande();
+  S.plaintes.slice().forEach(function(x){ if(x.limite<=t) indemniser(x,t,true); });
+  prendreReservations(t); planifierJour(t,t,true); planifierEvenement(t);
+  affecterMenage(t); affecterVisites(t); reappro(t);
+}
+// Le temps réel : on rejoue dans l'ordre tout ce qui devait arriver jusqu'à l'instant donné
+function avancer(jusqua){
+  var change=false, garde=0, t, quoi, qui, i, x, e, q, a, sj, relais;
+  if(!S.fondeLe) return false;
+  while(garde++<400000){
+    t=S.prochaineCloture; quoi="cloture"; qui=null; relais=relaisAccueil()>0;
+    if(S.arrivees.length&&S.arrivees[0].t<t){ t=S.arrivees[0].t; quoi="prevu"; }
+    if(S.evts.length&&S.evts[0].t<t){ t=S.evts[0].t; quoi="evenement"; }
+    if(S.commandes.length&&S.commandes[0].t<t){ t=S.commandes[0].t; quoi="livraison"; }
+    if(S.releve&&S.releve<t){ t=S.releve; quoi="releve"; }
+    for(i=0;i<S.sejours.length;i++){
+      x=S.sejours[i];
+      if(x.etat==="reserve"){ e=x.arrive; q="arrivee"; }
+      else if(x.etat==="accueil"){ if(x.auto&&x.auto<=x.limite&&relais){ e=x.auto; q="relais"; } else { e=x.limite; q="depart"; } }
+      else { e=x.fin; q="sortie"; }
+      if(e<t){ t=e; quoi=q; qui=x; }
+    }
+    for(i=0;i<S.chambres.length;i++){ x=S.chambres[i]; if(x.etat==="menage"&&x.men&&x.men.fin<t){ t=x.men.fin; quoi="menage"; qui=x; } }
+    for(i=0;i<S.visites.length;i++){
+      x=S.visites[i];
+      if(x.etat==="service"){ e=x.fin; q="vfin"; } else { e=x.limite; q="vrate"; }
+      if(e<t){ t=e; quoi=q; qui=x; }
+    }
+    for(i=0;i<S.requetes.length;i++){
+      x=S.requetes[i];
+      if(x.auto&&x.auto<=x.limite&&relaisRequete()){ e=x.auto; q="rauto"; } else { e=x.limite; q="rfin"; }
+      if(e<t){ t=e; quoi=q; qui=x; }
+    }
+    if(t>jusqua) break;
+    if(t<S.horloge) t=S.horloge;
+    change=true; S.horloge=t;
+    if(quoi==="cloture"){ cloturer(t); S.prochaineCloture=prochainMinuit(t+1000); }
+    else if(quoi==="prevu"){
+      a=S.arrivees.shift(); sj=a.sj?parId(S.sejours,a.sj):null;
+      if(a.k==="walk") passage(t,false);
+      else if(a.k==="sem") seminaire(t);
+      else if(a.k==="req"){ if(sj&&sj.etat==="loge") ouvrirRequete(sj,t); }
+      else if(a.k==="vis"&&ouvertPour(a.v)){
+        if(!a.sj) creerVisite(t,a.v,a.v==="spa"?1:a.v==="bar"?entre(1,3):entre(1,4),null);
+        else if(sj&&sj.etat==="loge") creerVisite(t,a.v,a.v==="spa"?1:a.v==="bar"?Math.min(2,sj.pers):sj.pers,sj.id);
+        affecterVisites(t);
+      }
+    }
+    else if(quoi==="evenement"){ S.evts.shift(); declencher(t); }
+    else if(quoi==="livraison"){ a=S.commandes.shift(); S.stock[a.p]=stockDe(a.p)+a.n; S.valStock[a.p]=(S.valStock[a.p]||0)+a.v; }
+    else if(quoi==="releve"){ S.releve=prochaineReleve(t+1000); affecterMenage(t); affecterVisites(t); }
+    else if(quoi==="arrivee") arriver(qui,t);
+    else if(quoi==="relais") logerSeul(qui,t);
+    else if(quoi==="depart"){ if(peutPatienter(qui,t)) qui.limite=t+20*MIN; else repartir(qui,t,false); }
+    else if(quoi==="sortie") quitter(qui,t);
+    else if(quoi==="menage") finMenage(qui,t);
+    else if(quoi==="vfin") finVisite(qui,t);
+    else if(quoi==="vrate") visiteRatee(qui,t);
+    else if(quoi==="rauto") repondreSeul(qui,t);
+    else requetePerdue(qui,t);
+  }
+  if(jusqua>S.horloge) S.horloge=jusqua;
+  return change;
+}
+// Chaque nuit : le portefeuille d'actions rapporte entre 2 % et 7 % par an (le taux bouge un peu chaque jour),
+// et l'hôtel verse au directeur les intérêts de ce qu'il lui a prêté.
+function financesPerso(t){
+  var M=S.moi, gain, entier;
+  M.taux=borne(M.taux+(4.5-M.taux)*0.08+alea(-0.6,0.6),TAUX_MIN,TAUX_MAX);
+  if(M.place>0){ gain=M.place*M.taux/100/365; M.place+=gain; M.gainsPlace+=gain; }
+  if(M.pret>0){
+    M.interets+=M.pret*TAUX_PRET/100/365; entier=Math.floor(M.interets);
+    if(entier>=1){ inscrire(t,"x:pret",entier); M.argent+=entier; M.gainsPret+=entier; M.interets-=entier; }
+  }
+}
+// Chaque nuit : retours d'absence, congés qui commencent, nouveaux malades et nouvelles demandes de congé
+function partirEnConge(e,d,t,sansReponse){
+  if(absentLe(e,t)) e.absent.fin=Math.max(e.absent.fin,d.fin); else e.absent={debut:d.debut,fin:d.fin,motif:"conge"};
+  e.humeur={v:5,fin:jourApres(t,10)};
+  if(sansReponse) noter(t,"",nomComplet(e)+" part en congé jusqu'au "+dateLongue(d.fin-1000)+" : sa demande est restée sans réponse.");
+}
+function absences(t){
+  S.equipe.forEach(function(e){ if(e.absent&&e.absent.fin<=t) e.absent=null; });
+  S.demandes=S.demandes.filter(function(d){
+    var e=parId(S.equipe,d.qui);
+    if(!e) return false;
+    if(d.debut<=t){ partirEnConge(e,d,t,true); return false; }
+    return true;
+  });
+  if(!S.portes) return;
+  S.equipe.forEach(function(e){
+    var n, debut;
+    if(e.absent) return;
+    if(Math.random()<TAUX_MALADIE*(moralDe(e)<40?2:1)){
+      n=entre(1,3); e.absent={debut:t,fin:jourApres(t,n),motif:"maladie"};
+      noter(t,"warn",nomComplet(e)+" ("+nomRole(e).toLowerCase()+") est malade : "+pl(n,"jour","jours")+" d'absence.");
+    } else if(!S.demandes.some(function(d){ return d.qui===e.id; })&&Math.random()<TAUX_CONGE){
+      n=entre(2,5); debut=jourApres(t,DELAI_CONGE);
+      S.demandes.push({id:S.nDemande++,qui:e.id,debut:debut,fin:jourApres(debut,n),jours:n});
+      noter(t,"",nomComplet(e)+" ("+nomRole(e).toLowerCase()+") demande "+n+" jours de congé à partir du "+dateLongue(debut)+".");
+    }
+  });
+}
+// Le salaire du directeur : PAIE_DIRECTEUR par tranche de vingt minutes passées sur le jeu
+function activite(ms){
+  var paye=false;
+  S.moi.actif+=ms; S.moi.tranche+=ms;
+  while(S.moi.tranche>=TRANCHE){
+    S.moi.tranche-=TRANCHE; S.moi.argent+=PAIE_DIRECTEUR; S.moi.gagne+=PAIE_DIRECTEUR; inscrire(maintenant(),"s:direction",PAIE_DIRECTEUR); paye=true;
+  }
+  return paye;
+}
+
+/* ------------------------------------------------------------------ Icônes */
+var I={
+  accueil:'<svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7M6 10v10h12V10M10 20v-5h4v5"/></svg>',
+  clients:'<svg viewBox="0 0 24 24"><rect x="5" y="8" width="14" height="12" rx="2"/><path d="M9 8V6a3 3 0 0 1 6 0v2M9 12v4M15 12v4"/></svg>',
+  equipe:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5.2a3.2 3.2 0 0 1 0 6.1M18 14.5c2 .8 3.3 2.8 3.3 5.5"/></svg>',
+  recrut:'<svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.4"/><path d="M3.5 20c0-3.6 2.9-6.5 6.5-6.5 1.4 0 2.7.4 3.8 1.2M18 14v6M15 17h6"/></svg>',
+  equipements:'<svg viewBox="0 0 24 24"><path d="M5 21V4h14v17M2 21h20M9 8h2M13 8h2M9 12h2M13 12h2M10 21v-4h4v4"/></svg>',
+  tarifs:'<svg viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/></svg>',
+  finances:'<svg viewBox="0 0 24 24"><path d="M3 20h18M6 20v-6M11 20V6M16 20v-9M21 20v-4"/></svg>',
+  journal:'<svg viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11"/></svg>',
+  moi:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg>',
+  reglages:'<svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>',
+  horloge:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
+  retour:'<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
+  suivant:'<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>',
+  lit:'<svg viewBox="0 0 24 24"><path d="M3 18V7M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5M7 11.5a1.5 1.5 0 1 0 0-.01"/></svg>',
+  guide:'<svg viewBox="0 0 24 24"><path d="M12 6c-2-1.5-5-2-8-1.5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5v-13c-3-.5-6 0-8 1.5zM12 6v13"/></svg>',
+  calendrier:'<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4M8 14h3M13 14h3M8 17h3"/></svg>',
+  caisse:'<svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4v9l-8 4-8-4zM4 8l8 4 8-4M12 12v9"/></svg>',
+  couverts:'<svg viewBox="0 0 24 24"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 2-3 5-3 8h3zM17 11v10"/></svg>',
+  verre:'<svg viewBox="0 0 24 24"><path d="M5 4h14l-7 9zM12 13v7M8 20h8M15 7l3-4"/></svg>',
+  lotus:'<svg viewBox="0 0 24 24"><path d="M12 5c-2 3-2 7 0 11 2-4 2-8 0-11zM4 11c1 4 4 6 8 5-1-3-4-5-8-5zM20 11c-1 4-4 6-8 5 1-3 4-5 8-5zM5 20h14"/></svg>',
+  vagues:'<svg viewBox="0 0 24 24"><path d="M3 15c2-2 4-2 6 0s4 2 6 0 4-2 6 0M3 19c2-2 4-2 6 0s4 2 6 0 4-2 6 0M8 12V6a2 2 0 0 1 4 0M14 12V6a2 2 0 0 1 4 0M8 9h6"/></svg>',
+  voiture:'<svg viewBox="0 0 24 24"><path d="M4 16v-4l2-5h12l2 5v4M4 16h16M4 16v2M20 16v2M4 12h16"/><circle cx="7.5" cy="14" r=".8"/><circle cx="16.5" cy="14" r=".8"/></svg>',
+  ecran:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="11" rx="1.5"/><path d="M12 15v3M8 20l4-2 4 2M7 11l3-3 2 2 4-4"/></svg>',
+  cloche:'<svg viewBox="0 0 24 24"><path d="M4 17h16M5 17a7 7 0 0 1 14 0M12 10V7M10 7h4M3 20h18"/></svg>',
+  machine:'<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="13" r="4"/><path d="M8 6.5h.01M11 6.5h.01"/></svg>',
+  plus:'<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>'
+};
+
+/* ------------------------------------------------------------------ Morceaux d'écran */
+function barre(){
+  return '<header class="barre"><div class="marque"><span class="logo">H</span><span>'+h(S.fondeLe?S.nom:"MyHotel")+'</span></div>'
+    +'<span class="puce num">'+I.horloge+'<span id="horloge">'+horlogeTxt(maintenant())+'</span></span></header>';
+}
+function souhaitNom(k){ return k==="budget"?SOUHAITS[k]+" ("+mt(SEUIL_BUDGET)+" la nuit au plus)":SOUHAITS[k]; }
+function souhaitsHtml(l){ return '<span class="signes">'+l.map(function(k){ return '<span class="signe">'+souhaitNom(k)+'</span>'; }).join("")+'</span>'; }
+function attentesHtml(l){ return l.length?'<span class="signes">'+l.map(function(k){ return '<span class="signe ctx">'+ATTENTES[k][0]+'</span>'; }).join("")+'</span>':""; }
+function resumeSejour(sj){ return nomProfil(sj)+" · "+pl(sj.pers,"personne","personnes")+" · "+pl(sj.nuits,"nuit","nuits"); }
+function manqueHtml(prix){ return S.caisse>=prix?"":'<span class="aide">Il manque '+mt(prix-S.caisse)+'.</span>'; }
+function palierPourNiv(n){ for(var i=0;i<PALIERS.length;i++) if(PALIERS[i].niv>=n) return i; return PALIERS.length-1; }
+function besoinEquip(k){
+  var n=niv(k);
+  if(k==="resto"&&n>=2&&(!nb("serveur")||!nbGroupe(CUISINE))) return ["Il faut un serveur et un cuisinier pour servir le déjeuner et le dîner.",nb("serveur")?"cuisinier":"serveur"];
+  if(k==="bar"&&n&&!nb("barman")) return ["Sans barman, le bar reste fermé.","barman"];
+  if(k==="spa"&&n&&!nb("praticien")) return ["Sans praticien, aucun soin n'est donné.","praticien"];
+  if(k==="seminaire"&&n&&!nb("serveur")) return ["Sans serveur le matin, les pauses des séminaires ne sont pas servies.","serveur"];
+  return null;
+}
+function alertes(){
+  var l=[], n, m, sales;
+  function a(classe,texte,cible,bouton){ l.push('<div class="alerte '+classe+'"><span>'+texte+'</span>'+(cible?'<button type="button" class="btn petit" data-a="aller" data-e="'+cible+'">'+bouton+'</button>':'')+'</div>'); }
+  n=parEtat("accueil").length;
+  if(n) a("",pl(n,"client attend","clients attendent")+(n>1?" leur":" sa")+" chambre à la réception.","clients","Voir les clients");
+  n=S.requetes.length;
+  if(n) a("",pl(n,"client a","clients ont")+" une demande.","clients","Voir les clients");
+  if(!tient()) a("warn","Une réservation à venir n'a pas de chambre assez grande de libre. Achetez une chambre, ou préparez-vous à envoyer un client ailleurs.","chambres","Voir les chambres");
+  n=S.contestes.filter(function(c){ return !c.relance; }).length;
+  if(n) a("warn","Une société conteste "+pl(n,"lot","lots")+" de factures. Sans relance, l'argent est perdu.","societes","Voir les factures");
+  if(S.plaintes.length) a("bad",pl(S.plaintes.length,"réclamation attend","réclamations attendent")+" votre décision.","journal","Voir les réclamations");
+  if(S.demandes.length) a("",pl(S.demandes.length,"demande de congé attend","demandes de congé attendent")+" votre réponse.","planning","Voir le planning");
+  n=S.equipe.filter(function(e){ return absentLe(e,S.horloge)&&!e.absent.interim; }).map(function(e){ return nomComplet(e)+" ("+(e.absent.motif==="maladie"?"malade":"en congé")+")"; });
+  if(n.length) a("warn",(n.length>1?"Absents aujourd'hui : ":"Absence aujourd'hui : ")+n.join(", ")+".","planning","Voir le planning");
+  if(S.caisse<0) a("bad","La caisse est à découvert : la banque prélève 0,2 % par jour. L'hôtel ne peut pas faire faillite, mais les achats sont bloqués, sauf l'économat jusqu'à "+mt(DECOUVERT_MAX)+" de découvert.");
+  if(S.stat.deloges) a("bad",pl(S.stat.deloges,"client avait réservé et a été envoyé","clients avaient réservé et ont été envoyés")+" ailleurs aujourd'hui.","clients","Voir les clients");
+  if(S.stat.repartis) a("warn",pl(S.stat.repartis,"client de passage est reparti","clients de passage sont repartis")+" sans chambre aujourd'hui : il n'y avait personne à l'accueil.","planning","Voir le planning");
+  if(S.stat.sansReponse) a("warn",pl(S.stat.sansReponse,"demande est restée","demandes sont restées")+" sans réponse aujourd'hui."+(nbGroupe(ACCUEIL)?"":" Un réceptionniste répondrait quand vous n'êtes pas là."),"recrutement","Recruter");
+  sales=S.chambres.filter(function(c){ return c.etat==="sale"&&!c.sj; }).length;
+  if(sales>=2&&!enPosteRole(FEMMES).length) a("warn",sales+" chambres attendent le ménage et personne n'est en poste aux étages : vous les refaites vous-même, deux heures chacune.",nbGroupe(FEMMES)?"planning":"recrutement",nbGroupe(FEMMES)?"Voir le planning":"Recruter");
+  ORDRE_EQUIP.forEach(function(k){
+    var b=besoinEquip(k), r=S.stat.rates[k];
+    if(b) a("warn",b[0],"recrutement","Recruter");
+    else if(r&&k!=="parking") a("warn",EQUIP[k].nom+" : "+pl(r,"client est reparti","clients sont repartis")+" sans être servi aujourd'hui. L'équipe ou la place ne suit pas.","equipements","Voir les équipements");
+  });
+  if(S.stat.rates.parking) a("warn","Parking complet : "+pl(S.stat.rates.parking,"client n'a pas eu","clients n'ont pas eu")+" de place aujourd'hui.","equipements","Voir les équipements");
+  n=Object.keys(S.stat.ruptures).map(function(k){ return PRODUITS[k].nom+" ("+S.stat.ruptures[k]+")"; });
+  if(n.length) a("bad","Rupture de stock aujourd'hui : "+n.join(", ")+".","economat","Voir l'économat");
+  n=produitsConnus().filter(function(k){ return stockDe(k)<=seuilStock()&&!enCommande(k); }).map(function(k){ return PRODUITS[k].nom; });
+  if(n.length) a("warn","Stock bas : "+n.join(", ")+".","economat","Commander");
+  if(couvMenage()<1) a("warn","Trop de chambres occupées pour le personnel des étages : les clients trouvent leur chambre moins bien tenue.","recrutement","Recruter");
+  if(couvAccueil()<1) a("warn","La réception est débordée par les arrivées du jour.","recrutement","Recruter");
+  ORDRE_ROLES.forEach(function(r){ m=moral(r); if(nb(r)&&m<40) a("bad","Le moral des "+ROLES[r].pluriel.toLowerCase()+" est bas ("+m+" / 100) : risque de démission.","equipe","Voir l'équipe"); });
+  return l.join("");
+}
+function palierHtml(){
+  var p=prochainPalier(), rep=Math.round(reputation()), neufs;
+  if(!p) return '<div class="carte"><div class="carte-haut"><h3>'+nomPalier(S.palier)+'<small>Dernier palier atteint. Tout est débloqué.</small></h3></div></div>';
+  neufs=ORDRE_EQUIP.filter(function(k){ return EQUIP[k].palier===S.palier+1; }).map(function(k){ return EQUIP[k].nom.toLowerCase(); });
+  return '<div class="carte"><div class="carte-haut"><h3>Prochain palier : '+nomPalier(S.palier+1)+'<small>Jusqu\'à '+p.chambres+' chambres, chambres jusqu\'au niveau '+p.niv+', équipements jusqu\'au niveau '+Math.min(EQUIP_MAX,S.palier+2)+(neufs.length?". Nouveau : "+neufs.join(", "):"")+'.</small></h3></div>'
+    +'<div class="progres '+(S.finis>=p.min?"n2":"nn")+'"><div class="progres-haut"><b>Séjours terminés</b><span>'+Math.min(S.finis,p.min)+" / "+p.min+'</span></div><div class="piste"><div class="plein" style="width:'+borne(S.finis/p.min*100,0,100)+'%"></div></div></div>'
+    +'<div class="progres '+(rep>=p.rep?"n2":"nn")+'"><div class="progres-haut"><b>Réputation</b><span>'+rep+" / "+p.rep+' au moins</span></div><div class="piste"><div class="plein" style="width:'+borne(rep/p.rep*100,0,100)+'%"></div></div></div></div>';
+}
+
+/* ------------------------------------------------------------------ Écrans */
+function ecranFondation(){
+  return barre()
+    +'<div class="titre"><h1>Ouvrez votre hôtel</h1><p>Vous commencez avec deux chambres toutes simples. À vous d\'en faire un palace.</p></div>'
+    +'<div class="carte">'
+    +'<div class="champ"><label for="f-nom">Nom de l\'établissement</label><input type="text" id="f-nom" maxlength="40" placeholder="Hôtel des Tilleuls" value="'+h(U.fond.nom)+'" autocomplete="off"></div>'
+    +'<div class="champ"><label for="f-prenom">Votre prénom</label><input type="text" id="f-prenom" maxlength="24" value="'+h(U.fond.prenom)+'" autocomplete="off"></div>'
+    +'<div class="champ"><span>Monnaie</span><div class="puces-choix">'+DEVISES.map(function(d){ return '<button type="button" class="choix'+(U.fond.devise===d?" actif":"")+'" data-a="devise" data-k="'+d+'">'+d+'</button>'; }).join("")+'</div></div>'
+    +'</div>'
+    +'<div class="carte"><h2>Comment ça marche</h2>'
+    +'<p class="aide">Le jeu suit la vraie date et la vraie heure. Une nuit d\'hôtel est une vraie nuit : les clients arrivent l\'après-midi, repartent le matin, et l\'hôtel tourne même quand le jeu est fermé.</p>'
+    +'<p class="aide">À chaque arrivée, vous lisez la fiche du client et vous choisissez la chambre qui lui convient. Pendant le séjour, vous répondez à ses demandes.</p>'
+    +'<p class="aide">Vous achetez de nouvelles chambres, vous les améliorez sur dix niveaux, et vous construisez un restaurant, un parking, un bar ou un spa, sur cinq niveaux chacun.</p>'
+    +'<p class="aide">Vous démarrez avec '+nombre(CAISSE_DEPART)+' '+U.fond.devise+' en caisse, sans personnel : au début, c\'est vous qui faites tout. L\'hôtel ne peut pas faire faillite.</p></div>'
+    +'<button type="button" class="btn principal large" data-a="fonder">Ouvrir l\'hôtel</button>';
+}
+function prochaineReservation(){ var t=0; S.sejours.forEach(function(x){ if(x.etat==="reserve"&&(!t||x.arrive<t)) t=x.arrive; }); return t; }
+function ecranAccueil(){
+  var rep=Math.round(reputation()), occ=occupees(), nc=S.chambres.length, pr=pretes().length, jr=resultatJour(), al=alertes(), pro=prochaineReservation(), na=parEtat("accueil").length, nr=S.requetes.length, nl=parEtat("loge").length;
+  var r=U.resume, bloc="", fin=S.prochaineCloture, dep=0, arr=0;
+  S.sejours.forEach(function(x){ if(x.etat==="loge"&&x.fin<fin) dep++; if(x.etat==="reserve"&&x.arrive<fin) arr++; });
+  if(r) bloc='<div class="carte"><div class="carte-haut"><h3>Pendant votre absence<small>'+dureeTxt(r.duree)+'</small></h3><button type="button" class="btn petit" data-a="resume">Fermer</button></div>'
+    +'<p>'+pl(r.finis,"séjour terminé","séjours terminés")+'. Caisse : <b class="'+(r.caisse>=0?"plus-c":"moins-c")+'">'+signeM(r.caisse)+'</b>. Réputation : '+(r.rep>0?"+":r.rep<0?"−":"")+Math.abs(r.rep)+' '+(Math.abs(r.rep)>1?"points":"point")+'.</p></div>';
+  return barre()
+    +'<div class="titre"><h1>'+h(S.nom)+'</h1><p>'+PALIERS[S.palier].nom+(PALIERS[S.palier].etoiles?' <span class="etoiles">'+etoiles(PALIERS[S.palier].etoiles)+'</span>':"")+' · jour '+S.jour+' · '+SAISONS[saisonDe(maintenant())].nom+' · Directeur : '+h(S.prenom)+'</p></div>'
+    +'<div class="jauges">'
+    +jauge("Caisse",mt(S.caisse),S.caisse<0?"n0":"",null,"Aujourd'hui "+signeM(jr))
+    +jauge("Réputation",rep+" / 100",rep>=65?"n2":rep<40?"n0":"",rep,libReputation(rep))
+    +jauge("Chambres",occ+" / "+nc+" occupées",occ>=nc?"n2":"nn",nc?occ/nc*100:0,pl(pr,"prête","prêtes")+" · "+(nc-occ-pr)+" à refaire")
+    +jauge("Aujourd'hui",pl(arr,"arrivée","arrivées")+" à venir","",null,pl(dep,"départ","départs")+" à venir · "+pl(S.stat.departs,"parti","partis"))
+    +'</div>'
+    +'<div class="bloc"><button type="button" class="btn principal large" data-a="client"'+(pr?"":" disabled")+'>'+I.plus+'Faire venir un client</button>'
+    +'<p class="aide">'+(pr?"":"Aucune chambre n'est prête. ")+(pro?"Prochaine réservation attendue "+(cleJour(pro)===cleJour(maintenant())?"vers ":dateCourte(pro)+" vers ")+heureTxt(pro)+".":"Aucune réservation en vue pour le moment.")+'</p></div>'
+    +bloc
+    +(al?'<div class="alertes">'+al+'</div>':"")
+    +'<div class="tuiles">'
+    +tuile("g5","clients","Clients",na+" à accueillir · "+pl(nr,"demande","demandes"),"clients")
+    +tuile("g1","lit","Chambres",nc+" sur "+PALIERS[S.palier].chambres+" · "+pl(nl,"occupée","occupées"),"chambres")
+    +tuile("g3","guide","Clientèle","Profils et souhaits","clientele")
+    +tuile("g7","equipements","Équipements",ORDRE_EQUIP.filter(function(k){ return niv(k); }).length+" sur "+ORDRE_EQUIP.length+" construits","equipements")
+    +tuile("g2","equipe","Équipe",pl(S.equipe.length,"personne","personnes"),"equipe")
+    +tuile("g6","calendrier","Planning",enPosteMaintenant()+" en poste","planning")
+    +tuile("g4","recrut","Recrutement","Engager du personnel","recrutement")
+    +tuile("g2","caisse","Économat",pl(produitsConnus().filter(function(k){ return stockDe(k)<=seuilStock(); }).length,"stock bas","stocks bas"),"economat")
+    +tuile("g5","tarifs","Tarifs","Chambres à "+S.tarifs.chambre+" %","tarifs")
+    +tuile("g6","finances","Finances","Aujourd'hui "+signeM(jr),"finances")
+    +tuile("g1","journal","Journal",S.journal.length?quandTxt(S.journal[0].t):"Rien à signaler","journal")
+    +tuile("g8","moi","Ma fiche",mt(S.moi.argent)+" à vous","moi")
+    +'</div>'
+    +palierHtml()
+    +'<button type="button" class="btn" data-a="aller" data-e="reglages">'+I.reglages+'Aide et réglages</button>';
+}
+function notePuce(n){ return n===null||n===undefined?"":'<span class="puce num '+(n>=65?"ok":n>=40?"warn":"bad")+'">'+n+' / 100</span>'; }
+function ligneAccueil(sj){
+  return '<li class="rang"><div><b>'+h(nomComplet(sj))+'</b><small>'+resumeSejour(sj)+'</small><small>'+sj.souhaits.map(souhaitNom).join(", ")+'</small></div>'
+    +'<div class="droite"><span class="puce warn num">repart dans <span data-reste="'+sj.limite+'">'+resteTxt(sj.limite)+'</span></span><button type="button" class="btn principal petit" data-a="fiche" data-k="'+sj.id+'">Accueillir</button></div></li>';
+}
+function ligneRequete(r){
+  var sj=parId(S.sejours,r.sj), c=sj?chambre(sj.ch):null;
+  if(!sj||!c) return "";
+  return '<li class="rang"><div><b>'+h(nomComplet(sj))+'</b> · chambre '+c.n+'<small>« '+REQUETES[r.k].txt+' »</small></div>'
+    +'<div class="droite"><span class="puce warn num">attend encore <span data-reste="'+r.limite+'">'+resteTxt(r.limite)+'</span></span><button type="button" class="btn principal petit" data-a="requete" data-k="'+r.id+'">Répondre</button></div></li>';
+}
+function ligneLoge(sj){
+  var c=chambre(sj.ch);
+  return '<li class="rang"><div><b>'+h(nomComplet(sj))+'</b> · chambre '+(c?c.n:"?")+'<small>'+resumeSejour(sj)+' · '+mt(sj.prixNuit)+' la nuit</small><small>'+CANAUX[sj.canal]+(sj.parking?" · au parking":"")+(sj.tardif?" · départ tardif":"")+'</small></div>'
+    +'<div class="droite"><span class="puce num">départ '+dateCourte(sj.fin)+' · '+heureTxt(sj.fin)+'</span></div></li>';
+}
+function ligneReserve(sj){
+  return '<li class="rang"><div><b>'+h(nomComplet(sj))+'</b><small>'+resumeSejour(sj)+'</small><small>'+sj.souhaits.map(souhaitNom).join(", ")+'</small></div>'
+    +'<div class="droite"><span class="puce info num">'+dateCourte(sj.arrive)+' · '+heureTxt(sj.arrive)+'</span></div></li>';
+}
+function ecranClients(){
+  var ordre=function(x,y){ return x.arrive-y.arrive; }, a=parEtat("accueil").sort(ordre), l=parEtat("loge").sort(function(x,y){ return x.fin-y.fin; }), r=parEtat("reserve").sort(ordre), q=S.requetes;
+  return barre()+entete("Clients",S.stat.arrives+" arrivés aujourd'hui · "+S.stat.departs+" partis")
+    +(U.retour?'<div class="alertes"><div class="alerte '+U.retour.c+'"><span>'+h(U.retour.m)+'</span></div></div>':"")
+    +'<button type="button" class="btn principal large" data-a="client"'+(pretes().length?"":" disabled")+'>'+I.plus+'Faire venir un client</button>'
+    +'<div class="bloc"><h2>À la réception ('+a.length+')</h2>'+(a.length?'<ul class="liste">'+a.map(ligneAccueil).join("")+'</ul>':'<p class="vide">Personne n\'attend sa chambre.</p>')
+    +'<p class="aide">'+(enPosteRole(ACCUEIL).length?"Sans réponse de votre part au bout de 15 minutes, la réception donne une chambre prête. Elle choisit souvent la meilleure, pas toujours.":S.palier===0?"Sans réponse de votre part au bout de 15 minutes, le client prend une clé dans la boîte à clés et s'installe dans une chambre prête, pas forcément la bonne.":"Personne n'est en poste à la réception : vous seul pouvez accueillir les clients. Au bout d'une heure, ils repartent.")+'</p></div>'
+    +'<div class="bloc"><h2>Demandes ('+q.length+')</h2>'+(q.length?'<ul class="liste">'+q.map(ligneRequete).join("")+'</ul>':'<p class="vide">Aucune demande en attente.</p>')+'</div>'
+    +'<div class="bloc"><h2>En séjour ('+l.length+')</h2>'+(l.length?'<ul class="liste">'+l.map(ligneLoge).join("")+'</ul>':'<p class="vide">L\'hôtel est vide.</p>')+'</div>'
+    +'<div class="bloc"><h2>Réservations à venir ('+r.length+')</h2>'+(r.length?'<ul class="liste">'+r.map(ligneReserve).join("")+'</ul>':'<p class="vide">Aucune réservation pour les jours qui viennent.</p>')
+    +'<p class="aide">De nouvelles réservations tombent chaque nuit, pour les trois jours suivants. L\'hôtel n\'en prend jamais plus qu\'il n\'a de chambres.</p></div>'
+    +'<div class="bloc"><h2>Registre</h2>'+(S.registre.length?'<ul class="liste">'+S.registre.slice(0,25).map(function(x){
+      return '<li class="rang"><div><b>'+h(x.nom)+'</b><small>'+x.profil+' · '+pl(x.nuits,"nuit","nuits")+' · '+quandTxt(x.t)+'</small></div><div class="droite">'+(x.paye?'<span class="puce num">'+mt(x.paye)+'</span>':"")+notePuce(x.note)+(x.issue!=="parti"?'<span class="puce '+ISSUES[x.issue][1]+'">'+ISSUES[x.issue][0]+'</span>':"")+'</div></li>';
+    }).join("")+'</ul>':'<p class="vide">Le registre se remplira avec les premiers départs.</p>')+'</div>';
+}
+function chambreChoixHtml(sj,c){
+  var actif=U.choix===c.id, prix=prixPour(sj,c), bloque=!tient(null,{ch:c.id,jusqua:sj.finPrevue,sj:sj.id}), eq=equipementsDe(c), n=0, puces="";
+  sj.souhaits.forEach(function(k){ if(souhaitOk(k,c,prix)) n++; });
+  if(forme("physionomiste")) puces+='<span class="puce '+(n===sj.souhaits.length?"ok":n?"warn":"bad")+'">'+n+' sur '+pl(sj.souhaits.length,"souhait","souhaits")+'</span>';
+  if(bloque) puces+='<span class="puce warn">Prendrait la chambre d\'une réservation</span>';
+  if(c.defaut) puces+='<span class="puce bad">Refaite sans linge frais</span>';
+  return '<li class="cand'+(actif?" actif":"")+'"><button type="button" data-a="choisir" data-k="'+c.id+'" aria-expanded="'+actif+'"><span class="cand-nom">Chambre '+c.n+' · '+TYPES[c.type].nom+'<span class="puce">Niveau '+c.niv+'</span></span>'
+    +'<span class="equips">'+COTES[c.cote].nom+' · '+ETAGES[c.etage].toLowerCase()+' · '+TYPES[c.type].lit+'</span>'
+    +'<span class="equips">'+(eq.length?eq.join(", "):"Sans équipement particulier")+'</span>'
+    +'<span class="cand-prix"><b>'+mt(prix)+'</b> la nuit · '+mt(prix*sj.nuits)+' le séjour</span>'
+    +(puces?'<span class="badges">'+puces+'</span>':"")+'</button>'
+    +(actif?'<div class="fiche"><button type="button" class="btn principal" data-a="loger">Donner la chambre '+c.n+'</button></div>':"")+'</li>';
+}
+function ecranFiche(){
+  var sj=parId(S.sejours,U.dossier), n=maintenant(), l, enCours, autres, q;
+  if(!sj||sj.etat!=="accueil"){ U.ecran="clients"; U.dossier=null; U.choix=null; if(!U.retour) U.retour={c:"",m:"Ce client n'attend plus à la réception."}; return ecranClients(); }
+  l=pretes().filter(function(c){ return TYPES[c.type].cap>=sj.pers; });
+  enCours=S.chambres.filter(function(c){ return !c.sj&&c.etat!=="propre"&&TYPES[c.type].cap>=sj.pers; });
+  autres=S.sejours.filter(function(x){ return x.id!==sj.id&&(x.etat==="reserve"||x.etat==="accueil")&&x.arrive<sj.finPrevue; }).sort(function(x,y){ return x.arrive-y.arrive; });
+  q=relaisAccueil();
+  return barre()+entete(nomComplet(sj),resumeSejour(sj),"clients","Clients")
+    +'<div class="badges"><span class="puce warn num">repart dans <span data-reste="'+sj.limite+'">'+resteTxt(sj.limite)+'</span></span>'
+    +(q&&sj.auto>n?'<span class="puce num">'+(enPosteRole(ACCUEIL).length?"relais de la réception":"boîte à clés")+' dans <span data-reste="'+sj.auto+'">'+resteTxt(sj.auto)+'</span></span>':"")
+    +'<span class="puce">'+CANAUX[sj.canal]+'</span></div>'
+    +'<div class="carte"><h2>Ce que souhaite le client</h2>'+souhaitsHtml(sj.souhaits)+'<p class="aide">Il s\'attend à une chambre de niveau '+sj.att+' au moins'+(sj.attentes.length?", et compte aussi sur :":".")+'</p>'+attentesHtml(sj.attentes)+'</div>'
+    +(autres.length?'<div class="carte"><h2>À loger aussi d\'ici son départ</h2><ul class="liste">'+autres.slice(0,6).map(function(x){ return '<li class="rang"><div><b>'+h(nomComplet(x))+'</b><small>'+resumeSejour(x)+'</small></div><div class="droite"><span class="puce num">'+(x.etat==="accueil"?"à la réception":dateCourte(x.arrive)+" · "+heureTxt(x.arrive))+'</span></div></li>'; }).join("")+'</ul></div>':"")
+    +'<div class="carte"><h2>Chambres prêtes</h2>'+(l.length?'<p class="aide">Touchez une chambre pour la choisir. Un client seul dans une grande chambre paie le prix d\'une chambre à sa taille.</p><ul class="liste">'+l.map(function(c){ return chambreChoixHtml(sj,c); }).join("")+'</ul>':'<p class="vide">Aucune chambre prête pour '+pl(sj.pers,"personne","personnes")+'.</p>')
+    +(enCours.length?'<ul class="liste">'+enCours.map(function(c){ return '<li class="rang"><div><b>Chambre '+c.n+'</b><small>'+descChambre(c)+' · niveau '+c.niv+'</small></div><div class="droite">'+etatChambreHtml(c)+'</div></li>'; }).join("")+'</ul>':"")+'</div>'
+    +'<div class="carte"><h2>Pas de chambre pour ce client ?</h2><p class="aide">'+(sj.reserve?"Il avait réservé : l'hôtel paie sa nuit ailleurs, et sa réputation en souffre.":"Il n'avait pas réservé : il ira voir ailleurs, sans frais pour l'hôtel.")+'</p>'
+    +'<div class="actions"><button type="button" class="btn danger" data-a="refuser">'+(U.confirme==="refuser"?"Confirmer":"L'envoyer dans un autre hôtel")+'</button></div></div>';
+}
+function detailOption(sj,o){
+  var l=[];
+  if(o.cout) l.push("coûte "+mt(o.cout));
+  if(o.remise) l.push("coûte "+mt(Math.round(sj.prixNuit*o.remise*(o.sejour?sj.nuits:1))));
+  if(o.supp) l.push("rapporte "+mt(o.supp<1?Math.round(sj.prixNuit*o.supp):o.supp));
+  if(o.recette) l.push("rapporte "+mt(S.tarifs[o.recette]*sj.pers));
+  if(o.stock) l.push("pris sur le stock : "+PRODUITS[o.stock].nom.toLowerCase());
+  if(o.besoin==="chambre"||o.besoin==="jardin"||o.besoin==="mieux") l.push("la chambre quittée sera à refaire");
+  return l.join(" · ");
+}
+function ecranRequete(){
+  var r=parId(S.requetes,U.dossier), sj=r?parId(S.sejours,r.sj):null, c, R, e;
+  if(!r||!sj){ U.ecran="clients"; U.dossier=null; if(!U.retour) U.retour={c:"",m:"Cette demande a déjà reçu une réponse."}; return ecranClients(); }
+  c=chambre(sj.ch); R=REQUETES[r.k]; e=relaisRequete();
+  return barre()+entete(nomComplet(sj),"Chambre "+c.n+" · "+resumeSejour(sj),"clients","Clients")
+    +'<div class="badges"><span class="puce warn num">attend encore <span data-reste="'+r.limite+'">'+resteTxt(r.limite)+'</span></span>'
+    +(e&&r.auto>maintenant()?'<span class="puce num">relais '+(e.role==="concierge"?"du concierge":"de la réception")+' dans <span data-reste="'+r.auto+'">'+resteTxt(r.auto)+'</span></span>':"")+'</div>'
+    +'<div class="carte"><h2>Sa demande</h2><p class="parole">« '+R.txt+' »</p><p class="aide">'+descChambre(c)+' · niveau '+c.niv+' · '+mt(sj.prixNuit)+' la nuit · départ '+dateCourte(sj.fin)+'</p></div>'
+    +'<div class="carte"><h2>Votre réponse</h2><div class="liste">'+R.o.map(function(o,i){
+      var raison=optionDispo(r,o), d=raison||detailOption(sj,o);
+      return '<button type="button" class="option" data-a="repondre" data-k="'+i+'"'+(raison?" disabled":"")+'><b>'+o.nom+'</b>'+(d?'<small>'+d+'</small>':"")+'</button>';
+    }).join("")+'</div><p class="aide">La meilleure réponse dépend de ce que l\'hôtel a sous la main : personnel en poste, chambre prête, stock.</p></div>';
+}
+function etatChambreHtml(c){
+  var sj=sejourDe(c);
+  if(sj) return '<span class="puce info num">Occupée · départ '+dateCourte(sj.fin)+'</span>';
+  if(c.etat==="menage") return '<span class="puce warn num">Ménage · <span data-reste="'+c.men.fin+'">'+resteTxt(c.men.fin)+'</span></span>';
+  if(c.etat==="sale") return '<span class="puce bad">À refaire</span>';
+  return '<span class="puce ok">Prête</span>';
+}
+function carteChambre(c){
+  var cap=PALIERS[S.palier].niv, suiv=c.niv<NIV_MAX?NIVEAUX[c.niv+1]:null, sj=sejourDe(c), eq=equipementsDe(c), action;
+  if(!suiv) action='<p class="aide">Niveau maximum atteint.</p>';
+  else if(c.niv>=cap) action='<p class="aide">Niveau '+(c.niv+1)+' (« '+suiv.nom+' ») à partir du palier '+nomPalier(palierPourNiv(c.niv+1))+'.</p>';
+  else action='<div class="actions"><button type="button" class="btn principal" data-a="ameliorer" data-k="'+c.id+'"'+(S.caisse>=suiv.cout?"":" disabled")+'>Niveau '+(c.niv+1)+' : '+suiv.nom+' · '+mt(suiv.cout)+'</button>'+manqueHtml(suiv.cout)+'</div>';
+  return '<div class="carte"><div class="carte-haut"><h3>Chambre '+c.n+' · '+TYPES[c.type].nom+'<small>'+COTES[c.cote].nom+' · '+ETAGES[c.etage].toLowerCase()+' · '+TYPES[c.type].lit+(sj?'<br>'+h(nomComplet(sj))+' · '+pl(sj.pers,"personne","personnes"):"")+'</small></h3>'+etatChambreHtml(c)+'</div>'
+    +'<div class="progres nn"><div class="progres-haut"><b>Niveau '+c.niv+' / '+NIV_MAX+'</b><span>'+mt(prixChambre(c))+' la nuit</span></div><div class="piste"><div class="plein" style="width:'+(c.niv/NIV_MAX*100)+'%"></div></div></div>'
+    +'<p class="equips">'+(eq.length?eq.join(", "):"Un lit, une douche, rien de plus.")+'</p>'+action+'</div>';
+}
+function ecranChambres(){
+  var max=PALIERS[S.palier].chambres, A=U.achat, prix=prixAchat(A.type,A.cote), plein=S.chambres.length>=max, p=prochainPalier(), lit=TYPES[A.type].lit;
+  function groupe(k,nom,opts){ return '<div class="champ"><span>'+nom+'</span><div class="puces-choix">'+opts.map(function(o){ return '<button type="button" class="choix'+(A[k]===o[0]?" actif":"")+'" data-a="achat" data-k="'+k+'" data-d="'+o[0]+'">'+o[1]+'</button>'; }).join("")+'</div></div>'; }
+  return barre()+entete("Chambres",S.chambres.length+" sur "+max+" possibles · "+occupees()+" occupées · "+pl(pretes().length,"prête","prêtes"))
+    +'<div class="carte"><div class="carte-haut"><h3>Acheter une chambre<small>Elle arrive au niveau 1, prête à louer.</small></h3>'+(plein?"":'<span class="puce num">'+mt(prix)+'</span>')+'</div>'
+    +(plein?'<p class="aide">'+(p?"Le palier "+nomPalier(S.palier)+" ne permet pas plus de "+max+" chambres. Le palier "+nomPalier(S.palier+1)+" en permet "+p.chambres+".":"L'hôtel a atteint sa taille maximale.")+'</p>'
+      :groupe("type","Type",ORDRE_TYPES.map(function(t){ return [t,TYPES[t].nom+" · "+TYPES[t].cap+" pers."]; }))
+        +groupe("cote","Côté",[["rue","Côté rue"],["jardin","Côté jardin"]])
+        +groupe("etage","Étage",[["rez","Rez-de-chaussée"],["haut","À l'étage"]])
+        +'<p class="aide">'+lit.charAt(0).toUpperCase()+lit.slice(1)+'. Prix habituel de la nuit au niveau 1 : '+mt(Math.round(TYPES[A.type].prix*COTES[A.cote].mult))+'.'+(A.cote==="jardin"?" Le côté jardin est au calme.":"")+'</p>'
+        +'<div class="actions"><button type="button" class="btn principal" data-a="chambre"'+(S.caisse>=prix?"":" disabled")+'>Acheter · '+mt(prix)+'</button>'+manqueHtml(prix)+'</div>')
+    +'</div>'
+    +'<p class="aide">Chaque niveau ajoute un équipement à la chambre et relève son prix habituel. Le palier '+nomPalier(S.palier)+' permet d\'aller jusqu\'au niveau '+PALIERS[S.palier].niv+'.</p>'
+    +S.chambres.map(carteChambre).join("");
+}
+function ecranClientele(){
+  var sa=SAISONS[saisonDe(maintenant())], cap=PALIERS[S.palier].niv, i, niveaux="";
+  for(i=2;i<=NIV_MAX;i++) niveaux+='<li class="rang"><div><b>Niveau '+i+' · '+NIVEAUX[i].nom+'</b><small>'+mt(NIVEAUX[i].cout)+' · prix habituel × '+String(NIVEAUX[i].mult).replace(".",",")+(i>cap?' · à partir du palier '+nomPalier(palierPourNiv(i)):"")+'</small></div></li>';
+  return barre()+entete("Clientèle","Qui vient à l'hôtel, ce que chacun souhaite, et ce qui y répond.")
+    +'<div class="alertes"><div class="alerte"><span>Saison : '+sa.nom.toLowerCase()+'. On voit surtout '+sa.txt+'.</span></div></div>'
+    +'<div class="bloc"><h2>Les profils</h2><ul class="liste">'+Object.keys(PROFILS).filter(function(k){ return (PROFILS[k].palier||0)<=S.palier; }).map(function(k){
+      var P=PROFILS[k], l=(P.fixe?[P.fixe]:[]).concat(P.souhaits.filter(function(s){ return NIV_DE[s]===undefined||NIV_DE[s]<=cap; }));
+      return '<li class="cand"><div class="fiche seule"><span class="cand-nom">'+P.nom+'<span class="puce">niveau '+niveauAttendu(P)+' au moins</span></span>'
+        +'<span class="equips">'+(P.pers[0]===P.pers[1]?pl(P.pers[0],"personne","personnes"):P.pers[0]+" à "+P.pers[1]+" personnes")+' · '+(P.nuits[0]===P.nuits[1]?pl(P.nuits[0],"nuit","nuits"):P.nuits[0]+" à "+P.nuits[1]+" nuits")+' · '+(P.we>P.sem?"surtout le week-end":P.sem>P.we?"surtout en semaine":"toute la semaine")+'</span>'
+        +souhaitsHtml(l)+attentesHtml(P.attentes.filter(function(a){ return EQUIP[ATTENTES[a][1]].palier<=S.palier&&ATTENTES[a][2]<=capEquip(); }))+'</div></li>';
+    }).join("")+'</ul><p class="aide">Chaque client n\'a que deux ou trois de ces souhaits. En bleu : ce qu\'il attend de l\'hôtel, quelle que soit sa chambre.</p></div>'
+    +'<div class="bloc"><h2>Ce qui répond à chaque souhait</h2><div class="carte">'+Object.keys(SOUHAITS).filter(function(k){ return NIV_DE[k]===undefined||NIV_DE[k]<=cap; }).map(function(k){
+      return ligne(SOUHAITS[k],NIV_DE[k]?"chambre de niveau "+NIV_DE[k]+" ou plus":k==="budget"?mt(SEUIL_BUDGET)+" la nuit au plus":REPONSES[k]);
+    }).join("")+'</div></div>'
+    +'<div class="bloc"><h2>Les dix niveaux d\'une chambre</h2><ul class="liste"><li class="rang"><div><b>Niveau 1 · Chambre simple</b><small>Un lit, une douche, rien de plus</small></div></li>'+niveaux+'</ul></div>';
+}
+function entete(titre,sous,cible,nomCible){
+  return '<button type="button" class="retour" data-a="aller" data-e="'+(cible||"accueil")+'">'+I.retour+(nomCible||"Accueil")+'</button>'
+    +'<div class="titre"><h1>'+h(titre)+'</h1>'+(sous?'<p>'+sous+'</p>':'')+'</div>';
+}
+function jauge(nom,val,niv,pct,bas){
+  return '<div class="jauge '+(niv||"")+'"><span class="jauge-nom">'+nom+'</span><span class="jauge-val">'+val+'</span>'
+    +(pct===null?'':'<div class="piste"><div class="plein" style="width:'+borne(pct,0,100)+'%"></div></div>')
+    +'<span class="jauge-bas">'+(bas||"")+'</span></div>';
+}
+function tuile(g,ic,nom,chiffre,cible){
+  return '<button type="button" class="tuile" data-a="aller" data-e="'+cible+'"><span class="tuile-icone '+g+'">'+I[ic]+'</span>'
+    +'<span class="tuile-texte"><span class="tuile-nom">'+nom+'</span><span class="tuile-chiffre">'+chiffre+'</span></span></button>';
+}
+function pas(action,cle,valeur,delta,moinsOk,plusOk,libelle){
+  return '<div class="pas"><button type="button" data-a="'+action+'" data-k="'+cle+'" data-d="'+(-delta)+'" aria-label="Baisser '+libelle+'"'+(moinsOk?'':' disabled')+'>−</button>'
+    +'<output>'+valeur+'</output>'
+    +'<button type="button" data-a="'+action+'" data-k="'+cle+'" data-d="'+delta+'" aria-label="Augmenter '+libelle+'"'+(plusOk?'':' disabled')+'>+</button></div>';
+}
+function libReputation(r){ return r>=80?"Excellente":r>=65?"Bonne":r>=50?"Correcte":r>=35?"Fragile":"Mauvaise"; }
+function absenceTxt(e){
+  var a=e.absent, t=maintenant();
+  if(a.motif==="maladie") return "Malade jusqu'au "+dateCourte(a.fin-1000)+" inclus";
+  return (a.debut>t?"En congé du "+dateCourte(a.debut)+" au ":"En congé jusqu'au ")+dateCourte(a.fin-1000)+(a.debut>t?"":" inclus");
+}
+function absencesHtml(){
+  var lignes="";
+  S.demandes.forEach(function(d){
+    var e=parId(S.equipe,d.qui); if(!e) return;
+    lignes+='<li class="rang"><div><b>'+h(nomComplet(e))+'</b><small>'+nomRole(e)+' · demande '+d.jours+' jours de congé, du '+dateCourte(d.debut)+' au '+dateCourte(d.fin-1000)+'</small></div>'
+      +'<div class="droite"><button type="button" class="btn petit principal" data-a="conge" data-k="'+d.id+'" data-d="1">Accepter</button><button type="button" class="btn petit" data-a="conge" data-k="'+d.id+'" data-d="0">Refuser</button></div></li>';
+  });
+  S.equipe.forEach(function(e){
+    if(!e.absent) return;
+    lignes+='<li class="rang"><div><b>'+h(nomComplet(e))+'</b><small>'+nomRole(e)+' · '+absenceTxt(e)+'</small></div><div class="droite">'
+      +(e.absent.interim?'<span class="puce ok">Intérimaire en place</span><button type="button" class="btn petit" data-a="interim" data-k="'+e.id+'">Retirer</button>'
+        :'<button type="button" class="btn petit" data-a="interim" data-k="'+e.id+'">Intérimaire · '+mt(paieInterim(e,"M"))+' par poste</button>')+'</div></li>';
+  });
+  if(!lignes) return "";
+  return '<div class="carte"><h2>Absences et congés</h2><ul class="liste">'+lignes+'</ul><p class="aide">Une personne absente reste payée. Un intérimaire tient ses postes à sa place, pour une fois et demie le salaire du métier. Un congé refusé pèse sur le moral ; une demande sans réponse est acceptée d\'office.</p></div>';
+}
+function etatPersonne(e){
+  var n=charge(e);
+  if(absentLe(e,S.horloge)) return '<span class="puce warn">'+(e.absent.motif==="maladie"?"Malade":"En congé")+(e.absent.interim?" · remplacé":"")+'</span>';
+  if(n) return '<span class="puce info">'+(e.role==="femme"||e.role==="gouvernante"?"Fait une chambre":e.role==="praticien"?"En soin":pl(n,"table","tables"))+'</span>';
+  return enPoste(e)?'<span class="puce ok">En poste</span>':'<span class="puce">Hors poste</span>';
+}
+function carteRole(r){
+  var R=ROLES[r], p=S.postes[r], m=moral(r), membres=S.equipe.filter(function(e){ return e.role===r; });
+  if(!membres.length) return "";
+  return '<div class="carte"><div class="carte-haut"><h3>'+R.pluriel+' ('+membres.length+')<small>'+AIDE_ROLE[r]+'</small></h3><span class="puce '+(m>=60?"ok":m>=40?"warn":"bad")+'">Moral '+m+' / 100</span></div>'
+    +'<div class="reglage"><span>Salaire par poste de 8 h (habituel : '+mt(R.salaire)+')</span>'+pas("salaire",r,mt(p.salaire),5,p.salaire>Math.round(R.salaire*0.5),p.salaire<R.salaire*2.5,"le salaire")+'</div>'
+    +'<ul class="liste">'+membres.map(function(e){
+      var c=U.confirme==="e"+e.id, max=e.exp>=2, bas=SEUILS_XP[e.exp], haut=max?bas:SEUILS_XP[e.exp+1], prix=prixStage(e);
+      return '<li class="rang"><div><b>'+h(nomComplet(e))+'</b><small>'+nomExp(e)+' · '+e.age+' ans · '+mt(paieDe(e))+' par poste · '+pl(nbPostes(e),"poste","postes")+' par semaine</small>'
+        +(max?'<small>Expérience au maximum</small>':'<small>Expérience : '+Math.floor(e.xp)+' / '+haut+' pour passer '+(e.femme&&EXP[e.exp+1].f?EXP[e.exp+1].f:EXP[e.exp+1].nom).toLowerCase()+'</small><div class="piste nn" style="margin-top:5px"><div class="plein" style="width:'+borne((e.xp-bas)/(haut-bas)*100,0,100)+'%"></div></div>')+'</div>'
+        +'<div class="droite">'+etatPersonne(e)
+        +(max?"":'<button type="button" class="btn petit" data-a="stage" data-k="'+e.id+'"'+(stagePossible(e)&&S.caisse>=prix?"":" disabled")+'>'+(e.stage&&!stagePossible(e)?"Stage fait aujourd'hui":"Stage · "+mt(prix))+'</button>')
+        +'<button type="button" class="btn petit danger" data-a="licencier" data-k="'+e.id+'"'+(charge(e)?" disabled":"")+'>'+(c?"Confirmer":"Licencier")+'</button></div></li>';
+    }).join("")+'</ul></div>';
+}
+function ecranEquipe(){
+  var cartes=ORDRE_ROLES.map(carteRole).join("");
+  return barre()+entete("Équipe",pl(S.equipe.length,"personne","personnes")+" · "+mt(masseJour(maintenant())*(1+TAUX_COTISATIONS))+" de salaires et cotisations aujourd'hui")
+    +'<ul class="liste"><li class="rang moi"><div><b>'+h(S.prenom)+'</b> (vous)<small>Directeur de l\'hôtel · '+mt(PAIE_DIRECTEUR)+' toutes les 20 minutes de jeu</small><small>Sans personnel, vous accueillez, vous refaites les chambres et vous servez le petit-déjeuner.</small></div><div class="droite"><button type="button" class="btn petit" data-a="aller" data-e="moi">Ma fiche</button></div></li></ul>'
+    +'<div class="actions"><button type="button" class="btn" data-a="aller" data-e="planning">'+I.calendrier+'Planning</button><button type="button" class="btn principal" data-a="aller" data-e="recrutement">'+I.recrut+'Recruter</button></div>'
+    +(cartes||'<p class="vide">Personne ne travaille encore ici. Un réceptionniste accueille les clients quand vous n\'êtes pas là ; une femme de chambre refait une chambre en une demi-heure au lieu de deux heures.</p>');
+}
+function ecranPlanning(){
+  var q=posteDe(maintenant()), G=GROUPES_PLANNING.filter(function(x){ return x[0]===U.planVue; })[0]||GROUPES_PLANNING[0], grille="", blocs="";
+  function prevus(j,k){ var n=0; S.equipe.forEach(function(e){ if(G[3].indexOf(e.role)>=0&&e.plan[j]===k) n++; }); return n; }
+  ["M","A","N"].forEach(function(k){
+    grille+='<tr><th>'+POSTES[k].nom+'<small>'+POSTES[k].h+'</small></th>'+JOURS_COURTS.map(function(x,j){ var n=prevus(j,k); return '<td class="'+(n?"":"zero")+(q.j===j&&q.k===k?" ici":"")+'">'+(n||"–")+'</td>'; }).join("")+'</tr>';
+  });
+  G[3].forEach(function(r){
+    var membres=S.equipe.filter(function(e){ return e.role===r; });
+    if(!membres.length) return;
+    blocs+='<div class="bloc"><h2>'+ROLES[r].pluriel+'</h2>'+membres.map(function(e){
+      var m=moralDe(e), n=nbPostes(e);
+      return '<div class="carte"><div class="carte-haut"><h3>'+h(nomComplet(e))+'<small>'+pl(n,"poste","postes")+' · '+mt(paieSemaine(e))+' par semaine'+(e.absent?'<br>'+absenceTxt(e)+(e.absent.interim?" · intérimaire en place":""):"")+'</small></h3><span class="puce '+(m>=60?"ok":m>=40?"warn":"bad")+'">Moral '+m+'</span></div>'
+        +'<div class="semaine">'+e.plan.map(function(k,j){ return '<button type="button" class="jour p-'+k+(q.j===j?" ici":"")+'" data-a="plan" data-k="'+e.id+'" data-d="'+j+'" aria-label="'+JOURS_NOMS[j]+' : '+POSTES[k].nom+'"><small>'+JOURS_COURTS[j]+'</small><b>'+POSTES[k].court+'</b></button>'; }).join("")+'</div></div>';
+    }).join("")+'</div>';
+  });
+  return barre()+entete("Planning","Semaine type · en ce moment : "+JOURS_NOMS[q.j]+", "+POSTES[q.k].nom.toLowerCase())
+    +absencesHtml()
+    +'<div class="onglets">'+GROUPES_PLANNING.map(function(x){ var n=S.equipe.filter(function(e){ return x[3].indexOf(e.role)>=0; }).length; return '<button type="button" class="onglet'+(x[0]===G[0]?" actif":"")+'" data-a="planvue" data-k="'+x[0]+'">'+x[1]+(n?" ("+n+")":"")+'</button>'; }).join("")+'</div>'
+    +'<div class="carte"><h2>'+G[2]+'</h2><div class="tableau"><table class="grille"><thead><tr><th></th>'+JOURS_COURTS.map(function(x,j){ return '<th class="'+(q.j===j?"ici":"")+'">'+x+'</th>'; }).join("")+'</tr></thead><tbody>'+grille+'</tbody></table></div>'
+    +'<p class="aide">'+(G[0]==="reception"?"Les clients arrivent surtout entre 14 h et 22 h. Sans personne à la réception, vous seul pouvez les accueillir et répondre à leurs demandes.":G[0]==="etages"?"Les départs ont lieu entre 7 h et 11 h : c'est le matin que les chambres sont à refaire.":"Petit-déjeuner de 6 h 30 à 10 h, déjeuner de 12 h à 14 h, dîner de 19 h à 22 h, bar de 17 h à 22 h, spa de 10 h à 19 h. Les clients de l'extérieur ne viennent que si le personnel est prévu.")+'</p></div>'
+    +(blocs?'<p class="aide">Touchez un jour pour changer de poste : matin, après-midi, nuit, repos. Au-delà de cinq postes par semaine ou de trois nuits, le moral baisse. Une nuit est payée 25 % de plus.</p>'+blocs
+      :'<p class="vide">Personne dans ce groupe pour le moment.</p><button type="button" class="btn principal large" data-a="aller" data-e="recrutement">'+I.recrut+'Recruter</button>');
+}
+function rolesOuverts(){ return ORDRE_ROLES.filter(function(r){ return ROLES[r].palier<=S.palier&&!(ROLES[r].unique&&nb(r)); }); }
+function ecranRecrutement(){
+  var roles=rolesOuverts(), r=U.role, R, liste;
+  if(roles.indexOf(r)<0) r=roles[0];
+  R=ROLES[r]; liste=S.candidats[r]||[];
+  return barre()+entete("Recrutement","Choisissez un métier, puis la personne que vous voulez.")
+    +'<div class="puces-choix">'+roles.map(function(x){ return '<button type="button" class="choix'+(x===r?" actif":"")+'" data-a="role" data-k="'+x+'">'+ROLES[x].nom+(nb(x)?" · "+nb(x):"")+'</button>'; }).join("")+'</div>'
+    +'<p class="aide">'+AIDE_ROLE[r]+' Salaire fixé pour ce métier : '+mt(S.postes[r].salaire)+' par poste de 8 h, plus 25 % de cotisations.</p>'
+    +'<ul class="liste">'+liste.map(function(c){
+      return '<li class="rang"><div><b>'+h(nomComplet(c))+'</b>, '+c.age+' ans<small>'+nomExp(c)+' · '+mt(Math.round(S.postes[r].salaire*EXP[c.exp].paie))+' par poste</small>'
+        +'<div class="badges" style="margin-top:6px">'+c.atouts.map(function(a){ return '<span class="puce'+(R.atouts.indexOf(a)>=0?" ok":"")+'">'+ATOUTS[a]+'</span>'; }).join("")+'</div></div>'
+        +'<div class="droite"><button type="button" class="btn principal" data-a="engager" data-k="'+c.id+'">Engager</button></div></li>';
+    }).join("")+'</ul>'
+    +'<button type="button" class="btn" data-a="autres">Voir d\'autres candidats</button>'
+    +'<p class="aide">Un junior coûte 15 % de moins. Un senior coûte 20 % de plus, travaille plus vite et laisse des clients plus satisfaits. Les atouts en vert sont utiles à ce poste.</p>';
+}
+function effetNiveau(k,n){
+  var E=EQUIP[k];
+  if(k==="resto") return n===1?"4 tables pour le petit-déjeuner":E.cap[n-1]+" tables · repas à "+mt(Math.round(REF.repas*MULT_REF.repas[n]))+" d'habitude";
+  if(k==="seminaire") return "jusqu'à "+E.cap[n-1]+" participants";
+  if(E.cap) return E.cap[n-1]+" "+E.unite[1];
+  if(k==="piscine") return (3*n)+" % de clients en plus";
+  if(k==="hall") return "patience à l'arrivée +"+(15*n)+" %";
+  return "ménage "+(10*n)+" % plus rapide";
+}
+function carteEquip(k){
+  var E=EQUIP[k], n=niv(k), verrou=E.palier>S.palier, cap=capEquip(), prix=n<EQUIP_MAX?E.couts[n]:0, suite="", etat, b=besoinEquip(k), vie="", fait, rate=S.stat.rates[k]||0;
+  if(verrou) etat='<span class="puce">Palier '+nomPalier(E.palier)+'</span>';
+  else {
+    etat='<span class="puce '+(n?"ok":"info")+'">'+(n?"Niveau "+n+" / "+EQUIP_MAX:"À construire")+'</span>';
+    if(n>=EQUIP_MAX) suite='<p class="aide">Niveau maximum atteint.</p>';
+    else if(n>=cap) suite='<p class="aide">Niveau '+(n+1)+' (« '+E.niveaux[n]+' ») à partir du palier '+nomPalier(n)+'.</p>';
+    else suite='<div class="actions"><button type="button" class="btn principal" data-a="equiper" data-k="'+k+'"'+(S.caisse>=prix?"":" disabled")+'>'+(n?"Niveau "+(n+1):"Construire")+' : '+E.niveaux[n]+' · '+mt(prix)+'</button>'+manqueHtml(prix)+'</div>'
+      +'<p class="aide">'+effetNiveau(k,n+1).charAt(0).toUpperCase()+effetNiveau(k,n+1).slice(1)+' · entretien : '+mt(Math.round(prix*PART_ENTRETIEN))+' de plus par jour.</p>';
+  }
+  if(n&&(k==="resto"||k==="bar"||k==="spa")){
+    fait=k==="resto"?pl(S.stat.couverts,"couvert servi","couverts servis"):pl(S.stat.visites[k]||0,"client servi","clients servis");
+    vie='<p class="aide">En ce moment : '+enService(k)+' sur '+capDe(k)+' '+E.unite[1]+(enFile(k)?' · '+enFile(k)+' en attente':"")+'. Aujourd\'hui : '+fait+(rate?' · '+pl(rate,"reparti","repartis")+' sans être servi'+(rate>1?"s":""):"")+'.</p>';
+  } else if(n&&k==="parking") vie='<p class="aide">'+(capDe(k)-placesLibres())+' sur '+pl(capDe(k),"place occupée","places occupées")+'.</p>';
+  return '<div class="carte"><div class="carte-haut"><div class="entete"><span class="tuile-icone '+E.g+'">'+I[E.ic]+'</span><h3>'+E.nom+'<small>'+(n?E.niveaux[n-1]+' · '+effetNiveau(k,n):"Pas encore construit")+'</small></h3></div>'+etat+'</div>'
+    +(verrou?"":'<p class="aide">'+E.txt+'</p>')+vie
+    +(b?'<div class="alertes"><div class="alerte warn"><span>'+b[0]+'</span><button type="button" class="btn petit" data-a="recruter" data-k="'+b[1]+'">Recruter</button></div></div>':"")
+    +(n&&k==="resto"&&n===1&&!nb("serveur")?'<p class="aide">Sans serveur en poste, vous servez vous-même le petit-déjeuner, deux tables à la fois.</p>':"")
+    +suite+'</div>';
+}
+function ecranEquipements(){
+  return barre()+entete("Équipements","Entretien : "+mt(entretienEquip())+" par jour · niveau "+capEquip()+" au plus à ce palier")
+    +'<p class="aide">Chaque équipement se construit puis s\'améliore sur cinq niveaux, avec la caisse de l\'hôtel. Chaque niveau ajoute 0,5 % de son prix en entretien par jour.</p>'
+    +ORDRE_EQUIP.map(carteEquip).join("");
+}
+function ecranEconomat(){
+  var connus=produitsConnus(), L=lot(), G=L*FOIS_GROS;
+  return barre()+entete("Économat","Valeur du stock : "+mt(valeurStock()))
+    +'<div class="carte"><div class="reglage"><div><b>Commande automatique</b><br><span class="aide">Un lot de '+L+' dès qu\'il reste '+seuilStock()+' unités ou moins</span></div><div class="bascule"><button type="button" data-a="auto" data-k="1" class="'+(S.auto?"actif":"")+'" aria-pressed="'+!!S.auto+'">Oui</button><button type="button" data-a="auto" data-k="0" class="'+(S.auto?"":"actif")+'" aria-pressed="'+!S.auto+'">Non</button></div></div>'
+    +'<p class="aide">La commande automatique coûte 15 % de plus qu\'une commande faite à la main. Un lot de '+G+' coûte 15 % de moins. Livraison en 30 minutes.</p></div>'
+    +(S.commandes.length?'<div class="bloc"><h2>Commandes en route</h2><ul class="liste">'+S.commandes.map(function(c){ return '<li class="rang"><div><b>'+c.n+' × '+PRODUITS[c.p].nom+'</b></div><div class="droite"><span class="puce num">livraison dans <span data-reste="'+c.t+'">'+resteTxt(c.t)+'</span></span></div></li>'; }).join("")+'</ul></div>':"")
+    +'<div class="bloc"><h2>Stock</h2><ul class="liste">'+connus.map(function(k){
+      var n=stockDe(k), a=prixLot(k,L,false), b=prixLot(k,G,false), usage={linge:"Un jeu par chambre refaite",accueil:"Un lot par chambre refaite",pdj:"Une portion par personne",denrees:"Un couvert par personne au déjeuner et au dîner",boissons:"Un verre par personne au bar, et les pauses des séminaires",soins:"Un par soin au spa"}[k];
+      return '<li class="rang"><div><b>'+PRODUITS[k].nom+'</b><small>'+usage+' · '+mt(PRODUITS[k].cout)+' pièce'+(enCommande(k)?' · '+enCommande(k)+' en route':"")+'</small></div>'
+        +'<div class="droite"><span class="puce num '+(n===0?"bad":n<=seuilStock()?"warn":"ok")+'">'+n+' en stock</span>'
+        +'<button type="button" class="btn petit" data-a="commander" data-k="'+k+'" data-d="'+L+'"'+(S.caisse-a>=-DECOUVERT_MAX?"":" disabled")+'>+'+L+' · '+mt(a)+'</button>'
+        +'<button type="button" class="btn petit" data-a="commander" data-k="'+k+'" data-d="'+G+'"'+(S.caisse-b>=-DECOUVERT_MAX?"":" disabled")+'>+'+G+' · '+mt(b)+'</button></div></li>';
+    }).join("")+'</ul><p class="aide">En rupture de linge, une chambre est refaite sans linge frais et le client suivant le remarque. En rupture de denrées ou de boissons, le client est servi à moitié et paie moitié prix.</p></div>';
+}
+function pourcent(x){ return Math.round(x*100)+" %"; }
+function carteTarif(k){
+  var prix=S.tarifs[k], ref=refDe(k), dk=null, x, d, cible, effet, min=null, max=null, corps="";
+  for(x in CLES_DEMANDE) if(CLES_DEMANDE[x]===k) dk=x;
+  d=dk?demande(dk):1; cible=dk?demandeCible(dk):1;
+  if(k==="chambre"){
+    S.chambres.forEach(function(c){ var p=prixChambre(c); if(min===null||p<min) min=p; if(max===null||p>max) max=p; });
+    corps=ligne("Votre chambre la moins chère",mt(min)+" la nuit")+ligne("Votre chambre la plus chère",mt(max)+" la nuit");
+  }
+  if(!dk) effet=k==="pdj"?"Payé par les clients de l'hôtel qui prennent le petit-déjeuner.":"Payé chaque nuit par les clients venus en voiture.";
+  else effet=Math.abs(cible-d)<0.01?(Math.abs(d-1)<0.01?"Vos prix sont dans la norme.":"La fréquentation s'est installée à ce niveau."):cible<d?"Trop cher pour la clientèle : la fréquentation va baisser peu à peu.":"Meilleur marché : la fréquentation va monter peu à peu.";
+  return '<div class="carte"><div class="reglage"><div><b>'+NOMS_PRIX[k]+'</b><br><span class="aide">'+(k==="chambre"?"En pourcentage du prix habituel de chaque chambre":"Prix habituel : "+mt(ref))+'</span></div>'
+    +pas("prix",k,k==="chambre"?prix+" %":mt(prix),PAS_PRIX[k],prix>(k==="chambre"?30:0),prix<(k==="chambre"?300:ref*5),"le prix")+'</div>'
+    +corps
+    +(dk?ligne("Fréquentation",pourcent(d)+(Math.abs(cible-d)>=0.01?' <span class="aide">(tend vers '+pourcent(cible)+')</span>':"")):"")
+    +'<p class="aide'+(dk&&cible<0.75?" moins-c":"")+'">'+effet+'</p></div>';
+}
+function ecranTarifs(){
+  var cles=["chambre"].concat(["pdj","repas","bar","spa","parking","seminaire"].filter(function(k){ return niv(EQUIP_DE[k])>=(k==="repas"?2:1); }));
+  return barre()+entete("Tarifs","Vos prix, et ce qu'ils font à la fréquentation.")
+    +'<p class="aide">Aucun client ne refuse votre prix. Mais un hôtel cher se fait une réputation : il y vient peu à peu moins de monde, et les clients repartent un peu moins contents. Un hôtel bon marché en attire davantage.</p>'
+    +cles.map(carteTarif).join("")
+    +'<p class="aide">Quand un équipement monte de niveau, son prix habituel monte aussi : pensez à revoir votre tarif.</p>';
+}
+function periode(vue,decal){
+  var d=new Date(maintenant()), cles=[], i, q, titre, src="cm";
+  if(vue==="jour"){ d.setDate(d.getDate()+decal); cles=[cleJour(d.getTime())]; src="cj"; titre=decal===0?"Aujourd'hui":decal===-1?"Hier":d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"}); }
+  else if(vue==="mois"){ d=new Date(d.getFullYear(),d.getMonth()+decal,1); cles=[cleMois(d.getTime())]; titre=d.toLocaleDateString("fr-FR",{month:"long",year:"numeric"}); }
+  else if(vue==="trimestre"){ q=Math.floor(d.getMonth()/3)+decal; d=new Date(d.getFullYear(),q*3,1); for(i=0;i<3;i++) cles.push(cleMois(new Date(d.getFullYear(),d.getMonth()+i,1).getTime())); q=Math.floor(d.getMonth()/3)+1; titre=q+(q===1?"er":"e")+" trimestre "+d.getFullYear(); }
+  else { d=new Date(d.getFullYear()+decal,0,1); for(i=0;i<12;i++) cles.push(cleMois(new Date(d.getFullYear(),i,1).getTime())); titre="Année "+d.getFullYear(); }
+  return {titre:titre,tot:additionner(S[src],cles)};
+}
+function pageResultat(){
+  var p=periode(U.vue,U.decal), a=periode(U.vue,U.decal-1), T=p.tot, A=a.tot, rT=recettesDe(T), rA=recettesDe(A), dT=depensesDe(T), dA=depensesDe(A), lignes="", services="", fT, fA, tresorerie="";
+  function cel(v,signe){ return v?(signe?signeM(v):mt(v)):"–"; }
+  function rang(nom,x,y,cl){ return '<tr'+(cl?' class="'+cl+'"':"")+'><td>'+nom+'</td><td>'+x+'</td><td class="avant">'+y+'</td></tr>'; }
+  function onglet(v,nom){ return '<button type="button" class="onglet'+(U.vue===v?" actif":"")+'" data-a="vue" data-k="'+v+'">'+nom+'</button>'; }
+  // Du résultat à la caisse : ce qui est compté sans être payé, et ce qui est payé sans être une charge
+  function flux(X){
+    var f={amort:typeDe(X,"a"),invest:0,stock:(X["k:economat"]||0)-typeDe(X,"g"),creances:(X["c:entreprises"]||0)-(X["d:entreprises"]||0)-typeDe(X,"w"),pret:(X["p:pret"]||0)-(X["q:pret"]||0)}, k;
+    for(k in X) if(k.charAt(0)==="k"&&k!=="k:economat") f.invest+=X[k];
+    f.total=recettesDe(X)-depensesDe(X)+f.amort-f.invest-f.stock-f.creances+f.pret;
+    return f;
+  }
+  lignes+='<tr class="sous"><td colspan="3">Recettes</td></tr>';
+  COMPTES_SERVICES.forEach(function(c){ var x=T["r:"+c[0]]||0, y=A["r:"+c[0]]||0; if(x||y) lignes+=rang(c[1],cel(x),cel(y)); });
+  lignes+=rang("Total des recettes",mt(rT),mt(rA),"total");
+  lignes+='<tr class="sous"><td colspan="3">Charges</td></tr>';
+  TYPES_D.forEach(function(c){ var x=typeDe(T,c[0]), y=typeDe(A,c[0]); if(x||y) lignes+=rang(c[1],cel(x),cel(y)); });
+  lignes+=rang("Total des charges",mt(dT),mt(dA),"total");
+  lignes+='<tr class="total"><td>Résultat</td><td class="'+(rT-dT>=0?"plus-c":"moins-c")+'">'+signeM(rT-dT)+'</td><td class="avant">'+signeM(rA-dA)+'</td></tr>';
+  fT=flux(T); fA=flux(A);
+  [["amort","Amortissements (non payés)",1],["creances","Factures en attente chez les sociétés",-1],["stock","Stock de l'économat",-1],["invest","Investissements",-1],["pret","Prêts du directeur, nets",1]].forEach(function(l){
+    if(fT[l[0]]||fA[l[0]]) tresorerie+=rang(l[1],cel(fT[l[0]]*l[2],true),cel(fA[l[0]]*l[2],true));
+  });
+  if(tresorerie) lignes+='<tr class="sous"><td colspan="3">Du résultat à la caisse</td></tr>'+tresorerie+rang("Variation de la caisse",signeM(fT.total),signeM(fA.total),"total");
+  COMPTES_SERVICES.forEach(function(c){
+    var s=serviceDe(T,c[0]); if(!s.r&&!s.d) return;
+    services+='<tr><td>'+c[1]+'</td><td>'+(s.r?nombre(s.r):"–")+'</td><td>'+(s.d?nombre(s.d):"–")+'</td><td class="'+(s.r-s.d>=0?"plus-c":"moins-c")+'">'+(s.r-s.d>0?"+":s.r-s.d<0?"−":"")+nombre(Math.abs(s.r-s.d))+'</td></tr>';
+  });
+  return '<div class="onglets">'+onglet("jour","Jour")+onglet("mois","Mois")+onglet("trimestre","Trimestre")+onglet("annee","Année")+'</div>'
+    +'<div class="periode"><button type="button" class="btn" data-a="decal" data-d="-1" aria-label="Période précédente"'+(U.vue==="jour"&&U.decal<=-(JOURS_GARDES-2)?" disabled":"")+'>'+I.retour+'</button><b>'+p.titre.charAt(0).toUpperCase()+p.titre.slice(1)+'</b><button type="button" class="btn" data-a="decal" data-d="1" aria-label="Période suivante"'+(U.decal>=0?" disabled":"")+'>'+I.suivant+'</button></div>'
+    +'<div class="carte"><div class="tableau"><table><thead><tr><th>Poste</th><th>Période</th><th>Précédente</th></tr></thead><tbody>'+lignes+'</tbody></table></div></div>'
+    +'<div class="bloc"><h2>Résultat par service (en '+h(S.devise)+')</h2>'+(services?'<div class="carte"><div class="tableau serre"><table><thead><tr><th>Service</th><th>Recettes</th><th>Charges</th><th>Résultat</th></tr></thead><tbody>'+services+'</tbody></table></div></div>':'<p class="vide">Aucun mouvement sur cette période.</p>')+'</div>'
+    +'<p class="aide">Une nuit est comptée à minuit, un repas quand la table se lève. Les salaires, les cotisations et les charges sont payés chaque nuit à minuit. Les détails par jour sont gardés '+JOURS_GARDES+' jours.</p>';
+}
+function pageBilan(){
+  var b=bilan(), an=periode("annee",0).tot, res=recettesDe(an)-depensesDe(an);
+  var ch={nom:"Chambres ("+S.chambres.length+")",v:0,c:0}, biens=[ch];
+  function rang(nom,v,cl){ return '<tr'+(cl?' class="'+cl+'"':"")+'><td>'+nom+'</td><td>'+v+'</td></tr>'; }
+  S.immos.forEach(function(im){ if(im.sv==="chambres"){ ch.v+=im.v; ch.c+=im.c; } else biens.push(im); });
+  return '<div class="carte"><div class="tableau"><table><thead><tr><th>Actif</th><th>Aujourd\'hui</th></tr></thead><tbody>'
+    +rang("Chambres et équipements, à l'achat",mt(b.brut))+rang("Amortissements",b.amort?"−"+mt(b.amort):"–")+rang("Chambres et équipements, valeur nette",mt(b.brut-b.amort),"total")
+    +rang("Stock de l'économat",mt(b.stock))+rang("À recevoir des sociétés",mt(b.creances))+rang("Caisse",mt(b.tresorerie))+rang("Total de l'actif",mt(b.actif),"total")
+    +'</tbody></table></div></div>'
+    +'<div class="carte"><div class="tableau"><table><thead><tr><th>Passif</th><th>Aujourd\'hui</th></tr></thead><tbody>'
+    +rang("Capitaux propres",mt(b.propres))+rang("dont résultat de l'année",signeM(res))+rang("Prêt du directeur",mt(b.pret))+rang("Découvert à la banque",mt(b.decouvert))+rang("Total du passif",mt(b.actif),"total")
+    +'</tbody></table></div></div>'
+    +(S.immos.length?'<div class="bloc"><h2>Immobilisations</h2><div class="carte"><div class="tableau serre"><table><thead><tr><th>Bien</th><th>Achat</th><th>Amorti</th><th>Net</th></tr></thead><tbody>'+biens.map(function(im){ return '<tr><td>'+h(im.nom)+'</td><td>'+nombre(im.v)+'</td><td>'+nombre(im.c)+'</td><td>'+nombre(im.v-im.c)+'</td></tr>'; }).join("")+'</tbody></table></div></div></div>':"")
+    +'<p class="aide">Une chambre, une amélioration ou un équipement ne sont pas des charges le jour de l\'achat : ils sont amortis sur cinq ans. Les capitaux propres sont ce qui reste à l\'hôtel une fois ses dettes retirées.</p>';
+}
+function pageSocietes(){
+  var attente=0, conteste=0;
+  S.bordereaux.forEach(function(b){ attente+=b.m; }); S.contestes.forEach(function(c){ conteste+=c.m; });
+  return '<div class="carte">'+ligne("En attente de paiement",mt(attente))+ligne("Contesté",mt(conteste))
+    +'<p class="aide">Les voyageurs d\'affaires dont la société paie, et les séminaires, sont réglés sur facture : chaque journée part en un lot, payé '+DELAI_FACTURE[0]+' à '+DELAI_FACTURE[1]+' jours plus tard. Les autres clients paient sur place. Les plateformes de réservation prennent '+Math.round(COMMISSION*100)+' % de commission sur les nuits qu\'elles apportent.</p></div>'
+    +(S.contestes.length?'<div class="bloc"><h2>Factures contestées</h2><ul class="liste">'+S.contestes.map(function(c){
+      return '<li class="rang"><div><b>'+mt(c.m)+'</b><small>Factures du '+dateCourte(c.t)+'</small><small>'+(c.relance?'Relancée : paiement dans <span data-reste="'+c.relance+'">'+resteTxt(c.relance)+'</span>':'Sans relance, perdu dans <span data-reste="'+c.limite+'">'+resteTxt(c.limite)+'</span>')+'</small></div>'
+        +'<div class="droite">'+(c.relance?'<span class="puce ok">Relancée</span>':'<button type="button" class="btn petit principal" data-a="relancer" data-k="'+c.id+'">Relancer</button>')+'</div></li>';
+    }).join("")+'</ul></div>':"")
+    +'<div class="bloc"><h2>Lots en attente</h2>'+(S.bordereaux.length?'<ul class="liste">'+S.bordereaux.map(function(b){
+      return '<li class="rang"><div><b>'+mt(b.m)+'</b><small>Factures du '+dateCourte(b.t)+' · '+pl(b.n,"ligne","lignes")+'</small></div><div class="droite"><span class="puce num">paiement vers le '+dateCourte(b.ech)+'</span></div></li>';
+    }).join("")+'</ul>':'<p class="vide">Aucun lot en attente.</p>')+'</div>';
+}
+function ecranFinances(){
+  var page=U.finPage||"resultat";
+  function onglet(k,nom){ return '<button type="button" class="onglet'+(page===k?" actif":"")+'" data-a="finpage" data-k="'+k+'">'+nom+'</button>'; }
+  return barre()+entete("Finances","Caisse : "+mt(S.caisse)+" · à recevoir : "+mt(creances()))
+    +'<div class="onglets">'+onglet("resultat","Résultat")+onglet("bilan","Bilan")+onglet("societes","Sociétés")+'</div>'
+    +(page==="bilan"?pageBilan():page==="societes"?pageSocietes():pageResultat());
+}
+function ecranJournal(){
+  var plaintes=S.plaintes.map(function(x){
+    return '<li class="rang"><div><b>'+h(x.nom)+'</b><small>'+h(x.motif.charAt(0).toUpperCase()+x.motif.slice(1))+' · réclame '+mt(x.montant)+' · l\'assurance en couvre 70 %</small><small>Sans décision, accord à l\'amiable d\'office dans <span data-reste="'+x.limite+'">'+resteTxt(x.limite)+'</span></small></div>'
+      +'<div class="droite"><button type="button" class="btn petit principal" data-a="plainte" data-k="'+x.id+'" data-d="amiable">Indemniser · '+mt(partHotel(x.montant/2))+'</button><button type="button" class="btn petit" data-a="plainte" data-k="'+x.id+'" data-d="justice">Aller au tribunal</button></div></li>';
+  }).join("");
+  return barre()+entete("Journal","Ce qui s'est passé à l'hôtel.")
+    +(plaintes?'<div class="carte"><h2>Réclamations</h2><ul class="liste">'+plaintes+'</ul><p class="aide">À l\'amiable, la moitié de la somme réclamée est versée. Au tribunal, l\'hôtel perd un peu plus d\'une fois sur deux : la somme entière est due, et sa réputation en souffre. Le tribunal coûte toujours '+mt(FRAIS_JUSTICE)+' de frais. L\'assurance paie 70 % des indemnités ; les montants affichés sur les boutons sont votre part.</p></div>':"")
+    +(S.journal.length?'<div class="carte"><ul class="journal">'+S.journal.map(function(j){ return '<li><time>'+dateCourte(j.t)+' · '+heureTxt(j.t)+'</time><span class="'+(j.c||"")+'">'+h(j.m)+'</span></li>'; }).join("")+'</ul></div>':'<p class="vide">Rien à signaler pour le moment.</p>');
+}
+function resteActivite(){ return dureeTxt(TRANCHE-S.moi.tranche); }
+function mt2(n){ return n.toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})+" "+S.devise; }
+function ligne(nom,valeur){ return '<div class="reglage"><span>'+nom+'</span><b>'+valeur+'</b></div>'; }
+function bouton(action,k,d,nom,ok,principal){ return '<button type="button" class="btn petit'+(principal?" principal":"")+'" data-a="'+action+'" data-k="'+k+'" data-d="'+d+'"'+(ok?"":" disabled")+'>'+nom+'</button>'; }
+function ecranMoi(){
+  var M=S.moi, v=U.moiVue||"fiche", total=M.argent+M.place+M.pret, nbBiens=BIENS.filter(function(x){ return M.biens[x[0]]; }).length, corps, plaque=null, suivante=null;
+  function onglet(k,nom){ return '<button type="button" class="onglet'+(v===k?" actif":"")+'" data-a="moivue" data-k="'+k+'">'+nom+'</button>'; }
+  PLAQUES.forEach(function(x){ if(M.dons>=x[0]) plaque=x; else if(!suivante) suivante=x; });
+  if(v==="formations"){
+    corps='<p class="aide">Vous payez ces formations avec votre propre argent. Elles sont acquises pour toujours.</p>'
+      +FORMATIONS.map(function(f){
+        return '<div class="carte"><div class="carte-haut"><h3>'+f[1]+'<small>'+f[3]+'</small></h3>'+(forme(f[0])?'<span class="puce ok">Acquise</span>':'<span class="puce num">'+mt(f[2])+'</span>')+'</div>'
+          +(forme(f[0])?"":'<div class="actions"><button type="button" class="btn principal" data-a="former" data-k="'+f[0]+'"'+(M.argent>=f[2]?"":" disabled")+'>Suivre la formation</button>'+(M.argent>=f[2]?"":'<span class="aide">Il vous manque '+mt(f[2]-M.argent)+'.</span>')+'</div>')+'</div>';
+      }).join("");
+  } else if(v==="argent"){
+    corps='<div class="carte"><div class="carte-haut"><h3>Portefeuille d\'actions<small>Rapporte entre '+TAUX_MIN+' % et '+TAUX_MAX+' % par an. Le taux bouge un peu chaque jour.</small></h3></div>'
+      +ligne("Valeur du portefeuille",mt2(M.place))+ligne("Rendement du moment",M.taux.toLocaleString("fr-FR",{minimumFractionDigits:1,maximumFractionDigits:1})+" % par an")+ligne("Gains depuis le début",mt2(M.gainsPlace))
+      +'<div class="actions">'+bouton("placer","in",100,"Placer 100",M.argent>=100,true)+bouton("placer","in",1000,"Placer 1 000",M.argent>=1000,true)+bouton("placer","in","tout","Tout placer",M.argent>=1,true)+'</div>'
+      +'<div class="actions">'+bouton("placer","out",100,"Retirer 100",M.place>=100)+bouton("placer","out",1000,"Retirer 1 000",M.place>=1000)+bouton("placer","out","tout","Tout retirer",M.place>0)+'</div></div>'
+      +'<div class="carte"><div class="carte-haut"><h3>Prêt à l\'hôtel<small>L\'hôtel vous verse '+TAUX_PRET+' % par an. Utile quand la caisse est à sec.</small></h3></div>'
+      +ligne("Prêté à l'hôtel",mt(M.pret))+ligne("Intérêts reçus",mt(M.gainsPret))+ligne("Caisse de l'hôtel",mt(S.caisse))
+      +'<div class="actions">'+bouton("preter","in",500,"Prêter 500",M.argent>=500,true)+bouton("preter","in",2000,"Prêter 2 000",M.argent>=2000,true)+bouton("preter","out",500,"Reprendre 500",M.pret>=500&&S.caisse>=500)+bouton("preter","out","tout","Tout reprendre",M.pret>0&&S.caisse>=M.pret)+'</div></div>'
+      +'<div class="carte"><div class="carte-haut"><h3>Dons à l\'hôtel<small>Un don entre dans la caisse et fait monter la réputation.</small></h3>'+(plaque?'<span class="puce ok">'+plaque[1]+'</span>':"")+'</div>'
+      +ligne("Total de vos dons",mt(M.dons))
+      +(suivante?'<div class="progres nn"><div class="progres-haut"><b>'+suivante[1]+'</b><span>'+mt(Math.min(M.dons,suivante[0]))+' / '+mt(suivante[0])+'</span></div><div class="piste"><div class="plein" style="width:'+borne(M.dons/suivante[0]*100,0,100)+'%"></div></div></div>':"")
+      +'<p class="aide">Une plaque à votre nom améliore un peu la satisfaction de tous les clients.</p>'
+      +'<div class="actions">'+bouton("donner","",200,"Donner 200",M.argent>=200,true)+bouton("donner","",1000,"Donner 1 000",M.argent>=1000,true)+'</div></div>';
+  } else if(v==="achats"){
+    corps='<p class="aide">Votre vie en dehors de l\'hôtel : '+nbBiens+' sur '+BIENS.length+'.</p><ul class="liste">'+BIENS.map(function(b){
+      var a=M.biens[b[0]];
+      return '<li class="rang"><div><b>'+b[1]+'</b><small>'+mt(b[2])+'</small></div><div class="droite">'+(a?'<span class="puce ok">À vous</span>':'<button type="button" class="btn petit principal" data-a="acheter" data-k="'+b[0]+'"'+(M.argent>=b[2]?"":" disabled")+'>Acheter</button>')+'</div></li>';
+    }).join("")+'</ul>';
+  } else {
+    corps='<div class="jauges">'+jauge("Argent disponible",mt(M.argent),"",null,"Gagné en tout : "+mt(M.gagne))+jauge("Patrimoine",mt(total),"",null,nbBiens+" "+(nbBiens>1?"biens":"bien")+" sur "+BIENS.length)+'</div>'
+      +'<div class="carte"><div class="carte-haut"><h3>Votre salaire<small>'+mt(PAIE_DIRECTEUR)+' toutes les 20 minutes passées sur le jeu, payés par l\'hôtel.</small></h3></div>'
+      +'<div class="progres nn"><div class="progres-haut"><b>Prochain versement</b><span>dans <span id="paie-reste">'+resteActivite()+'</span></span></div><div class="piste"><div class="plein" style="width:'+borne(M.tranche/TRANCHE*100,0,100)+'%"></div></div></div>'
+      +ligne("Temps de jeu",dureeTxt(M.actif))+'</div>'
+      +'<div class="carte"><h2>Votre argent</h2>'+ligne("Disponible",mt(M.argent))+ligne("Placé en actions",mt2(M.place))+ligne("Prêté à l'hôtel",mt(M.pret))+ligne("Donné à l'hôtel",mt(M.dons))
+      +ligne("Formations suivies",FORMATIONS.filter(function(f){ return forme(f[0]); }).length+" sur "+FORMATIONS.length)+'</div>'
+      +'<div class="carte"><h2>Votre accueil</h2><p>'+(S.accueil.ok+S.accueil.moyen?S.accueil.ok+" bien choisies sur "+pl(S.accueil.ok+S.accueil.moyen,"chambre attribuée","chambres attribuées")+" par vous.":"Vous n'avez encore attribué aucune chambre.")+(S.accueil.auto?" La réception en a attribué "+S.accueil.auto+", dont "+S.accueil.autoMoyen+" qu'on pouvait mieux choisir.":"")
+        +(S.req.ok+S.req.moyen?" "+S.req.ok+" bonnes réponses sur "+pl(S.req.ok+S.req.moyen,"demande traitée","demandes traitées")+" par vous.":"")+(S.req.sans?" "+pl(S.req.sans,"demande est restée","demandes sont restées")+" sans réponse.":"")+'</p></div>'
+      +'<div class="carte"><h2>Votre hôtel</h2><p>Ouvert le '+new Date(S.fondeLe).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})+'. '+pl(S.finis,"séjour terminé","séjours terminés")+' depuis l\'ouverture, '+pl(S.chambres.length,"chambre","chambres")+' aujourd\'hui.'+(plaque?' '+plaque[1]+'.':"")+'</p></div>';
+  }
+  return barre()+entete(S.prenom,"Directeur de "+h(S.nom)+" · "+mt(M.argent)+" disponibles")
+    +'<div class="onglets">'+onglet("fiche","Fiche")+onglet("formations","Formations")+onglet("argent","Argent")+onglet("achats","Achats")+'</div>'+corps;
+}
+function ecranReglages(){
+  var etat=nuage.ref?"Votre partie est enregistrée sur votre compte : vous la retrouvez sur votre téléphone comme sur votre ordinateur.":"Votre partie est enregistrée sur cet appareil.";
+  return barre()+entete("Aide et réglages","")
+    +'<div class="carte"><h2>Sauvegarde</h2><p>'+etat+'</p></div>'
+    +'<div class="carte"><h2>Les règles en bref</h2>'
+    +'<p class="aide"><b>Temps réel.</b> Une nuit d\'hôtel est une vraie nuit. Les clients arrivent entre 14 h et 22 h et repartent entre 7 h et 11 h. L\'hôtel continue de tourner quand le jeu est fermé.</p>'
+    +'<p class="aide"><b>Accueil.</b> Chaque client arrive avec deux ou trois souhaits et s\'attend à un certain niveau de chambre. Vous lisez sa fiche et vous lui donnez une chambre prête. Plus elle lui convient, plus il repart content. Sans réponse au bout de 15 minutes, la réception prend le relais ; aux chambres d\'hôtes, une boîte à clés dépanne. Sans personne à la réception, le client repart au bout d\'une heure.</p>'
+    +'<p class="aide"><b>Réservations.</b> Chaque nuit, des réservations tombent pour les trois jours suivants. L\'hôtel n\'en prend pas plus qu\'il n\'a de chambres assez grandes. Si vous donnez à un autre la chambre qu\'il fallait à une réservation, le client arrive sans chambre : l\'hôtel paie sa nuit ailleurs et sa réputation en souffre.</p>'
+    +'<p class="aide"><b>Demandes.</b> Pendant le séjour, les clients ont des demandes et des réclamations. Vous choisissez la réponse. La meilleure dépend de ce que l\'hôtel a sous la main : un technicien en poste, une chambre prête, du stock. Sans réponse en 40 minutes, le client s\'en souvient.</p>'
+    +'<p class="aide"><b>Chambres.</b> Vous commencez avec deux chambres doubles de niveau 1. Chaque palier permet d\'en acheter davantage. Une chambre a un type (simple, double, twin, familiale), un côté, un étage, et un niveau de 1 à 10 : chaque niveau ajoute un équipement et relève son prix.</p>'
+    +'<p class="aide"><b>Ménage.</b> Après un départ, la chambre est à refaire avant d\'être relouée : une demi-heure pour une femme de chambre en poste, deux heures si c\'est vous. Chaque chambre refaite prend un jeu de linge et un lot de produits d\'accueil.</p>'
+    +'<p class="aide"><b>Équipements.</b> Restaurant, parking, hall, buanderie, puis bar, spa, salles de séminaire et piscine : chacun se construit et s\'améliore sur cinq niveaux. Le restaurant sert le petit-déjeuner au niveau 1, le déjeuner et le dîner dès le niveau 2. Restaurant, bar et spa reçoivent aussi des clients de l\'extérieur, quand le personnel est prévu au planning.</p>'
+    +'<p class="aide"><b>Clientèle.</b> Voyageurs d\'affaires en semaine, couples et familles le week-end, familles l\'été, séminaires l\'automne. La tuile Clientèle donne les souhaits habituels de chacun.</p>'
+    +'<p class="aide"><b>Réputation.</b> Elle suit la note des derniers séjours : chambre bien choisie, attentes remplies (petit-déjeuner, parking, bar…), demandes bien traitées, chambres bien tenues, attente à l\'arrivée, prix. Une bonne réputation attire plus de monde.</p>'
+    +'<p class="aide"><b>Équipe.</b> Le salaire se règle par métier, pour un poste de 8 heures. Mal payée ou surchargée, une personne perd le moral, travaille moins bien et finit par démissionner. Chacun progresse en travaillant : junior, confirmé, senior. Un stage payé par l\'hôtel, une fois par jour et par personne, accélère la progression.</p>'
+    +'<p class="aide"><b>Planning.</b> Chaque personne a sa semaine type : matin (6 h à 14 h), après-midi (14 h à 22 h), nuit (22 h à 6 h) ou repos. On ne paie que les postes travaillés. De temps en temps, une personne tombe malade ou demande un congé : vous répondez dans le planning, et un intérimaire peut tenir ses postes.</p>'
+    +'<p class="aide"><b>Économat.</b> Linge, produits d\'accueil, petits-déjeuners, denrées, boissons, produits de soin. Les commandes arrivent en 30 minutes ; la commande automatique évite les ruptures, pour 15 % de plus.</p>'
+    +'<p class="aide"><b>Prix.</b> Personne ne refuse votre prix, mais un hôtel cher attire peu à peu moins de monde (voir Tarifs). Un client seul dans une grande chambre paie le prix d\'une chambre à sa taille.</p>'
+    +'<p class="aide"><b>Qui paie.</b> La plupart des clients paient sur place. Les plateformes de réservation prennent 15 % de commission. Les sociétés paient sur facture, 5 à 8 jours plus tard, et en contestent parfois une partie : il faut alors les relancer dans Finances, sinon l\'argent est perdu.</p>'
+    +'<p class="aide"><b>Comptabilité.</b> L\'hôtel paie 25 % de cotisations patronales sur les salaires. Une chambre, une amélioration ou un équipement sont amortis sur cinq ans. Une marchandise devient une charge quand elle sort du stock. Finances montre le résultat, le bilan et le passage du résultat à la caisse.</p>'
+    +'<p class="aide"><b>Votre argent.</b> Votre salaire vous appartient. Dans Ma fiche, vous pouvez suivre des formations, le placer en actions, le prêter à l\'hôtel, faire des dons ou vous offrir une vie en dehors de l\'hôtel.</p>'
+    +'<p class="aide"><b>Paliers.</b> Chambres d\'hôtes, Petit hôtel ★★, Hôtel ★★★, Grand hôtel ★★★★, Palace ★★★★★. Chaque palier demande des séjours terminés et une réputation, et rapporte une prime.</p>'
+    +'<p class="aide"><b>Argent.</b> L\'hôtel ne peut pas faire faillite. À découvert, la banque prélève 0,2 % par jour et les achats sont bloqués.</p></div>'
+    +'<div class="carte"><h2>Recommencer</h2><p class="aide">Efface cette partie et repart de deux chambres vides.</p><div class="actions"><button type="button" class="btn danger" data-a="recommencer">'+(U.confirme==="recommencer"?"Confirmer : tout effacer":"Recommencer une partie")+'</button></div></div>';
+}
+function navigation(){
+  var n=parEtat("accueil").length+S.requetes.length;
+  function b(e,ic,nom,extra){ var ici=U.ecran===e||(e==="clients"&&(U.ecran==="fiche"||U.ecran==="requete")); return '<button type="button" data-a="aller" data-e="'+e+'" class="'+(ici?"actif":"")+'"'+(ici?' aria-current="page"':"")+'>'+I[ic]+(extra||"")+'<span>'+nom+'</span></button>'; }
+  return '<nav class="bas" aria-label="Écrans principaux"><div>'+b("accueil","accueil","Accueil")+b("clients","clients","Clients",n?'<span class="pastille">'+n+'</span>':"")+b("chambres","lit","Chambres")+b("equipe","equipe","Équipe")+b("finances","finances","Finances")+'</div></nav>';
+}
+/* ------------------------------------------------------------------ Actions */
+// Chaque action renvoie true quand la partie a changé (à enregistrer), false quand seul l'écran a changé
+function ajouterChambre(type,cote,etage){
+  var c={id:S.nChambre,n:S.nChambre,type:type,cote:cote,etage:etage,niv:1,etat:"propre",sj:null,men:null,defaut:0};
+  S.nChambre++; S.chambres.push(c); return c;
+}
+var A={
+  aller:function(d){ if(d.e==="societes"){ d={e:"finances"}; U.finPage="societes"; } U.ecran=d.e; U.confirme=null; U.retour=null; U.dossier=null; U.choix=null; if(d.e==="recrutement"){ candidatsDe(roleCourant()); return true; } return false; },
+  devise:function(d){ U.fond.devise=d.k; return false; },
+  fonder:function(){
+    var t=Date.now(), heure=new Date(t).getHours();
+    S=etatInitial(); S.nom=(U.fond.nom||"").trim()||"Hôtel des Tilleuls"; S.prenom=(U.fond.prenom||"").trim()||"Vincent"; S.devise=U.fond.devise;
+    S.fondeLe=t; S.horloge=t; S.prochaineCloture=prochainMinuit(t); S.releve=prochaineReleve(t);
+    [["double","rue","haut"],["double","jardin","rez"]].forEach(function(x){ var c=ajouterChambre(x[0],x[1],x[2]); S.immos.push({cle:"ch"+c.id,nom:"Chambre "+c.n,sv:"chambres",v:prixAchat(x[0],x[1]),c:0,t:t}); });
+    produitsConnus().forEach(function(k){ S.stock[k]=STOCK_DEPART; S.valStock[k]=STOCK_DEPART*PRODUITS[k].cout; });
+    noter(t,"ok",S.prenom+" ouvre « "+S.nom+" » avec deux chambres. Les premières réservations ne vont pas tarder.");
+    prendreReservations(t); planifierJour(minuit(t),t,true); S.stat.complet=0;
+    // Un premier client se présente dans la demi-heure, pour ne pas ouvrir sur un hôtel vide
+    if(heure>=7&&heure<21&&!S.sejours.some(function(x){ return x.arrive<t+3*HEURE; })) S.sejours.push(creerSejour(t+Math.round(alea(15,35))*MIN,"couple",false));
+    U.ecran="accueil"; return true;
+  },
+  client:function(){
+    var t=maintenant(), sj=passage(t,true);
+    U.choix=null; U.retour=null;
+    if(!sj){ U.retour={c:"warn",m:"Aucune chambre prête pour un client de passage en ce moment."}; U.ecran="clients"; return true; }
+    U.dossier=sj.id; U.ecran="fiche"; return true;
+  },
+  fiche:function(d){ U.dossier=+d.k; U.choix=null; U.retour=null; U.ecran="fiche"; return false; },
+  choisir:function(d){ U.choix=U.choix===+d.k?null:+d.k; return false; },
+  loger:function(){
+    var sj=parId(S.sejours,U.dossier), c=chambre(U.choix), t=maintenant(), r, manque, txt, bien, complet;
+    if(!sj||sj.etat!=="accueil"||!c||c.sj||c.etat!=="propre"||TYPES[c.type].cap<sj.pers) return false;
+    r=loger(sj,c,t,false);
+    manque=sj.souhaits.filter(function(k){ return !souhaitOk(k,c,r.prix); }).map(function(k){ return SOUHAITS[k].toLowerCase(); });
+    complet=!manque.length&&c.niv>=sj.att; bien=r.a>=r.mieux-5;
+    txt=nomComplet(sj)+" s'installe en chambre "+c.n+", à "+mt(r.prix)+" la nuit. ";
+    if(complet) txt+="Tout ce qui était souhaité s'y trouve.";
+    else txt+=(manque.length?"Il manque : "+manque.join(", ")+". ":"")+(c.niv<sj.att?"Le client s'attendait à une chambre de niveau "+sj.att+" au moins.":"");
+    if(!bien) txt+=" Une autre chambre prête lui aurait mieux convenu.";
+    else if(!complet) txt+=" C'était la meilleure chambre prête.";
+    U.retour={c:!bien?"warn":complet?"ok":"",m:txt}; U.ecran="clients"; U.dossier=null; U.choix=null; return true;
+  },
+  refuser:function(){
+    var sj=parId(S.sejours,U.dossier);
+    if(!sj||sj.etat!=="accueil") return false;
+    if(U.confirme!=="refuser"){ U.confirme="refuser"; return false; }
+    U.confirme=null; repartir(sj,maintenant(),true);
+    U.retour={c:sj.reserve?"bad":"",m:nomComplet(sj)+" est envoyé dans un autre hôtel."+(sj.reserve?" L'hôtel paie sa nuit.":"")}; U.ecran="clients"; U.dossier=null; U.choix=null; return true;
+  },
+  requete:function(d){ U.dossier=+d.k; U.retour=null; U.ecran="requete"; return false; },
+  repondre:function(d){
+    var r=parId(S.requetes,U.dossier), o, res, sj;
+    if(!r) return false;
+    o=REQUETES[r.k].o[+d.k]; if(!o||optionDispo(r,o)) return false;
+    sj=parId(S.sejours,r.sj);
+    res=repondre(r,o,maintenant(),false);
+    if(res) U.retour={c:res.bon?"ok":o.e>0?"":"warn",m:(res.bon?"Bonne réponse":o.e>0?"Réponse correcte":"Le client est déçu")+(sj?" ("+nomComplet(sj)+")":"")+"."+(res.bon||!res.mieux?"":" Mieux valait : « "+res.mieux.nom.charAt(0).toLowerCase()+res.mieux.nom.slice(1)+" ».")};
+    U.ecran="clients"; U.dossier=null; return true;
+  },
+  achat:function(d){ if(U.achat[d.k]!==undefined) U.achat[d.k]=d.d; return false; },
+  chambre:function(){
+    var B=U.achat, t=maintenant(), prix, c;
+    if(!TYPES[B.type]||!COTES[B.cote]||!ETAGES[B.etage]) return false;
+    prix=prixAchat(B.type,B.cote);
+    if(S.chambres.length>=PALIERS[S.palier].chambres||S.caisse<prix) return false;
+    c=ajouterChambre(B.type,B.cote,B.etage); immobiliser(t,"chambres","ch"+c.id,"Chambre "+c.n,prix);
+    noter(t,"ok","Nouvelle chambre "+c.n+" : "+descChambre(c).toLowerCase()+" ("+mt(prix)+").");
+    return true;
+  },
+  ameliorer:function(d){
+    var c=chambre(+d.k), t=maintenant(), X;
+    if(!c||c.niv>=NIV_MAX||c.niv>=PALIERS[S.palier].niv) return false;
+    X=NIVEAUX[c.niv+1]; if(S.caisse<X.cout) return false;
+    c.niv++; immobiliser(t,"chambres","ch"+c.id,"Chambre "+c.n,X.cout); return true;
+  },
+  equiper:function(d){
+    var E=EQUIP[d.k], t=maintenant(), n, prix;
+    if(!E||E.palier>S.palier) return false;
+    n=niv(d.k); if(n>=EQUIP_MAX||n>=capEquip()) return false;
+    prix=E.couts[n]; if(S.caisse<prix) return false;
+    S.equip[d.k]=n+1; immobiliser(t,E.compte,"eq"+d.k,E.nom,prix);
+    noter(t,"ok",E.nom+", niveau "+(n+1)+" : "+E.niveaux[n].toLowerCase()+" ("+mt(prix)+").");
+    reappro(t); replanifier(t); affecterVisites(t); return true;
+  },
+  commander:function(d){ return commander(d.k,+d.d,maintenant(),false); },
+  auto:function(d){ S.auto=d.k==="1"; reappro(maintenant()); return true; },
+  role:function(d){ U.role=d.k; candidatsDe(d.k); return true; },
+  recruter:function(d){ U.role=d.k; U.ecran="recrutement"; candidatsDe(d.k); return true; },
+  autres:function(){ var r=roleCourant(); S.candidats[r]=[]; candidatsDe(r); return true; },
+  engager:function(d){
+    var r=roleCourant(), c=parId(S.candidats[r]||[],+d.k), t=maintenant();
+    if(!c||(ROLES[r].unique&&nb(r))) return false;
+    S.candidats[r].splice(S.candidats[r].indexOf(c),1);
+    c={id:S.nEquipe++,prenom:c.prenom,nom:c.nom,femme:c.femme,age:c.age,role:r,exp:c.exp,atouts:c.atouts,na:c.na,depuis:t,faits:0};
+    c.xp=SEUILS_XP[c.exp]; c.plan=planAuto(c); S.equipe.push(c);
+    noter(t,"",nomComplet(c)+" rejoint l'équipe comme "+nomRole(c).toLowerCase()+".");
+    replanifier(t);
+    if(!S.candidats[r].length||ROLES[r].unique) S.candidats[r]=[];
+    if(ROLES[r].unique) U.ecran="equipe"; else candidatsDe(r);
+    affecterMenage(t); affecterVisites(t); return true;
+  },
+  licencier:function(d){
+    var e=parId(S.equipe,+d.k);
+    if(!e||charge(e)) return false;
+    if(U.confirme!=="e"+e.id){ U.confirme="e"+e.id; return false; }
+    U.confirme=null; S.equipe.splice(S.equipe.indexOf(e),1); S.demandes=S.demandes.filter(function(x){ return x.qui!==e.id; });
+    noter(maintenant(),"",nomComplet(e)+" ("+nomRole(e).toLowerCase()+") quitte l'hôtel.");
+    replanifier(maintenant()); return true;
+  },
+  salaire:function(d){ var p=S.postes[d.k], R=ROLES[d.k]; if(!p||!R) return false; p.salaire=borne(p.salaire+(+d.d),Math.round(R.salaire*0.5),Math.round(R.salaire*2.5)); return true; },
+  planvue:function(d){ U.planVue=d.k; return false; },
+  plainte:function(d){
+    var x=parId(S.plaintes,+d.k), t=maintenant();
+    if(!x) return false;
+    if(d.d==="amiable") indemniser(x,t,false); else juger(x,t);
+    return true;
+  },
+  conge:function(d){
+    var dem=parId(S.demandes,+d.k), t=maintenant(), e;
+    if(!dem) return false;
+    e=parId(S.equipe,dem.qui); S.demandes.splice(S.demandes.indexOf(dem),1);
+    if(!e) return true;
+    if(d.d==="1"){ partirEnConge(e,dem,t,false); noter(t,"",nomComplet(e)+" obtient son congé, du "+dateLongue(dem.debut)+" au "+dateLongue(dem.fin-1000)+"."); }
+    else { e.humeur={v:-10,fin:jourApres(t,10)}; noter(t,"warn","Congé refusé à "+nomComplet(e)+" : son moral s'en ressent pendant dix jours."); }
+    return true;
+  },
+  interim:function(d){
+    var e=parId(S.equipe,+d.k), t=maintenant();
+    if(!e||!e.absent) return false;
+    e.absent.interim=!e.absent.interim; replanifier(t); affecterMenage(t); affecterVisites(t); return true;
+  },
+  stage:function(d){
+    var e=parId(S.equipe,+d.k), t=maintenant(), prix;
+    if(!e||!stagePossible(e)) return false;
+    prix=prixStage(e); if(S.caisse<prix) return false;
+    inscrire(t,"e:"+ROLES[e.role].service,prix); e.stage=t; gagnerXp(e,XP_STAGE,t);
+    return true;
+  },
+  plan:function(d){
+    var e=parId(S.equipe,+d.k), j=+d.d, t=maintenant();
+    if(!e||!(j>=0&&j<7)) return false;
+    e.plan[j]=CYCLE_POSTES[e.plan[j]]||"M"; replanifier(t); affecterMenage(t); affecterVisites(t); return true;
+  },
+  prix:function(d){
+    var k=d.k, ch=k==="chambre";
+    if(S.tarifs[k]===undefined) return false;
+    S.tarifs[k]=borne(S.tarifs[k]+(+d.d),ch?30:0,ch?300:refDe(k)*5); return true;
+  },
+  vue:function(d){ U.vue=d.k; U.decal=0; return false; },
+  finpage:function(d){ U.finPage=d.k; return false; },
+  relancer:function(d){
+    var c=parId(S.contestes,+d.k), t=maintenant();
+    if(!c||c.relance) return false;
+    c.relance=jourApres(t,DELAI_RELANCE); return true;
+  },
+  decal:function(d){ U.decal=Math.min(0,U.decal+(+d.d)); return false; },
+  resume:function(){ U.resume=null; return false; },
+  moivue:function(d){ U.moiVue=d.k; return false; },
+  former:function(d){
+    var f=FORMATIONS.filter(function(x){ return x[0]===d.k; })[0];
+    if(!f||forme(f[0])||S.moi.argent<f[2]) return false;
+    S.moi.argent-=f[2]; S.moi.formations[f[0]]=1;
+    noter(maintenant(),"ok",S.prenom+" suit la formation « "+f[1]+" ».");
+    return true;
+  },
+  placer:function(d){
+    var M=S.moi, n=d.d==="tout"?(d.k==="in"?Math.floor(M.argent):M.place):+d.d;
+    if(!(n>0)) return false;
+    if(d.k==="in"){ if(M.argent<n) return false; M.argent-=n; M.place+=n; }
+    else { if(M.place<n) return false; M.place-=n; M.argent+=n; if(M.place<0.005) M.place=0; }
+    return true;
+  },
+  preter:function(d){
+    var M=S.moi, t=maintenant(), n=d.d==="tout"?M.pret:+d.d;
+    if(!(n>0)) return false;
+    if(d.k==="in"){ if(M.argent<n) return false; M.argent-=n; M.pret+=n; inscrire(t,"p:pret",n); noter(t,"",S.prenom+" prête "+mt(n)+" à l'hôtel."); }
+    else { if(M.pret<n||S.caisse<n) return false; M.pret-=n; M.argent+=n; inscrire(t,"q:pret",n); noter(t,"","L'hôtel rembourse "+mt(n)+" à "+S.prenom+"."); }
+    return true;
+  },
+  donner:function(d){
+    var M=S.moi, t=maintenant(), n=+d.d, avant=bonusPlaque(), i, obtenue;
+    if(!(n>0)||M.argent<n) return false;
+    M.argent-=n; M.dons+=n; inscrire(t,"r:divers",n);
+    for(i=0;i<Math.min(5,Math.round(n/200));i++) avis(92);
+    obtenue=bonusPlaque()>avant?PLAQUES.filter(function(x){ return M.dons>=x[0]; }).pop():null;
+    noter(t,"ok",S.prenom+" fait un don de "+mt(n)+" à l'hôtel."+(obtenue?" L'hôtel inaugure « "+obtenue[1].toLowerCase()+" ».":""));
+    return true;
+  },
+  acheter:function(d){
+    var b=BIENS.filter(function(x){ return x[0]===d.k; })[0];
+    if(!b||S.moi.biens[b[0]]||S.moi.argent<b[2]) return false;
+    S.moi.argent-=b[2]; S.moi.biens[b[0]]=1; return true;
+  },
+  recommencer:function(){
+    if(U.confirme!=="recommencer"){ U.confirme="recommencer"; return false; }
+    U=ecranVide(); S=etatInitial();
+    try{ localStorage.removeItem(CLE); }catch(e){}
+    if(nuage.ref){ nuage.connu=null; nuage.sale=false; nuage.ref.delete().catch(function(){}); }
+    return false;
+  }
+};
+function roleCourant(){
+  var roles=rolesOuverts();
+  if(roles.indexOf(U.role)<0) U.role=roles[0];
+  return U.role;
+}
+
+/* ------------------------------------------------------------------ Sauvegarde sur le compte (téléphone et ordinateur) */
+var APPAREIL=(function(){ var id=null; try{ id=localStorage.getItem(CLE_APP); if(!id){ id="a"+Math.random().toString(36).slice(2,12); localStorage.setItem(CLE_APP,id); } }catch(e){} return id||"a"+Math.random().toString(36).slice(2,12); })();
+var nuage={ref:null,connu:null,occupe:false,sale:false,dernier:0}, gel=false;
+function marquer(){ S.modif=Date.now(); nuage.sale=true; }
+function pousser(force){
+  var t, corps;
+  if(!nuage.ref||nuage.occupe||!nuage.sale||!S.fondeLe) return;
+  if(!force&&Date.now()-nuage.dernier<15000) return;
+  t=S.modif||Date.now(); corps={v:V,t:t,appareil:APPAREIL,json:JSON.stringify(S)};
+  if(corps.json.length>200000){ S.registre.length=Math.min(S.registre.length,20); S.journal.length=Math.min(S.journal.length,40); corps.json=JSON.stringify(S); }
+  nuage.occupe=true; nuage.sale=false; nuage.dernier=Date.now();
+  nuage.ref.set(corps).then(function(){ nuage.connu=t; nuage.occupe=false; },function(e){
+    nuage.occupe=false;
+    if(e&&(e.code==="unavailable"||e.code==="resource_exhausted")) nuage.sale=true; else nuage.ref=null;
+  });
+}
+function adopter(d){
+  var o; try{ o=JSON.parse(d.json); }catch(e){ return false; }
+  if(!valide(o)||!o.fondeLe) return false;
+  S=o; migrer(); nuage.connu=d.t; nuage.sale=false; avancer(maintenant()); sauver(); return true;
+}
+function distant(d){ return !!(d&&d.json&&d.appareil!==APPAREIL&&d.t!==nuage.connu&&d.t>(nuage.connu||0)); }
+function brancher(){
+  if(!window.claude||!window.claude.use) return;
+  Promise.all([window.claude.use("db"),window.claude.use("user")]).then(function(r){
+    var db=r[0], user=r[1];
+    if(!db||!user) return null;
+    return user.id().then(function(id){
+      var ref;
+      if(!id) return null;
+      try{ ref=db.doc("data/users/"+id+"/partie"); }catch(e){ return null; }
+      return ref.get().then(function(snap){
+        var d=snap.exists?snap.data():null;
+        nuage.ref=ref;
+        if(d&&d.json&&(!S.fondeLe||d.t>(S.modif||0))){ if(adopter(d)) rendre(); }
+        else { if(d) nuage.connu=d.t; if(S.fondeLe) nuage.sale=true; }
+        ref.onSnapshot(function(s){
+          var x=s.exists?s.data():null;
+          if(s.metadata&&s.metadata.hasPendingWrites) return;
+          if(distant(x)&&adopter(x)) rendre();
+        },function(){});
+        pousser(true);
+        if(U.ecran==="reglages") rendre();
+      });
+    });
+  }).catch(function(){});
+}
+// Au retour sur le jeu, on regarde d'abord si la partie a avancé sur un autre appareil
+function revenir(){
+  var fini=false;
+  function suite(){ if(fini) return; fini=true; gel=false; battement(true); }
+  if(!nuage.ref||!S.fondeLe){ battement(true); return; }
+  gel=true; setTimeout(suite,4000);
+  nuage.ref.get().then(function(snap){ var d=snap.exists?snap.data():null; if(distant(d)) adopter(d); suite(); },suite);
+}
+
+
+/* ------------------------------------------------------------------ Boucle */
+var app=document.getElementById("app"), dernier="", dernierBattement=Date.now();
+var ECRANS={accueil:ecranAccueil,clients:ecranClients,fiche:ecranFiche,requete:ecranRequete,chambres:ecranChambres,clientele:ecranClientele,equipements:ecranEquipements,economat:ecranEconomat,planning:ecranPlanning,equipe:ecranEquipe,recrutement:ecranRecrutement,tarifs:ecranTarifs,finances:ecranFinances,journal:ecranJournal,moi:ecranMoi,reglages:ecranReglages};
+function rendre(){
+  var y=window.scrollY, cle=S.fondeLe?U.ecran:"fondation";
+  app.innerHTML='<div class="ecran">'+(S.fondeLe?(ECRANS[U.ecran]||ecranAccueil)():ecranFondation())+'</div>'+(S.fondeLe?navigation():"");
+  if(cle!==dernier){ window.scrollTo(0,0); dernier=cle; } else window.scrollTo(0,y);
+  sauver();
+}
+function tic(){
+  var n=maintenant(), l, i, x;
+  x=document.getElementById("horloge"); if(x) x.textContent=horlogeTxt(n);
+  x=document.getElementById("paie-reste"); if(x) x.textContent=resteActivite();
+  l=document.querySelectorAll("[data-reste]"); for(i=0;i<l.length;i++) l[i].textContent=resteTxt(+l[i].dataset.reste);
+}
+function instantane(){ return {t:S.horloge,finis:S.finis,caisse:S.caisse,rep:reputation()}; }
+function resumer(avant){
+  var d=maintenant()-avant.t;
+  if(d<HEURE) return;
+  U.resume={duree:d,finis:S.finis-avant.finis,caisse:Math.round(S.caisse-avant.caisse),rep:Math.round(reputation()-avant.rep)};
+}
+function battement(retour){
+  var n=Date.now(), ecoule=Math.min(n-dernierBattement,2000), paye, avant, change;
+  dernierBattement=n;
+  if(!S.fondeLe||gel||document.hidden) return;
+  avant=instantane();
+  paye=activite(ecoule);
+  change=avancer(maintenant());
+  if(retour) resumer(avant);
+  if(change||paye){ marquer(); rendre(); } else if(retour) rendre(); else tic();
+  pousser(false);
+}
+document.addEventListener("click",function(ev){
+  var el=ev.target.closest?ev.target.closest("[data-a]"):null, a, change;
+  if(!el||el.disabled||!A[el.dataset.a]) return;
+  a=el.dataset.a;
+  if(a!=="licencier"&&a!=="recommencer"&&a!=="refuser") U.confirme=null;
+  change=A[a](el.dataset);
+  if(change) marquer();
+  rendre();
+  if(change) pousser(false);
+});
+document.addEventListener("input",function(ev){
+  if(ev.target.id==="f-nom") U.fond.nom=ev.target.value;
+  if(ev.target.id==="f-prenom") U.fond.prenom=ev.target.value;
+});
+document.addEventListener("visibilitychange",function(){
+  if(document.hidden){ sauver(); pousser(true); } else { dernierBattement=Date.now(); revenir(); }
+});
+
+function demarrer(donnees){
+  var repris=(donnees&&valide(donnees.S))?donnees.S:charger(), base=ecranVide(), avant, k;
+  if(donnees&&donnees.U){ U=donnees.U; for(k in base) if(U[k]===undefined) U[k]=base[k]; }
+  if(repris){
+    S=repris; migrer();
+    avant=instantane();
+    if(S.fondeLe&&avancer(maintenant())){ marquer(); resumer(avant); }
+  }
+  rendre();
+  setInterval(battement,1000);
+  brancher();
+}
+var chaud=window.claude&&window.claude.hot;
+if(chaud&&chaud.snapshot) chaud.snapshot(function(){ return {S:S,U:U}; });
+if(chaud&&chaud.ready) chaud.ready(demarrer); else demarrer(chaud&&chaud.data);
+window.__hotel={etat:function(){ return S; },ecran:function(e){ U.ecran=e; rendre(); },agir:function(a,d){ var r=A[a](d||{}); rendre(); return r; },faire:function(a,d){ return A[a](d||{}); },avancer:function(ms){ S.decalage=(S.decalage||0)+ms; return avancer(maintenant()); },regles:{REQUETES:REQUETES},vue:function(){ return U; },
+  sauter:function(ms){ S.decalage=(S.decalage||0)+ms; var c=avancer(maintenant()); rendre(); return c; },
+  calc:{demandeCible:demandeCible,bilan:bilan,creances:creances,tient:tient,adequation:adequation,prixPour:prixPour,pretes:pretes,reputation:reputation,attendus:attendus,periode:periode,optionsDe:optionsDe,couvMenage:couvMenage,recettesDe:recettesDe,depensesDe:depensesDe}};
+})();
+</script>
+<script>if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});</script>
+</body>
+</html>
