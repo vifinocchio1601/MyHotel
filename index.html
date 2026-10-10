@@ -506,9 +506,10 @@ var AIDE_ROLE={
   chef:"Cuisine comme un cuisinier, tient huit tables, et relève le travail de toute la salle. Un seul par hôtel.",
   barman:"Tient le bar en fin d'après-midi et en soirée, jusqu'à six clients à la fois.",
   praticien:"Donne les soins du spa, un client à la fois."};
-// Le planning : trois postes de 8 heures. Chaque personne a une semaine type, un poste ou un repos par jour.
+// Le planning : deux postes de 8 heures, de 6 h à 22 h. La nuit, l'hôtel dort : aucun poste, aucune arrivée.
+// Chaque personne a une semaine type, un poste ou un repos par jour.
 var POSTES={M:{nom:"Matin",court:"Mat",h:"6 h – 14 h"},A:{nom:"Après-midi",court:"Apm",h:"14 h – 22 h"},N:{nom:"Nuit",court:"Nuit",h:"22 h – 6 h"},R:{nom:"Repos",court:"–",h:""}};
-var CYCLE_POSTES={M:"A",A:"N",N:"R",R:"M"}, PRIME_NUIT=1.25;
+var CYCLE_POSTES={M:"A",A:"R",N:"R",R:"M"}, PRIME_NUIT=1.25;
 var JOURS_COURTS=["Lu","Ma","Me","Je","Ve","Sa","Di"], JOURS_NOMS=["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"];
 var GROUPES_PLANNING=[
   ["reception","Réception","Réception prévue",["receptionniste","concierge"]],
@@ -561,6 +562,8 @@ function migrer(){
   for(k in ROLES) if(!S.postes[k]) S.postes[k]={salaire:ROLES[k].salaire,heures:8};
   for(k in REF) if(S.tarifs[k]===undefined) S.tarifs[k]=REF[k];
   if(!S.releve) S.releve=prochaineReleve(S.horloge||Date.now());
+  // Les postes de nuit n'existent plus : ceux qui en avaient passent au repos ces jours-là
+  S.equipe.forEach(function(e){ if(e.plan) e.plan=e.plan.map(function(k){ return k==="N"?"R":k; }); });
 }
 function charger(){ try{ var t=localStorage.getItem(CLE); if(!t) return null; var o=JSON.parse(t); return valide(o)?o:null; }catch(e){ return null; } }
 
@@ -699,6 +702,8 @@ function nomPalier(i){ var e=etoiles(PALIERS[i].etoiles); return PALIERS[i].nom+
 function prochainPalier(){ return PALIERS[S.palier+1]||null; }
 // Les jours de l'hôtel vont de 6 h à 6 h : une arrivée à 2 h du matin compte pour la nuit en cours
 function jourHotel(t){ return minuit(t-6*HEURE); }
+// De 22 h à 6 h, l'hôtel dort : personne n'arrive, personne ne travaille
+function nuit(t){ var hh=new Date(t).getHours(); return hh>=22||hh<6; }
 
 // Chambres
 function chambre(id){ return parId(S.chambres,id); }
@@ -969,7 +974,7 @@ function prendreReservations(t){
   for(i=0;i<3;i++){
     n=base*parts[i]*alea(0.7,1.3); n=Math.floor(n)+(Math.random()<n%1?1:0);
     for(j=0;j<n;j++){
-      a=jourApres(minuit(t),i)+Math.round(alea(14,21.5)*HEURE);
+      a=jourApres(minuit(t),i)+Math.round(alea(14,21)*HEURE);
       if(a<=t+30*MIN) continue;
       sj=creerSejour(a,null,false);
       if(tient(sj)){ S.sejours.push(sj); pris++; } else { S.nSejour--; S.stat.complet++; }
@@ -985,6 +990,7 @@ function arriver(sj,t){
 // Un client de passage, quand il en vient un : il doit rester de quoi le loger sans prendre la chambre d'une réservation
 function passage(t,force){
   var max=0, sj=null, i;
+  if(nuit(t)) return null;
   S.chambres.forEach(function(c){ if(!c.sj&&(!force||c.etat==="propre")) max=Math.max(max,TYPES[c.type].cap); });
   if(!max){ S.stat.complet++; return null; }
   for(i=0;i<20&&!sj;i++){ sj=creerSejour(t,null,true); if(sj.pers>max||(!force&&!tient(sj))){ S.nSejour--; sj=null; } }
@@ -1023,9 +1029,9 @@ function programmerSejour(sj,t){
     jour=jourApres(j0,d);
     if(d>0&&veut("pdj",0.95,0.6)){ finH=d===sj.nuits?(sj.fin-jour)/HEURE-0.8:9.75; ev(jour+alea(6.6,Math.max(6.7,Math.min(9.75,finH)))*HEURE,{k:"vis",v:"pdj"}); }
     if(d<sj.nuits){
-      if(veut("diner",0.8,0.25)) ev(jour+alea(19,21.2)*HEURE,{k:"vis",v:"soir"});
-      if(veut("bar",0.7,0.2)) ev(jour+alea(17.2,21.6)*HEURE,{k:"vis",v:"bar"});
-      if(Math.random()<TAUX_REQUETE) ev(jour+alea(d?8:Math.max(8,(t-jour)/HEURE+0.4),22.8)*HEURE,{k:"req"});
+      if(veut("diner",0.8,0.25)) ev(jour+alea(19,20.8)*HEURE,{k:"vis",v:"soir"});
+      if(veut("bar",0.7,0.2)) ev(jour+alea(17.2,21.2)*HEURE,{k:"vis",v:"bar"});
+      if(Math.random()<TAUX_REQUETE) ev(jour+alea(d?8:Math.min(21.2,Math.max(8,(t-jour)/HEURE+0.4)),21.3)*HEURE,{k:"req"});
     }
   }
   if(veut("spa",0.8,0.1)) ev(jourApres(j0,sj.nuits>1?1:0)+alea(10,18.5)*HEURE,{k:"vis",v:"spa"});
@@ -1110,6 +1116,8 @@ function juger(x,t){
 // Après un départ, la chambre doit être refaite. Sans personne aux étages, le directeur s'en charge : deux heures, une chambre à la fois.
 function affecterMenage(t){
   var moiPris=S.chambres.some(function(c){ return c.etat==="menage"&&c.men&&c.men.qui===0; }), enP=enPosteRole(FEMMES,t).length, fait=false;
+  // La nuit, on ne refait pas de chambre, sauf si un client attend encore à la réception
+  if(nuit(t)&&!parEtat("accueil").length) return;
   S.chambres.forEach(function(c){
     var e, d;
     if(c.etat!=="sale"||c.sj) return;
@@ -1255,14 +1263,14 @@ function planifierJour(debut,apres,complet){
     for(i=0;i<combien;i++){ t=debut+Math.round(alea(h1,h2)*HEURE); if(t>apres){ e={t:t}; for(k in o) e[k]=o[k]; S.arrivees.push(e); } }
   }
   if(complet){
-    semer(attendus(midi)*PART_PASSAGE*alea(0.7,1.3),10,22,{k:"walk"});
+    semer(attendus(midi)*PART_PASSAGE*alea(0.7,1.3),10,21,{k:"walk"});
     if(niv("seminaire")&&j<5&&Math.random()<Math.min(0.85,(0.25+0.07*niv("seminaire"))*demande("seminaire")*rep)) semer(1,9,9.2,{k:"sem"});
   }
   if(n>=2){
     if(prevusLe(["serveur"],j,"M",midi)&&prevusLe(CUISINE,j,"M",midi)) semer(EXT.midi[n]*rep*demande("resto")*alea(0.8,1.2),12,13.6,{k:"vis",v:"midi"});
-    if(prevusLe(["serveur"],j,"A",midi)&&prevusLe(CUISINE,j,"A",midi)) semer(EXT.soir[n]*rep*demande("resto")*alea(0.8,1.2),19,21.3,{k:"vis",v:"soir"});
+    if(prevusLe(["serveur"],j,"A",midi)&&prevusLe(CUISINE,j,"A",midi)) semer(EXT.soir[n]*rep*demande("resto")*alea(0.8,1.2),19,20.8,{k:"vis",v:"soir"});
   }
-  if(niv("bar")&&prevusLe(["barman"],j,"A",midi)) semer(EXT.bar[niv("bar")]*rep*demande("bar")*alea(0.8,1.2),17,21.6,{k:"vis",v:"bar"});
+  if(niv("bar")&&prevusLe(["barman"],j,"A",midi)) semer(EXT.bar[niv("bar")]*rep*demande("bar")*alea(0.8,1.2),17,21.2,{k:"vis",v:"bar"});
   if(niv("spa")){
     if(prevusLe(["praticien"],j,"M",midi)) semer(EXT.spa[niv("spa")]*0.45*rep*demande("spa")*alea(0.8,1.2),10,13.3,{k:"vis",v:"spa"});
     if(prevusLe(["praticien"],j,"A",midi)) semer(EXT.spa[niv("spa")]*0.55*rep*demande("spa")*alea(0.8,1.2),14,18.8,{k:"vis",v:"spa"});
@@ -1588,8 +1596,8 @@ function ecranAccueil(){
     +jauge("Chambres",occ+" / "+nc+" occupées",occ>=nc?"n2":"nn",nc?occ/nc*100:0,pl(pr,"prête","prêtes")+" · "+(nc-occ-pr)+" à refaire")
     +jauge("Aujourd'hui",pl(arr,"arrivée","arrivées")+" à venir","",null,pl(dep,"départ","départs")+" à venir · "+pl(S.stat.departs,"parti","partis"))
     +'</div>'
-    +'<div class="bloc"><button type="button" class="btn principal large" data-a="client"'+(pr?"":" disabled")+'>'+I.plus+'Faire venir un client</button>'
-    +'<p class="aide">'+(pr?"":"Aucune chambre n'est prête. ")+(pro?"Prochaine réservation attendue "+(cleJour(pro)===cleJour(maintenant())?"vers ":dateCourte(pro)+" vers ")+heureTxt(pro)+".":"Aucune réservation en vue pour le moment.")+'</p></div>'
+    +'<div class="bloc"><button type="button" class="btn principal large" data-a="client"'+(pr&&!nuit(maintenant())?"":" disabled")+'>'+I.plus+'Faire venir un client</button>'
+    +'<p class="aide">'+(nuit(maintenant())?"L'hôtel dort : personne n'arrive entre 22 h et 6 h. ":pr?"":"Aucune chambre n'est prête. ")+(pro?"Prochaine réservation attendue "+(cleJour(pro)===cleJour(maintenant())?"vers ":dateCourte(pro)+" vers ")+heureTxt(pro)+".":"Aucune réservation en vue pour le moment.")+'</p></div>'
     +bloc
     +(al?'<div class="alertes">'+al+'</div>':"")
     +'<div class="tuiles">'
@@ -1633,7 +1641,7 @@ function ecranClients(){
   var ordre=function(x,y){ return x.arrive-y.arrive; }, a=parEtat("accueil").sort(ordre), l=parEtat("loge").sort(function(x,y){ return x.fin-y.fin; }), r=parEtat("reserve").sort(ordre), q=S.requetes;
   return barre()+entete("Clients",S.stat.arrives+" arrivés aujourd'hui · "+S.stat.departs+" partis")
     +(U.retour?'<div class="alertes"><div class="alerte '+U.retour.c+'"><span>'+h(U.retour.m)+'</span></div></div>':"")
-    +'<button type="button" class="btn principal large" data-a="client"'+(pretes().length?"":" disabled")+'>'+I.plus+'Faire venir un client</button>'
+    +'<button type="button" class="btn principal large" data-a="client"'+(pretes().length&&!nuit(maintenant())?"":" disabled")+'>'+I.plus+'Faire venir un client</button>'
     +'<div class="bloc"><h2>À la réception ('+a.length+')</h2>'+(a.length?'<ul class="liste">'+a.map(ligneAccueil).join("")+'</ul>':'<p class="vide">Personne n\'attend sa chambre.</p>')
     +'<p class="aide">'+(enPosteRole(ACCUEIL).length?"Sans réponse de votre part au bout de 15 minutes, la réception donne une chambre prête. Elle choisit souvent la meilleure, pas toujours.":S.palier===0?"Sans réponse de votre part au bout de 15 minutes, le client prend une clé dans la boîte à clés et s'installe dans une chambre prête, pas forcément la bonne.":"Personne n'est en poste à la réception : vous seul pouvez accueillir les clients. Au bout d'une heure, ils repartent.")+'</p></div>'
     +'<div class="bloc"><h2>Demandes ('+q.length+')</h2>'+(q.length?'<ul class="liste">'+q.map(ligneRequete).join("")+'</ul>':'<p class="vide">Aucune demande en attente.</p>')+'</div>'
@@ -1815,7 +1823,7 @@ function ecranEquipe(){
 function ecranPlanning(){
   var q=posteDe(maintenant()), G=GROUPES_PLANNING.filter(function(x){ return x[0]===U.planVue; })[0]||GROUPES_PLANNING[0], grille="", blocs="";
   function prevus(j,k){ var n=0; S.equipe.forEach(function(e){ if(G[3].indexOf(e.role)>=0&&e.plan[j]===k) n++; }); return n; }
-  ["M","A","N"].forEach(function(k){
+  ["M","A"].forEach(function(k){
     grille+='<tr><th>'+POSTES[k].nom+'<small>'+POSTES[k].h+'</small></th>'+JOURS_COURTS.map(function(x,j){ var n=prevus(j,k); return '<td class="'+(n?"":"zero")+(q.j===j&&q.k===k?" ici":"")+'">'+(n||"–")+'</td>'; }).join("")+'</tr>';
   });
   G[3].forEach(function(r){
@@ -1827,12 +1835,12 @@ function ecranPlanning(){
         +'<div class="semaine">'+e.plan.map(function(k,j){ return '<button type="button" class="jour p-'+k+(q.j===j?" ici":"")+'" data-a="plan" data-k="'+e.id+'" data-d="'+j+'" aria-label="'+JOURS_NOMS[j]+' : '+POSTES[k].nom+'"><small>'+JOURS_COURTS[j]+'</small><b>'+POSTES[k].court+'</b></button>'; }).join("")+'</div></div>';
     }).join("")+'</div>';
   });
-  return barre()+entete("Planning","Semaine type · en ce moment : "+JOURS_NOMS[q.j]+", "+POSTES[q.k].nom.toLowerCase())
+  return barre()+entete("Planning",q.k==="N"?"Semaine type · l'hôtel dort jusqu'à 6 h":"Semaine type · en ce moment : "+JOURS_NOMS[q.j]+", "+POSTES[q.k].nom.toLowerCase())
     +absencesHtml()
     +'<div class="onglets">'+GROUPES_PLANNING.map(function(x){ var n=S.equipe.filter(function(e){ return x[3].indexOf(e.role)>=0; }).length; return '<button type="button" class="onglet'+(x[0]===G[0]?" actif":"")+'" data-a="planvue" data-k="'+x[0]+'">'+x[1]+(n?" ("+n+")":"")+'</button>'; }).join("")+'</div>'
     +'<div class="carte"><h2>'+G[2]+'</h2><div class="tableau"><table class="grille"><thead><tr><th></th>'+JOURS_COURTS.map(function(x,j){ return '<th class="'+(q.j===j?"ici":"")+'">'+x+'</th>'; }).join("")+'</tr></thead><tbody>'+grille+'</tbody></table></div>'
-    +'<p class="aide">'+(G[0]==="reception"?"Les clients arrivent surtout entre 14 h et 22 h. Sans personne à la réception, vous seul pouvez les accueillir et répondre à leurs demandes.":G[0]==="etages"?"Les départs ont lieu entre 7 h et 11 h : c'est le matin que les chambres sont à refaire.":"Petit-déjeuner de 6 h 30 à 10 h, déjeuner de 12 h à 14 h, dîner de 19 h à 22 h, bar de 17 h à 22 h, spa de 10 h à 19 h. Les clients de l'extérieur ne viennent que si le personnel est prévu.")+'</p></div>'
-    +(blocs?'<p class="aide">Touchez un jour pour changer de poste : matin, après-midi, nuit, repos. Au-delà de cinq postes par semaine ou de trois nuits, le moral baisse. Une nuit est payée 25 % de plus.</p>'+blocs
+    +'<p class="aide">'+(G[0]==="reception"?"Les clients arrivent entre 14 h et 21 h. Sans personne à la réception, vous seul pouvez les accueillir et répondre à leurs demandes.":G[0]==="etages"?"Les départs ont lieu entre 7 h et 11 h : c'est le matin que les chambres sont à refaire.":"Petit-déjeuner de 6 h 30 à 10 h, déjeuner de 12 h à 14 h, dîner de 19 h à 22 h, bar de 17 h à 22 h, spa de 10 h à 19 h. Les clients de l'extérieur ne viennent que si le personnel est prévu.")+' De 22 h à 6 h, l\'hôtel dort : il n\'y a pas de poste de nuit.'+("")+'</p></div>'
+    +(blocs?'<p class="aide">Touchez un jour pour changer de poste : matin, après-midi, repos. Au-delà de cinq postes par semaine, le moral baisse.</p>'+blocs
       :'<p class="vide">Personne dans ce groupe pour le moment.</p><button type="button" class="btn principal large" data-a="aller" data-e="recrutement">'+I.recrut+'Recruter</button>');
 }
 function rolesOuverts(){ return ORDRE_ROLES.filter(function(r){ return ROLES[r].palier<=S.palier&&!(ROLES[r].unique&&nb(r)); }); }
@@ -2060,7 +2068,7 @@ function ecranReglages(){
   return barre()+entete("Aide et réglages","")
     +'<div class="carte"><h2>Sauvegarde</h2><p>'+etat+'</p></div>'
     +'<div class="carte"><h2>Les règles en bref</h2>'
-    +'<p class="aide"><b>Temps réel.</b> Une nuit d\'hôtel est une vraie nuit. Les clients arrivent entre 14 h et 22 h et repartent entre 7 h et 11 h. L\'hôtel continue de tourner quand le jeu est fermé.</p>'
+    +'<p class="aide"><b>Temps réel.</b> Une nuit d\'hôtel est une vraie nuit. Les clients arrivent entre 14 h et 21 h et repartent entre 7 h et 11 h. De 22 h à 6 h, l\'hôtel dort : aucune arrivée, aucune demande, personne au travail. L\'hôtel continue de tourner quand le jeu est fermé.</p>'
     +'<p class="aide"><b>Accueil.</b> Chaque client arrive avec deux ou trois souhaits et s\'attend à un certain niveau de chambre. Vous lisez sa fiche et vous lui donnez une chambre prête. Plus elle lui convient, plus il repart content. Sans réponse au bout de 15 minutes, la réception prend le relais ; aux chambres d\'hôtes, une boîte à clés dépanne. Sans personne à la réception, le client repart au bout d\'une heure.</p>'
     +'<p class="aide"><b>Réservations.</b> Chaque nuit, des réservations tombent pour les trois jours suivants. L\'hôtel n\'en prend pas plus qu\'il n\'a de chambres assez grandes. Si vous donnez à un autre la chambre qu\'il fallait à une réservation, le client arrive sans chambre : l\'hôtel paie sa nuit ailleurs et sa réputation en souffre.</p>'
     +'<p class="aide"><b>Demandes.</b> Pendant le séjour, les clients ont des demandes et des réclamations. Vous choisissez la réponse. La meilleure dépend de ce que l\'hôtel a sous la main : un technicien en poste, une chambre prête, du stock. Sans réponse en 40 minutes, le client s\'en souvient.</p>'
@@ -2070,7 +2078,7 @@ function ecranReglages(){
     +'<p class="aide"><b>Clientèle.</b> Voyageurs d\'affaires en semaine, couples et familles le week-end, familles l\'été, séminaires l\'automne. La tuile Clientèle donne les souhaits habituels de chacun.</p>'
     +'<p class="aide"><b>Réputation.</b> Elle suit la note des derniers séjours : chambre bien choisie, attentes remplies (petit-déjeuner, parking, bar…), demandes bien traitées, chambres bien tenues, attente à l\'arrivée, prix. Une bonne réputation attire plus de monde.</p>'
     +'<p class="aide"><b>Équipe.</b> Le salaire se règle par métier, pour un poste de 8 heures. Mal payée ou surchargée, une personne perd le moral, travaille moins bien et finit par démissionner. Chacun progresse en travaillant : junior, confirmé, senior. Un stage payé par l\'hôtel, une fois par jour et par personne, accélère la progression.</p>'
-    +'<p class="aide"><b>Planning.</b> Chaque personne a sa semaine type : matin (6 h à 14 h), après-midi (14 h à 22 h), nuit (22 h à 6 h) ou repos. On ne paie que les postes travaillés. De temps en temps, une personne tombe malade ou demande un congé : vous répondez dans le planning, et un intérimaire peut tenir ses postes.</p>'
+    +'<p class="aide"><b>Planning.</b> Chaque personne a sa semaine type : matin (6 h à 14 h), après-midi (14 h à 22 h) ou repos. Il n\'y a pas de poste de nuit. On ne paie que les postes travaillés. De temps en temps, une personne tombe malade ou demande un congé : vous répondez dans le planning, et un intérimaire peut tenir ses postes.</p>'
     +'<p class="aide"><b>Économat.</b> Linge, produits d\'accueil, petits-déjeuners, denrées, boissons, produits de soin. Les commandes arrivent en 30 minutes ; la commande automatique évite les ruptures, pour 15 % de plus.</p>'
     +'<p class="aide"><b>Prix.</b> Personne ne refuse votre prix, mais un hôtel cher attire peu à peu moins de monde (voir Tarifs). Un client seul dans une grande chambre paie le prix d\'une chambre à sa taille.</p>'
     +'<p class="aide"><b>Qui paie.</b> La plupart des clients paient sur place. Les plateformes de réservation prennent 15 % de commission. Les sociétés paient sur facture, 5 à 8 jours plus tard, et en contestent parfois une partie : il faut alors les relancer dans Finances, sinon l\'argent est perdu.</p>'
@@ -2103,13 +2111,13 @@ var A={
     noter(t,"ok",S.prenom+" ouvre « "+S.nom+" » avec deux chambres. Les premières réservations ne vont pas tarder.");
     prendreReservations(t); planifierJour(minuit(t),t,true); S.stat.complet=0;
     // Un premier client se présente dans la demi-heure, pour ne pas ouvrir sur un hôtel vide
-    if(heure>=7&&heure<21&&!S.sejours.some(function(x){ return x.arrive<t+3*HEURE; })) S.sejours.push(creerSejour(t+Math.round(alea(15,35))*MIN,"couple",false));
+    if(heure>=7&&heure<20&&!S.sejours.some(function(x){ return x.arrive<t+3*HEURE; })) S.sejours.push(creerSejour(t+Math.round(alea(15,35))*MIN,"couple",false));
     U.ecran="accueil"; return true;
   },
   client:function(){
     var t=maintenant(), sj=passage(t,true);
     U.choix=null; U.retour=null;
-    if(!sj){ U.retour={c:"warn",m:"Aucune chambre prête pour un client de passage en ce moment."}; U.ecran="clients"; return true; }
+    if(!sj){ U.retour={c:"warn",m:nuit(t)?"L'hôtel dort : personne n'arrive entre 22 h et 6 h.":"Aucune chambre prête pour un client de passage en ce moment."}; U.ecran="clients"; return true; }
     U.dossier=sj.id; U.ecran="fiche"; return true;
   },
   fiche:function(d){ U.dossier=+d.k; U.choix=null; U.retour=null; U.ecran="fiche"; return false; },
