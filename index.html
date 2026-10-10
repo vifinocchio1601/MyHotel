@@ -266,6 +266,8 @@ button.option:hover:not(:disabled){border-color:var(--faint)}
 .option small{font-size:13px;color:var(--muted)}
 .parole{font-size:16px;font-weight:600;line-height:1.4}
 .groupe-choix{display:flex;flex-direction:column;gap:6px}
+.onglets.cinq .onglet{font-size:12.5px;padding:10px 2px;min-width:0}
+.carte > .sous-titre{margin-top:4px}
 @media (min-width:760px){
   .jauges{grid-template-columns:repeat(4,minmax(0,1fr))}
   .tuiles{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -371,10 +373,10 @@ var EQUIP={
     txt:"En semaine, des sociétés louent la salle à la journée, au prix par participant. La facture est payée plus tard. Il faut un serveur pour les pauses."},
   hall:{nom:"Hall et réception",palier:0,compte:"equipements",ic:"cloche",g:"g5",couts:[600,1500,3500,8000,18000],
     niveaux:["Comptoir d'accueil","Hall aménagé","Salon d'accueil","Grand hall","Hall de prestige"],
-    txt:"Chaque niveau : les clients patientent 15 % plus longtemps à l'arrivée, et un réceptionniste accueille 20 % de clients en plus."},
+    txt:"Chaque niveau : les clients patientent 15 % plus longtemps à l'arrivée, et un réceptionniste accueille 20 % de clients en plus."},
   buanderie:{nom:"Buanderie",palier:0,compte:"equipements",ic:"machine",g:"g2",couts:[700,1600,3500,7500,16000],
     niveaux:["Lave-linge","Buanderie","Buanderie équipée","Lingerie","Blanchisserie"],
-    txt:"Chaque niveau : le ménage d'une chambre va 10 % plus vite, le linge coûte 8 % de moins, et une personne des étages couvre 15 % de chambres en plus."}
+    txt:"Chaque niveau : le ménage d'une chambre va 10 % plus vite, le linge coûte 8 % de moins, et une personne des étages couvre 15 % de chambres en plus."}
 };
 var ORDRE_EQUIP=["resto","parking","hall","buanderie","bar","spa","seminaire","piscine"];
 var EQUIP_MAX=5, PART_ENTRETIEN=0.005;
@@ -415,17 +417,17 @@ var REQUETES={
   douche:{txt:"L'eau de la douche reste froide.",o:[
     {nom:"Envoyer le technicien",besoin:"technicien",e:10},
     {nom:"Lui proposer une autre chambre",besoin:"chambre",e:7},
-    {nom:"Offrir 30 % sur la nuit",remise:0.3,e:2},
+    {nom:"Offrir 30 % sur la nuit",remise:0.3,e:2},
     {nom:"Présenter des excuses",e:-14}]},
   bruit:{txt:"Du bruit m'empêche de dormir.",o:[
     {nom:"Lui proposer une chambre côté jardin",besoin:"jardin",e:11},
     {nom:"Aller demander le calme vous-même",e:6},
-    {nom:"Offrir 20 % sur la nuit",remise:0.2,e:3},
+    {nom:"Offrir 20 % sur la nuit",remise:0.2,e:3},
     {nom:"Répondre que vous n'y pouvez rien",e:-12}]},
   proprete:{txt:"Ma chambre a été mal nettoyée.",o:[
     {nom:"Envoyer une femme de chambre",besoin:"femme",e:9},
     {nom:"Refaire la chambre vous-même",e:6},
-    {nom:"Offrir 20 % sur la nuit",remise:0.2,e:1},
+    {nom:"Offrir 20 % sur la nuit",remise:0.2,e:1},
     {nom:"Répondre que la chambre a été faite",e:-12}]},
   oreiller:{txt:"Je voudrais un oreiller et une couverture en plus.",o:[
     {nom:"Les faire monter tout de suite",stock:"linge",sv:"etages",e:7},
@@ -433,7 +435,7 @@ var REQUETES={
     {nom:"Répondre qu'il n'y en a plus",e:-9}]},
   tardif:{txt:"Pourrais-je garder la chambre jusqu'à 14 h le jour du départ ?",si:function(sj){ return !sj.tardif; },o:[
     {nom:"Accepter, gratuitement",tardif:1,e:9},
-    {nom:"Accepter, contre 30 % d'une nuit",tardif:1,supp:0.3,e:2},
+    {nom:"Accepter, contre 30 % d'une nuit",tardif:1,supp:0.3,e:2},
     {nom:"Refuser : départ avant 11 h",e:-5}]},
   diner:{txt:"Où pourrais-je dîner ce soir ?",o:[
     {nom:"Réserver une table au restaurant de l'hôtel",besoin:"resto2",visite:"soir",e:6},
@@ -458,18 +460,18 @@ var REQUETES={
     {nom:"Lui demander de mieux chercher",e:-8}]},
   deception:{txt:"Cette chambre ne vaut pas son prix.",si:function(sj){ return sj.adeq<55; },o:[
     {nom:"Le surclasser dans une meilleure chambre",besoin:"mieux",e:14},
-    {nom:"Offrir 20 % sur tout le séjour",remise:0.2,sejour:1,e:8},
+    {nom:"Offrir 20 % sur tout le séjour",remise:0.2,sejour:1,e:8},
     {nom:"Offrir le petit-déjeuner",besoin:"resto1",stock:"pdj",sv:"resto",e:5},
     {nom:"Répondre que le prix était affiché",e:-10}]}
 };
 // L'argent personnel du directeur : formations, placement en bourse, prêt à l'hôtel, dons et vie personnelle
 var FORMATIONS=[
   ["physionomiste","Physionomiste",300,"Sur la fiche d'arrivée, chaque chambre indique combien de souhaits du client elle remplit."],
-  ["negociateur","Négociation",500,"Les commandes de l'économat coûtent 10 % de moins."],
+  ["negociateur","Négociation",500,"Les commandes de l'économat coûtent 10 % de moins."],
   ["recruteur","Recrutement",500,"Cinq candidats au lieu de quatre, et davantage de confirmés et de seniors."],
   ["meneur","Management",800,"Le moral de toute l'équipe gagne 8 points."],
-  ["gestionnaire","Gestion",1000,"Les charges du bâtiment baissent de 15 %."],
-  ["communicant","Communication",1200,"L'hôtel attire 10 % de clients en plus."]];
+  ["gestionnaire","Gestion",1000,"Les charges du bâtiment baissent de 15 %."],
+  ["communicant","Communication",1200,"L'hôtel attire 10 % de clients en plus."]];
 var BIENS=[["velo","Vélo électrique",200],["montre","Belle montre",400],["vacances","Vacances au soleil",800],["voiture","Petite voiture",2000],["berline","Berline",5000],
   ["appartement","Appartement en ville",10000],["voilier","Voilier",15000],["maison","Maison avec jardin",25000],["villa","Villa au bord de la mer",60000]];
 // Les dons cumulés donnent droit à une plaque, qui améliore un peu la satisfaction de tous les clients
@@ -479,7 +481,7 @@ var TAUX_MIN=2, TAUX_MAX=7, TAUX_PRET=5;
 var SEUILS_XP=[0,60,250], XP_STAGE=50, XP_POSTE_TACHE=1, XP_POSTE_AUTRE=4;
 // Absences : chaque nuit, une personne peut tomber malade (1 à 3 jours) ou demander un congé (2 à 5 jours, dans 3 jours).
 var TAUX_MALADIE=0.02, TAUX_CONGE=0.012, PRIME_INTERIM=1.5, DELAI_CONGE=3, QUALITE_INTERIM=1.06;
-// L'hôtel est assuré : une prime chaque jour selon le palier, et l'assurance prend en charge 70 % des indemnités
+// L'hôtel est assuré : une prime chaque jour selon le palier, et l'assurance prend en charge 70 % des indemnités
 var PRIME_ASSURANCE=[5,15,35,70,130], FRANCHISE=0.3, FRAIS_JUSTICE=300;
 // Les métiers : salaire habituel par poste de 8 heures, compte de rattachement, atouts utiles, postes proposés d'office
 var ROLES={
@@ -521,20 +523,30 @@ var EXP=[{nom:"Junior",paie:0.85,qualite:0.88,vitesse:1.15,age:[20,28]},{nom:"Co
 // Livre de comptes. La première lettre d'un poste dit ce qu'il est : r recette ; s o m e x charges payées ;
 // g a w charges sans sortie d'argent (marchandises sorties du stock, amortissements, créances perdues) ;
 // k achat d'immobilisation ou de stock ; c facture envoyée à une société, d paiement reçu ; p prêt du directeur, q remboursement.
-var SENS={r:1,p:1,d:1,g:0,a:0,w:0}, TYPES_CHARGE="sogmeaxw";
-var TYPES_D=[["s","Salaires"],["o","Cotisations patronales"],["g","Marchandises et linge consommés"],["m","Commissions des plateformes"],["e","Charges et entretien"],["a","Amortissements"],["x","Amendes, intérêts et indemnités"],["w","Créances perdues"]];
+// v TVA collectée sur une vente (encaissée, due à l'État), u TVA payée sur un achat (à récupérer), t paiement d'une dette fiscale,
+// z remboursement de TVA reçu ; y impôt des sociétés (charge, payée plus tard) ; b dividende versé.
+var SENS={r:1,p:1,d:1,v:1,z:1,g:0,a:0,w:0,y:0}, TYPES_CHARGE="sogmeaxwy";
+var TYPES_D=[["s","Salaires"],["o","Cotisations patronales"],["g","Marchandises et linge consommés"],["m","Commissions des plateformes"],["e","Charges et entretien"],["a","Amortissements"],["x","Amendes, intérêts et indemnités"],["w","Créances perdues"],["y","Impôt des sociétés"]];
+// La TVA : les prix sont TVA comprise, à l'achat comme à la vente. Taux belges : 6 % sur les nuitées, 12 % sur les repas, 21 % sur le reste.
+// Chaque trimestre, une déclaration à déposer avant le 20 du mois suivant. Les grilles sont celles de la déclaration belge.
+var TVA_NORMALE=0.21, TVA_VENTE={chambres:0.06,resto:0.12,bar:0.21,spa:0.21,parking:0.21,seminaire:0.21};
+var TVA_PRODUIT={linge:0.21,accueil:0.21,pdj:0.06,denrees:0.06,boissons:0.21,soins:0.21}, GRILLE_VENTE={"0.06":"g01","0.12":"g02","0.21":"g03"};
+// L'exercice comptable dure un trimestre. À la clôture : impôt des sociétés de 25 % sur le bénéfice (les pertes se reportent),
+// 5 % du bénéfice en réserve légale jusqu'à 10 % du capital, puis le directeur décide du dividende, soumis à 30 % de précompte mobilier.
+var TAUX_ISOC=0.25, PRECOMPTE=0.3, PART_RESERVE=0.05, PLAFOND_RESERVE=0.1, DELAI_AFFECTATION=20;
 // Les sociétés paient les séjours de leurs voyageurs et leurs séminaires sur facture, par lots, 5 à 8 jours plus tard, et en contestent parfois une partie.
 var DELAI_FACTURE=[5,8], TAUX_CONTESTE=0.25, DELAI_RELANCE=5, LIMITE_CONTESTE=20;
-// L'employeur paie 25 % de cotisations sur les salaires. Les achats durables sont amortis sur cinq ans.
+// L'employeur paie 25 % de cotisations sur les salaires. Les achats durables sont amortis sur cinq ans.
 var TAUX_COTISATIONS=0.25, DUREE_AMORT=5*365;
-var COMPTES_SERVICES=[["chambres","Hébergement"],["resto","Restaurant"],["bar","Bar"],["spa","Spa"],["parking","Parking"],["seminaire","Séminaires"],["reception","Réception"],["etages","Étages et technique"],["economat","Économat"],["entreprises","Factures aux sociétés"],["equipements","Équipements"],["direction","Direction"],["batiment","Bâtiment"],["litiges","Assurance, indemnités et justice"],["pret","Intérêts versés au directeur"],["divers","Primes, dons et divers"]];
+var COMPTES_SERVICES=[["chambres","Hébergement"],["resto","Restaurant"],["bar","Bar"],["spa","Spa"],["parking","Parking"],["seminaire","Séminaires"],["reception","Réception"],["etages","Étages et technique"],["economat","Économat"],["entreprises","Factures aux sociétés"],["equipements","Équipements"],["direction","Direction"],["batiment","Bâtiment"],["litiges","Assurance, indemnités et justice"],["impot","Impôt des sociétés"],["pret","Intérêts versés au directeur"],["divers","Primes, dons et divers"]];
 var ISSUES={parti:["Séjour terminé","ok"],reparti:["Reparti sans chambre","bad"],deloge:["Envoyé ailleurs","bad"]};
 var PRENOMS_F=["Élise","Noor","Camille","Inès","Solange","Ludmila","Odette","Jeanne","Maëlle","Clémence","Yasmine","Agathe","Margaux","Salomé","Apolline","Hortense","Lucie","Nadia","Roxane","Zélie","Bérénice","Colette","Fanny","Garance","Ilona","Justine","Karima","Léonie","Mathilde","Ophélie"];
 var PRENOMS_M=["Bastien","Théo","Gaspard","Honoré","Victor","Marius","Armand","Cédric","Lucien","Octave","Rémi","Samir","Tristan","Ulysse","Valentin","Yanis","Achille","Baptiste","Corentin","Damien","Émile","Félix","Gabin","Hugo","Ismaël","Joachim","Karim","Léandre","Maxence","Noé"];
 var NOMS=["Marchetti","Roche","El Amrani","Vasseur","Lemoine","Bertin","Okafor","Delcourt","Petit","Fontaine","Keller","Novak","Maréchal","Aubry","Vanel","Brunel","Castan","Dufresne","Esteban","Ferrand","Garnier","Haddad","Imbert","Jouvet","Kowalski","Lacombe","Morel","Nguyen","Ostrowski","Perrin","Quentin","Ribeiro","Sorel","Tessier","Urbain","Vidal","Weiss","Yildiz","Zamora","Bellamy"];
 
 /* ------------------------------------------------------------------ État */
-function moiVide(){ return {argent:0,gagne:0,actif:0,tranche:0,formations:{},place:0,taux:4.5,gainsPlace:0,pret:0,interets:0,gainsPret:0,dons:0,biens:{}}; }
+function moiVide(){ return {argent:0,gagne:0,actif:0,tranche:0,formations:{},place:0,taux:4.5,gainsPlace:0,pret:0,interets:0,gainsPret:0,dons:0,dividendes:0,biens:{}}; }
+function tvaVide(){ return {g01:0,g02:0,g03:0,g54:0,g81:0,g82:0,g83:0,g59:0}; }
 function statVide(){ return {arrives:0,departs:0,repartis:0,deloges:0,complet:0,couverts:0,visites:{},rates:{},ruptures:{},sansReponse:0}; }
 function etatInitial(){
   var postes={}, k;
@@ -544,12 +556,13 @@ function etatInitial(){
     equipe:[],nEquipe:1,candidats:{},nCandidat:1,sejours:[],nSejour:1,visites:[],nVisite:1,requetes:[],nRequete:1,arrivees:[],evts:[],
     avis:[55,55,55,55,55,55,55,55,55,55],finis:0,stat:statVide(),accueil:{ok:0,moyen:0,auto:0,autoMoyen:0},req:{ok:0,moyen:0,auto:0,sans:0},
     stock:{},commandes:[],auto:true,demandes:[],nDemande:1,demande:{},plaintes:[],nPlainte:1,bordereaux:[],contestes:[],nBord:1,immos:[],frac:{},valStock:{},
+    tvaP:tvaVide(),declarations:[],tvaHisto:[],nFisc:1,impots:[],exercices:[],capital:0,reserve:0,reporte:0,pertes:0,affectation:null,
     registre:[],journal:[],cj:{},cm:{},prochaineCloture:0,
     moi:moiVide(),releve:0,decalage:0};
 }
 var S=etatInitial();
 // L'état d'écran reste sur l'appareil : il ne fait pas partie de la partie
-function ecranVide(){ return {ecran:"accueil",role:"receptionniste",vue:"jour",decal:0,confirme:null,resume:null,dossier:null,choix:null,retour:null,moiVue:"fiche",planVue:"reception",finPage:"resultat",achat:{type:"double",cote:"rue",etage:"haut"},fond:{nom:"",prenom:"Vincent",devise:"$"}}; }
+function ecranVide(){ return {ecran:"accueil",role:"receptionniste",vue:"jour",decal:0,confirme:null,resume:null,dossier:null,choix:null,retour:null,moiVue:"fiche",planVue:"reception",finPage:"resultat",div:50,achat:{type:"double",cote:"rue",etage:"haut"},fond:{nom:"",prenom:"Vincent",devise:"$"}}; }
 var U=ecranVide();
 function valide(o){ return !!(o&&o.v===V&&o.postes&&o.tarifs&&o.equipe&&o.chambres&&o.sejours); }
 function sauver(){ try{ localStorage.setItem(CLE,JSON.stringify(S)); }catch(e){} }
@@ -564,6 +577,8 @@ function migrer(){
   if(!S.releve) S.releve=prochaineReleve(S.horloge||Date.now());
   // Les postes de nuit n'existent plus : ceux qui en avaient passent au repos ces jours-là
   S.equipe.forEach(function(e){ if(e.plan) e.plan=e.plan.map(function(k){ return k==="N"?"R":k; }); });
+  // Parties commencées avant la TVA et la clôture : le capital est ce que l'hôtel possédait en net au début du trimestre en cours
+  if(S.fondeLe&&!S.capital) S.capital=Math.round(bilan().propres-resultatExercice(S.horloge||Date.now()));
 }
 function charger(){ try{ var t=localStorage.getItem(CLE); if(!t) return null; var o=JSON.parse(t); return valide(o)?o:null; }catch(e){ return null; } }
 
@@ -624,16 +639,29 @@ function inscrireF(t,poste,montant){
   if(entier>=1){ inscrire(t,poste,entier); total-=entier; }
   S.frac[poste]=total;
 }
-// Une facture : la recette est acquise. Un client ordinaire paie sur place ; pour une société, la facture part sur le lot du jour.
-function facturer(t,poste,prix,canal){
-  var k=cleJour(t), b=null;
-  prix=Math.round(prix); if(!prix) return;
-  inscrire(t,poste,prix);
+function partTva(ttc,taux){ return Math.round(ttc-ttc/(1+taux)); }
+// Une vente : le prix est TVA comprise. La recette est hors TVA, la TVA est due à l'État.
+// Un client ordinaire paie sur place ; pour une société, la facture part sur le lot du jour.
+function recette(t,compte,ttc,canal){
+  var taux=TVA_VENTE[compte]||0, k=cleJour(t), b=null, tva;
+  ttc=Math.round(ttc); if(!ttc) return;
+  tva=taux?partTva(ttc,taux):0;
+  inscrire(t,"r:"+compte,ttc-tva);
+  if(tva){ inscrire(t,"v:"+compte,tva); S.tvaP[GRILLE_VENTE[taux]]+=ttc-tva; S.tvaP.g54+=tva; }
   if(canal!=="entreprise") return;
-  inscrire(t,"c:entreprises",prix);
+  inscrire(t,"c:entreprises",ttc);
   S.bordereaux.forEach(function(x){ if(x.jour===k) b=x; });
   if(!b){ b={id:S.nBord++,jour:k,t:t,m:0,n:0,ech:jourApres(t,entre(DELAI_FACTURE[0],DELAI_FACTURE[1]))}; S.bordereaux.push(b); }
-  b.m+=prix; b.n++;
+  b.m+=ttc; b.n++;
+}
+// Un achat : le prix payé est TVA comprise. La charge (ou le bien) est hors TVA, la TVA est à récupérer. Renvoie le montant hors TVA.
+function achat(t,poste,ttc,taux,grille){
+  var tva;
+  ttc=Math.round(ttc); if(!ttc) return 0;
+  tva=taux?partTva(ttc,taux):0;
+  inscrire(t,poste,ttc-tva);
+  if(tva){ inscrire(t,"u:"+poste.slice(2),tva); S.tvaP[grille]+=ttc-tva; S.tvaP.g59+=tva; }
+  return ttc-tva;
 }
 function creances(){ var n=0; S.bordereaux.forEach(function(b){ n+=b.m; }); S.contestes.forEach(function(c){ n+=c.m; }); return n; }
 // Chaque nuit : les sociétés paient les lots arrivés à échéance, en contestent parfois une partie, et les relances aboutissent
@@ -655,21 +683,83 @@ function reglements(t){
 // Un achat durable sort de la caisse, mais n'est pas une charge : il s'amortit jour après jour.
 // Une chambre et ses améliorations forment un seul bien, un équipement et ses niveaux aussi.
 function immobiliser(t,sv,cle,nom,prix){
-  var im=null;
-  inscrire(t,"k:"+sv,prix);
+  var im=null, ht=achat(t,"k:"+sv,prix,TVA_NORMALE,"g83");
   S.immos.forEach(function(x){ if(x.cle===cle) im=x; });
-  if(im) im.v+=prix; else S.immos.push({cle:cle,nom:nom,sv:sv,v:prix,c:0,t:t});
+  if(im) im.v+=ht; else S.immos.push({cle:cle,nom:nom,sv:sv,v:ht,c:0,t:t});
+}
+
+/* ------------------------------------------------------------------ TVA, clôture et impôt */
+function nomTrimestre(t){ var d=new Date(t), q=Math.floor(d.getMonth()/3)+1; return q+(q===1?"er":"e")+" trimestre "+d.getFullYear(); }
+function finTrimestre(t){ var d=new Date(t); return new Date(d.getFullYear(),Math.floor(d.getMonth()/3)*3+3,1).getTime(); }
+function moisDuTrimestre(t){ var d=new Date(t), m0=Math.floor(d.getMonth()/3)*3, l=[], i; for(i=0;i<3;i++) l.push(cleMois(new Date(d.getFullYear(),m0+i,1).getTime())); return l; }
+// Ce que l'hôtel doit à l'État en TVA (ou, en négatif, ce que l'État lui doit) : le trimestre en cours et les déclarations pas encore déposées
+function soldeTva(){ var n=S.tvaP.g54-S.tvaP.g59; S.declarations.forEach(function(d){ n+=d.g54-d.g59; }); return n; }
+function cloturerTva(tj,t){
+  var d={id:S.nFisc++,nom:nomTrimestre(tj)}, L=new Date(t), k;
+  for(k in S.tvaP) d[k]=S.tvaP[k];
+  L.setDate(21); d.limite=L.getTime();
+  S.declarations.push(d); S.tvaP=tvaVide();
+  noter(t,"","Le "+d.nom+" est terminé : la déclaration de TVA est à déposer avant le "+dateLongue(d.limite-1000)+", dans Finances.");
+}
+function deposerTva(d,t,office){
+  var solde=d.g54-d.g59, amende=0, i=S.declarations.indexOf(d);
+  if(i>=0) S.declarations.splice(i,1);
+  if(solde>0) inscrire(t,"t:tva",solde); else if(solde<0) inscrire(t,"z:tva",-solde);
+  if(office){ amende=Math.max(50,Math.round(Math.max(0,solde)*0.1)); inscrire(t,"x:divers",amende); }
+  S.tvaHisto.unshift({nom:d.nom,solde:solde,t:t,amende:amende}); if(S.tvaHisto.length>8) S.tvaHisto.length=8;
+  noter(t,office?"bad":"","Déclaration de TVA du "+d.nom+(office?" déposée d'office, en retard : ":" déposée : ")+(solde>0?mt(solde)+" payés à l'État":solde<0?mt(-solde)+" remboursés par l'État":"rien à payer")+(office?", plus "+mt(amende)+" d'amende.":"."));
+}
+// Le résultat du trimestre avant impôt
+function resultatExercice(t){ var tot=additionner(S.cm,moisDuTrimestre(t)); return recettesDe(tot)-depensesDe(tot)+typeDe(tot,"y"); }
+function dettesImpot(){ var n=0; S.impots.forEach(function(x){ n+=x.m; }); return n; }
+// À minuit le dernier jour du trimestre : l'impôt est calculé, la réserve légale dotée, et le reste attend la décision du directeur
+function cloturerExercice(tj,t){
+  var R=resultatExercice(tj), imposable=0, impot, net, dot=0, L, ex;
+  if(S.affectation) affecterResultat(0,t,true);
+  if(R>0){ imposable=Math.max(0,R-S.pertes); S.pertes=Math.max(0,S.pertes-R); } else S.pertes+=-R;
+  impot=Math.round(imposable*TAUX_ISOC);
+  if(impot){ inscrire(tj,"y:impot",impot); L=new Date(t); L.setMonth(L.getMonth()+1); S.impots.push({id:S.nFisc++,nom:nomTrimestre(tj),m:impot,limite:L.getTime()}); }
+  net=R-impot;
+  if(net>0){ dot=Math.min(Math.round(net*PART_RESERVE),Math.max(0,Math.round(S.capital*PLAFOND_RESERVE)-S.reserve)); S.reserve+=dot; }
+  ex={nom:nomTrimestre(tj),resultat:R,impot:impot,net:net,reserve:dot,dividende:0};
+  S.exercices.unshift(ex); if(S.exercices.length>12) S.exercices.length=12;
+  if(net>0&&S.reporte+net-dot>0) S.affectation={nom:ex.nom,net:net-dot,dispo:S.reporte+net-dot,limite:jourApres(t,DELAI_AFFECTATION)};
+  else S.reporte+=net-dot;
+  noter(t,net>=0?"ok":"warn","Clôture du "+ex.nom+" : résultat avant impôt "+signeM(R)+(impot?", impôt des sociétés "+mt(impot)+" à payer avant le "+dateLongue(L.getTime()-1000):R>0?", pas d'impôt grâce aux pertes reportées":", pas d'impôt")+"."+(S.affectation?" Il vous reste à décider du dividende, dans Finances.":""));
+}
+// Ce que le directeur peut se verser : pas plus que le bénéfice disponible, ni que ce que la caisse contient
+function dividendeMax(){ return S.affectation?Math.max(0,Math.min(S.affectation.dispo,Math.floor(S.caisse))):0; }
+function affecterResultat(D,t,office){
+  var X=S.affectation, pourMoi;
+  if(!X) return;
+  D=borne(Math.round(D),0,dividendeMax());
+  S.reporte+=X.net-D; S.affectation=null;
+  if(D){ pourMoi=Math.round(D*(1-PRECOMPTE)); inscrire(t,"b:dividende",D); S.moi.argent+=pourMoi; S.moi.gagne+=pourMoi; S.moi.dividendes=(S.moi.dividendes||0)+pourMoi; }
+  S.exercices.forEach(function(e){ if(e.nom===X.nom) e.dividende=D; });
+  noter(t,"","Résultat du "+X.nom+(D?" : dividende de "+mt(D)+", dont "+mt(pourMoi)+" pour "+S.prenom+" après le précompte mobilier. Le reste est reporté.":" : tout est reporté à l'exercice suivant."+(office?" Aucune décision n'avait été prise.":"")));
+}
+function payerImpot(x,t,retard){
+  var i=S.impots.indexOf(x), maj=retard?Math.round(x.m*0.1):0;
+  if(i>=0) S.impots.splice(i,1);
+  inscrire(t,"t:impot",x.m);
+  if(maj) inscrire(t,"x:divers",maj);
+  noter(t,retard?"bad":"","Impôt des sociétés du "+x.nom+" : "+mt(x.m)+" payés"+(retard?" d'office, en retard, plus "+mt(maj)+" de majoration.":"."));
+}
+// Le bilan. Les capitaux propres se détaillent ; le résultat de l'exercice en cours est ce qui reste une fois le reste retiré.
+function bilan(){
+  var tva=soldeTva(), b={brut:0,amort:0,stock:valeurStock(),creances:creances(),tresorerie:Math.max(0,S.caisse),decouvert:Math.max(0,-S.caisse),pret:S.moi.pret};
+  S.immos.forEach(function(im){ b.brut+=im.v; b.amort+=im.c; });
+  b.tvaActif=Math.max(0,-tva); b.tvaPassif=Math.max(0,tva); b.impots=dettesImpot();
+  b.actif=b.brut-b.amort+b.stock+b.creances+b.tvaActif+b.tresorerie;
+  b.propres=b.actif-b.pret-b.decouvert-b.tvaPassif-b.impots;
+  b.capital=S.capital; b.reserve=S.reserve; b.reporte=S.reporte; b.aAffecter=S.affectation?S.affectation.net:0;
+  b.exercice=b.propres-b.capital-b.reserve-b.reporte-b.aAffecter;
+  return b;
 }
 function amortir(t){
   S.immos.forEach(function(im){ var d; if(im.c>=im.v) return; d=Math.min(im.v/DUREE_AMORT,im.v-im.c); im.c+=d; inscrireF(t,"a:"+im.sv,d); });
 }
 function valeurStock(){ var n=0, k; for(k in S.valStock) n+=S.valStock[k]; S.commandes.forEach(function(c){ n+=c.v||0; }); return n; }
-function bilan(){
-  var b={brut:0,amort:0,stock:valeurStock(),creances:creances(),tresorerie:Math.max(0,S.caisse),decouvert:Math.max(0,-S.caisse),pret:S.moi.pret};
-  S.immos.forEach(function(im){ b.brut+=im.v; b.amort+=im.c; });
-  b.actif=b.brut-b.amort+b.stock+b.creances+b.tresorerie; b.propres=b.actif-b.pret-b.decouvert;
-  return b;
-}
 function additionner(src,cles){ var tot={}, i, k, o; for(i=0;i<cles.length;i++){ o=src[cles[i]]; if(o) for(k in o) tot[k]=(tot[k]||0)+o[k]; } return tot; }
 function recettesDe(tot){ var k, n=0; for(k in tot) if(k.charAt(0)==="r") n+=tot[k]; return n; }
 function depensesDe(tot){ var k, n=0; for(k in tot) if(TYPES_CHARGE.indexOf(k.charAt(0))>=0) n+=tot[k]; return n; }
@@ -777,7 +867,7 @@ function enCommande(k){ var n=0; S.commandes.forEach(function(c){ if(c.p===k) n+
 function commander(k,n,t,auto){
   var prix=prixLot(k,n,auto);
   if(!PRODUITS[k]||S.caisse-prix<-DECOUVERT_MAX) return false;
-  inscrire(t,"k:economat",prix); S.commandes.push({t:t+DELAI_LIVRAISON,p:k,n:n,v:prix}); S.commandes.sort(function(a,b){ return a.t-b.t; });
+  S.commandes.push({t:t+DELAI_LIVRAISON,p:k,n:n,v:achat(t,"k:economat",prix,TVA_PRODUIT[k],"g81")}); S.commandes.sort(function(a,b){ return a.t-b.t; });
   return true;
 }
 // Réapprovisionnement automatique : un lot dès qu'un stock est bas, plus cher qu'une commande faite à la main
@@ -1004,9 +1094,9 @@ function meilleureNote(sj){
 }
 function nuitee(sj,t){
   sj.facturees++;
-  facturer(t,"r:chambres",sj.prixNuit,sj.canal); sj.paye+=sj.prixNuit;
+  recette(t,"chambres",sj.prixNuit,sj.canal); sj.paye+=sj.prixNuit;
   if(sj.canal==="plateforme") inscrire(t,"m:chambres",sj.prixNuit*COMMISSION);
-  if(sj.parking){ facturer(t,"r:parking",S.tarifs.parking,sj.canal); sj.paye+=S.tarifs.parking; }
+  if(sj.parking){ recette(t,"parking",S.tarifs.parking,sj.canal); sj.paye+=S.tarifs.parking; }
 }
 // Une fois la chambre attribuée, le client s'installe. Ses repas, ses passages au bar et ses demandes sont prévus pour tout le séjour.
 function loger(sj,c,t,auto){
@@ -1166,7 +1256,7 @@ function affecterVisites(t){
 function oterVisite(v){ var i=S.visites.indexOf(v); if(i>=0) S.visites.splice(i,1); }
 function finVisite(v,t){
   var X=SV[v.k], prix=Math.round(S.tarifs[X.prix]*v.n*(v.rupture?0.5:1)), sj=v.sj?parId(S.sejours,v.sj):null, note;
-  facturer(t,"r:"+v.sv,prix,"direct");
+  recette(t,v.sv,prix,"direct");
   v.staff.forEach(function(id){ var e=parId(S.equipe,id); if(e){ e.faits=(e.faits||0)+1; if(!remplace(e,t)) gagnerXp(e,1,t); } });
   note=borne(70+(v.q-1)*60-Math.min(25,v.att/X.patience*25)-(v.rupture?25:0)+(niv(v.sv)-1)*2,0,100);
   if(sj){ sj.plus=(sj.plus||0)+(note>=60?3:-5); sj.paye+=prix; }
@@ -1223,11 +1313,11 @@ function repondre(r,o,t,auto){
   oterRequete(r);
   if(!sj) return null;
   bon=!!mieux&&o.e>=mieux.e;
-  if(o.cout) inscrire(t,"e:reception",o.cout);
-  if(o.remise){ m=Math.round(sj.prixNuit*o.remise*(o.sejour?sj.nuits:1)); inscrire(t,"r:chambres",-m); sj.paye-=m; }
-  if(o.supp){ m=o.supp<1?Math.round(sj.prixNuit*o.supp):o.supp; inscrire(t,"r:chambres",m); sj.paye+=m; }
+  if(o.cout) achat(t,"e:reception",o.cout,TVA_NORMALE,"g82");
+  if(o.remise){ m=Math.round(sj.prixNuit*o.remise*(o.sejour?sj.nuits:1)); recette(t,"chambres",-m,"direct"); sj.paye-=m; }
+  if(o.supp){ m=o.supp<1?Math.round(sj.prixNuit*o.supp):o.supp; recette(t,"chambres",m,"direct"); sj.paye+=m; }
   if(o.stock&&stockDe(o.stock)>0){ sortirStock(o.stock,t,o.sv||"reception"); reappro(t); }
-  if(o.recette){ m=S.tarifs[o.recette]*sj.pers; inscrire(t,"r:resto",m); sj.paye+=m; }
+  if(o.recette){ m=S.tarifs[o.recette]*sj.pers; recette(t,"resto",m,"direct"); sj.paye+=m; }
   if(o.tardif){ sj.tardif=1; sj.fin=minuit(sj.fin)+14*HEURE; sj.finPrevue=Math.max(sj.finPrevue,sj.fin); }
   if(o.visite){ S.arrivees.push({t:Math.max(t+10*MIN,minuit(t)+Math.round(alea(19,20.5)*HEURE)),k:"vis",v:o.visite,sj:sj.id}); S.arrivees.sort(function(a,b){ return a.t-b.t; }); }
   if(o.besoin==="chambre"||o.besoin==="jardin"||o.besoin==="mieux"){
@@ -1301,7 +1391,7 @@ function seminaire(t){
   if(!cap) return;
   n=entre(Math.max(4,Math.round(cap*0.4)),cap); prix=n*S.tarifs.seminaire;
   ok=prevusLe(["serveur"],posteDe(t).j,"M",t)>0;
-  facturer(t,"r:seminaire",prix,"entreprise");
+  recette(t,"seminaire",prix,"entreprise");
   for(i=0;i<Math.ceil(n/4);i++){ if(stockDe("boissons")>0) sortirStock("boissons",t,"seminaire"); else { ok=false; manquer("boissons"); break; } }
   avis(ok?82:42); reappro(t);
   noter(t,ok?"ok":"warn","Séminaire de "+n+" participants : "+mt(prix)+" facturés à la société."+(ok?"":" Sans serveur ni boissons pour les pauses, les participants sont repartis déçus."));
@@ -1320,7 +1410,7 @@ function declencher(t){
     if(couvMenage()>=0.8){ avis(90); avis(90); avis(90); noter(t,"ok","Inspection d'hygiène : l'hôtel est irréprochable. Sa réputation en profite."); }
     else { m=150*(S.palier+1); inscrire(t,"x:divers",m); noter(t,"bad","Inspection d'hygiène : les chambres ne sont pas assez bien tenues. Amende de "+mt(m)+"."); }
   } else if(k==="panne"){
-    m=enPosteRole(["technicien"],t).length?80:300; inscrire(t,"e:batiment",m);
+    m=enPosteRole(["technicien"],t).length?80:300; achat(t,"e:batiment",m,TVA_NORMALE,"g82");
     noter(t,"warn","Panne de chaudière. "+(m<300?"Votre technicien s'en charge : "+mt(m)+" de pièces.":"Sans technicien en poste, il faut un dépanneur : "+mt(m)+"."));
   } else if(k==="presse"){
     avis(95); avis(95); noter(t,"ok","Un magazine de voyage recommande "+S.nom+". Sa réputation en profite.");
@@ -1339,8 +1429,8 @@ function cloturer(t){
     inscrire(tj,"s:"+ROLES[e.role].service,paie); inscrire(tj,"o:"+ROLES[e.role].service,paie*TAUX_COTISATIONS);
     if(k!=="R"&&!abs) gagnerXp(e,estTache(e)?XP_POSTE_TACHE:XP_POSTE_AUTRE,tj);
   });
-  inscrire(tj,"e:batiment",chargesBatiment());
-  for(k in EQUIP) inscrire(tj,"e:"+EQUIP[k].compte,entretienDe(k));
+  achat(tj,"e:batiment",chargesBatiment(),TVA_NORMALE,"g82");
+  for(k in EQUIP) achat(tj,"e:"+EQUIP[k].compte,entretienDe(k),TVA_NORMALE,"g82");
   inscrire(tj,"e:litiges",PRIME_ASSURANCE[S.palier]);
   S.sejours.forEach(function(sj){ if(sj.etat==="loge"&&sj.facturees<sj.nuits) nuitee(sj,tj); });
   amortir(tj);
@@ -1355,6 +1445,11 @@ function cloturer(t){
   });
   c=S.cj[cleJour(tj)]||{}; res=recettesDe(c)-depensesDe(c);
   noter(tj,res>=0?"ok":"warn","Jour "+S.jour+" : "+pl(S.stat.arrives,"arrivée","arrivées")+", "+pl(S.stat.departs,"départ","départs")+", "+pl(occupees(),"chambre occupée","chambres occupées")+" cette nuit"+(S.stat.couverts?", "+pl(S.stat.couverts,"couvert","couverts"):"")+(S.stat.deloges?", "+pl(S.stat.deloges,"client envoyé","clients envoyés")+" ailleurs":"")+". Résultat de la journée : "+signeM(res)+".");
+  // Le premier jour d'un trimestre : clôture de l'exercice qui s'achève et déclaration de TVA à déposer
+  if(new Date(t).getDate()===1&&new Date(t).getMonth()%3===0){ cloturerExercice(tj,t); cloturerTva(tj,t); }
+  S.declarations.slice().forEach(function(d){ if(d.limite<=t) deposerTva(d,t,true); });
+  S.impots.slice().forEach(function(x){ if(x.limite<=t) payerImpot(x,t,true); });
+  if(S.affectation&&S.affectation.limite<=t) affecterResultat(0,t,true);
   S.stat=statVide(); S.jour++;
   garde=cleJour(t-JOURS_GARDES*JOUR);
   for(vieux in S.cj) if(vieux<garde) delete S.cj[vieux];
@@ -1423,7 +1518,7 @@ function avancer(jusqua){
   if(jusqua>S.horloge) S.horloge=jusqua;
   return change;
 }
-// Chaque nuit : le portefeuille d'actions rapporte entre 2 % et 7 % par an (le taux bouge un peu chaque jour),
+// Chaque nuit : le portefeuille d'actions rapporte entre 2 % et 7 % par an (le taux bouge un peu chaque jour),
 // et l'hôtel verse au directeur les intérêts de ce qu'il lui a prêté.
 function financesPerso(t){
   var M=S.moi, gain, entier;
@@ -1531,11 +1626,16 @@ function alertes(){
   if(!tient()) a("warn","Une réservation à venir n'a pas de chambre assez grande de libre. Achetez une chambre, ou préparez-vous à envoyer un client ailleurs.","chambres","Voir les chambres");
   n=S.contestes.filter(function(c){ return !c.relance; }).length;
   if(n) a("warn","Une société conteste "+pl(n,"lot","lots")+" de factures. Sans relance, l'argent est perdu.","societes","Voir les factures");
+  S.declarations.forEach(function(d){ a("warn","Déclaration de TVA du "+d.nom+" à déposer avant le "+dateLongue(d.limite-1000)+".","tva","Voir la TVA"); });
+  S.impots.forEach(function(x){ a("warn","Impôt des sociétés du "+x.nom+" : "+mt(x.m)+" à payer avant le "+dateLongue(x.limite-1000)+".","exercice","Voir l'exercice"); });
+  n=Math.ceil((finTrimestre(S.horloge)-S.horloge)/JOUR); m=Math.round(Math.max(0,resultatExercice(S.horloge)-S.pertes)*TAUX_ISOC);
+  if(n<=10&&m>0) a("","Clôture du trimestre dans "+pl(n,"jour","jours")+" : impôt des sociétés estimé à "+mt(m)+", à payer dans le mois qui suit.","exercice","Voir l'exercice");
+  if(S.affectation) a("","Le résultat du "+S.affectation.nom+" attend votre décision : dividende ou report.","exercice","Voir l'exercice");
   if(S.plaintes.length) a("bad",pl(S.plaintes.length,"réclamation attend","réclamations attendent")+" votre décision.","journal","Voir les réclamations");
   if(S.demandes.length) a("",pl(S.demandes.length,"demande de congé attend","demandes de congé attendent")+" votre réponse.","planning","Voir le planning");
   n=S.equipe.filter(function(e){ return absentLe(e,S.horloge)&&!e.absent.interim; }).map(function(e){ return nomComplet(e)+" ("+(e.absent.motif==="maladie"?"malade":"en congé")+")"; });
   if(n.length) a("warn",(n.length>1?"Absents aujourd'hui : ":"Absence aujourd'hui : ")+n.join(", ")+".","planning","Voir le planning");
-  if(S.caisse<0) a("bad","La caisse est à découvert : la banque prélève 0,2 % par jour. L'hôtel ne peut pas faire faillite, mais les achats sont bloqués, sauf l'économat jusqu'à "+mt(DECOUVERT_MAX)+" de découvert.");
+  if(S.caisse<0) a("bad","La caisse est à découvert : la banque prélève 0,2 % par jour. L'hôtel ne peut pas faire faillite, mais les achats sont bloqués, sauf l'économat jusqu'à "+mt(DECOUVERT_MAX)+" de découvert.");
   if(S.stat.deloges) a("bad",pl(S.stat.deloges,"client avait réservé et a été envoyé","clients avaient réservé et ont été envoyés")+" ailleurs aujourd'hui.","clients","Voir les clients");
   if(S.stat.repartis) a("warn",pl(S.stat.repartis,"client de passage est reparti","clients de passage sont repartis")+" sans chambre aujourd'hui : il n'y avait personne à l'accueil.","planning","Voir le planning");
   if(S.stat.sansReponse) a("warn",pl(S.stat.sansReponse,"demande est restée","demandes sont restées")+" sans réponse aujourd'hui."+(nbGroupe(ACCUEIL)?"":" Un réceptionniste répondrait quand vous n'êtes pas là."),"recrutement","Recruter");
@@ -1609,7 +1709,7 @@ function ecranAccueil(){
     +tuile("g6","calendrier","Planning",enPosteMaintenant()+" en poste","planning")
     +tuile("g4","recrut","Recrutement","Engager du personnel","recrutement")
     +tuile("g2","caisse","Économat",pl(produitsConnus().filter(function(k){ return stockDe(k)<=seuilStock(); }).length,"stock bas","stocks bas"),"economat")
-    +tuile("g5","tarifs","Tarifs","Chambres à "+S.tarifs.chambre+" %","tarifs")
+    +tuile("g5","tarifs","Tarifs","Chambres à "+S.tarifs.chambre+" %","tarifs")
     +tuile("g6","finances","Finances","Aujourd'hui "+signeM(jr),"finances")
     +tuile("g1","journal","Journal",S.journal.length?quandTxt(S.journal[0].t):"Rien à signaler","journal")
     +tuile("g8","moi","Ma fiche",mt(S.moi.argent)+" à vous","moi")
@@ -1850,23 +1950,23 @@ function ecranRecrutement(){
   R=ROLES[r]; liste=S.candidats[r]||[];
   return barre()+entete("Recrutement","Choisissez un métier, puis la personne que vous voulez.")
     +'<div class="puces-choix">'+roles.map(function(x){ return '<button type="button" class="choix'+(x===r?" actif":"")+'" data-a="role" data-k="'+x+'">'+ROLES[x].nom+(nb(x)?" · "+nb(x):"")+'</button>'; }).join("")+'</div>'
-    +'<p class="aide">'+AIDE_ROLE[r]+' Salaire fixé pour ce métier : '+mt(S.postes[r].salaire)+' par poste de 8 h, plus 25 % de cotisations.</p>'
+    +'<p class="aide">'+AIDE_ROLE[r]+' Salaire fixé pour ce métier : '+mt(S.postes[r].salaire)+' par poste de 8 h, plus 25 % de cotisations.</p>'
     +'<ul class="liste">'+liste.map(function(c){
       return '<li class="rang"><div><b>'+h(nomComplet(c))+'</b>, '+c.age+' ans<small>'+nomExp(c)+' · '+mt(Math.round(S.postes[r].salaire*EXP[c.exp].paie))+' par poste</small>'
         +'<div class="badges" style="margin-top:6px">'+c.atouts.map(function(a){ return '<span class="puce'+(R.atouts.indexOf(a)>=0?" ok":"")+'">'+ATOUTS[a]+'</span>'; }).join("")+'</div></div>'
         +'<div class="droite"><button type="button" class="btn principal" data-a="engager" data-k="'+c.id+'">Engager</button></div></li>';
     }).join("")+'</ul>'
     +'<button type="button" class="btn" data-a="autres">Voir d\'autres candidats</button>'
-    +'<p class="aide">Un junior coûte 15 % de moins. Un senior coûte 20 % de plus, travaille plus vite et laisse des clients plus satisfaits. Les atouts en vert sont utiles à ce poste.</p>';
+    +'<p class="aide">Un junior coûte 15 % de moins. Un senior coûte 20 % de plus, travaille plus vite et laisse des clients plus satisfaits. Les atouts en vert sont utiles à ce poste.</p>';
 }
 function effetNiveau(k,n){
   var E=EQUIP[k];
   if(k==="resto") return n===1?"4 tables pour le petit-déjeuner":E.cap[n-1]+" tables · repas à "+mt(Math.round(REF.repas*MULT_REF.repas[n]))+" d'habitude";
   if(k==="seminaire") return "jusqu'à "+E.cap[n-1]+" participants";
   if(E.cap) return E.cap[n-1]+" "+E.unite[1];
-  if(k==="piscine") return (3*n)+" % de clients en plus";
-  if(k==="hall") return "patience à l'arrivée +"+(15*n)+" %";
-  return "ménage "+(10*n)+" % plus rapide";
+  if(k==="piscine") return (3*n)+" % de clients en plus";
+  if(k==="hall") return "patience à l'arrivée +"+(15*n)+" %";
+  return "ménage "+(10*n)+" % plus rapide";
 }
 function carteEquip(k){
   var E=EQUIP[k], n=niv(k), verrou=E.palier>S.palier, cap=capEquip(), prix=n<EQUIP_MAX?E.couts[n]:0, suite="", etat, b=besoinEquip(k), vie="", fait, rate=S.stat.rates[k]||0;
@@ -1890,14 +1990,14 @@ function carteEquip(k){
 }
 function ecranEquipements(){
   return barre()+entete("Équipements","Entretien : "+mt(entretienEquip())+" par jour · niveau "+capEquip()+" au plus à ce palier")
-    +'<p class="aide">Chaque équipement se construit puis s\'améliore sur cinq niveaux, avec la caisse de l\'hôtel. Chaque niveau ajoute 0,5 % de son prix en entretien par jour.</p>'
+    +'<p class="aide">Chaque équipement se construit puis s\'améliore sur cinq niveaux, avec la caisse de l\'hôtel. Chaque niveau ajoute 0,5 % de son prix en entretien par jour.</p>'
     +ORDRE_EQUIP.map(carteEquip).join("");
 }
 function ecranEconomat(){
   var connus=produitsConnus(), L=lot(), G=L*FOIS_GROS;
   return barre()+entete("Économat","Valeur du stock : "+mt(valeurStock()))
     +'<div class="carte"><div class="reglage"><div><b>Commande automatique</b><br><span class="aide">Un lot de '+L+' dès qu\'il reste '+seuilStock()+' unités ou moins</span></div><div class="bascule"><button type="button" data-a="auto" data-k="1" class="'+(S.auto?"actif":"")+'" aria-pressed="'+!!S.auto+'">Oui</button><button type="button" data-a="auto" data-k="0" class="'+(S.auto?"":"actif")+'" aria-pressed="'+!S.auto+'">Non</button></div></div>'
-    +'<p class="aide">La commande automatique coûte 15 % de plus qu\'une commande faite à la main. Un lot de '+G+' coûte 15 % de moins. Livraison en 30 minutes.</p></div>'
+    +'<p class="aide">La commande automatique coûte 15 % de plus qu\'une commande faite à la main. Un lot de '+G+' coûte 15 % de moins. Livraison en 30 minutes.</p></div>'
     +(S.commandes.length?'<div class="bloc"><h2>Commandes en route</h2><ul class="liste">'+S.commandes.map(function(c){ return '<li class="rang"><div><b>'+c.n+' × '+PRODUITS[c.p].nom+'</b></div><div class="droite"><span class="puce num">livraison dans <span data-reste="'+c.t+'">'+resteTxt(c.t)+'</span></span></div></li>'; }).join("")+'</ul></div>':"")
     +'<div class="bloc"><h2>Stock</h2><ul class="liste">'+connus.map(function(k){
       var n=stockDe(k), a=prixLot(k,L,false), b=prixLot(k,G,false), usage={linge:"Un jeu par chambre refaite",accueil:"Un lot par chambre refaite",pdj:"Une portion par personne",denrees:"Un couvert par personne au déjeuner et au dîner",boissons:"Un verre par personne au bar, et les pauses des séminaires",soins:"Un par soin au spa"}[k];
@@ -1907,7 +2007,7 @@ function ecranEconomat(){
         +'<button type="button" class="btn petit" data-a="commander" data-k="'+k+'" data-d="'+G+'"'+(S.caisse-b>=-DECOUVERT_MAX?"":" disabled")+'>+'+G+' · '+mt(b)+'</button></div></li>';
     }).join("")+'</ul><p class="aide">En rupture de linge, une chambre est refaite sans linge frais et le client suivant le remarque. En rupture de denrées ou de boissons, le client est servi à moitié et paie moitié prix.</p></div>';
 }
-function pourcent(x){ return Math.round(x*100)+" %"; }
+function pourcent(x){ return Math.round(x*100)+" %"; }
 function carteTarif(k){
   var prix=S.tarifs[k], ref=refDe(k), dk=null, x, d, cible, effet, min=null, max=null, corps="";
   for(x in CLES_DEMANDE) if(CLES_DEMANDE[x]===k) dk=x;
@@ -1919,7 +2019,7 @@ function carteTarif(k){
   if(!dk) effet=k==="pdj"?"Payé par les clients de l'hôtel qui prennent le petit-déjeuner.":"Payé chaque nuit par les clients venus en voiture.";
   else effet=Math.abs(cible-d)<0.01?(Math.abs(d-1)<0.01?"Vos prix sont dans la norme.":"La fréquentation s'est installée à ce niveau."):cible<d?"Trop cher pour la clientèle : la fréquentation va baisser peu à peu.":"Meilleur marché : la fréquentation va monter peu à peu.";
   return '<div class="carte"><div class="reglage"><div><b>'+NOMS_PRIX[k]+'</b><br><span class="aide">'+(k==="chambre"?"En pourcentage du prix habituel de chaque chambre":"Prix habituel : "+mt(ref))+'</span></div>'
-    +pas("prix",k,k==="chambre"?prix+" %":mt(prix),PAS_PRIX[k],prix>(k==="chambre"?30:0),prix<(k==="chambre"?300:ref*5),"le prix")+'</div>'
+    +pas("prix",k,k==="chambre"?prix+" %":mt(prix),PAS_PRIX[k],prix>(k==="chambre"?30:0),prix<(k==="chambre"?300:ref*5),"le prix")+'</div>'
     +corps
     +(dk?ligne("Fréquentation",pourcent(d)+(Math.abs(cible-d)>=0.01?' <span class="aide">(tend vers '+pourcent(cible)+')</span>':"")):"")
     +'<p class="aide'+(dk&&cible<0.75?" moins-c":"")+'">'+effet+'</p></div>';
@@ -1927,7 +2027,7 @@ function carteTarif(k){
 function ecranTarifs(){
   var cles=["chambre"].concat(["pdj","repas","bar","spa","parking","seminaire"].filter(function(k){ return niv(EQUIP_DE[k])>=(k==="repas"?2:1); }));
   return barre()+entete("Tarifs","Vos prix, et ce qu'ils font à la fréquentation.")
-    +'<p class="aide">Aucun client ne refuse votre prix. Mais un hôtel cher se fait une réputation : il y vient peu à peu moins de monde, et les clients repartent un peu moins contents. Un hôtel bon marché en attire davantage.</p>'
+    +'<p class="aide">Tous les prix sont TVA comprise. Aucun client ne refuse votre prix. Mais un hôtel cher se fait une réputation : il y vient peu à peu moins de monde, et les clients repartent un peu moins contents. Un hôtel bon marché en attire davantage.</p>'
     +cles.map(carteTarif).join("")
     +'<p class="aide">Quand un équipement monte de niveau, son prix habituel monte aussi : pensez à revoir votre tarif.</p>';
 }
@@ -1946,9 +2046,10 @@ function pageResultat(){
   function onglet(v,nom){ return '<button type="button" class="onglet'+(U.vue===v?" actif":"")+'" data-a="vue" data-k="'+v+'">'+nom+'</button>'; }
   // Du résultat à la caisse : ce qui est compté sans être payé, et ce qui est payé sans être une charge
   function flux(X){
-    var f={amort:typeDe(X,"a"),invest:0,stock:(X["k:economat"]||0)-typeDe(X,"g"),creances:(X["c:entreprises"]||0)-(X["d:entreprises"]||0)-typeDe(X,"w"),pret:(X["p:pret"]||0)-(X["q:pret"]||0)}, k;
+    var f={amort:typeDe(X,"a"),invest:0,stock:(X["k:economat"]||0)-typeDe(X,"g"),creances:(X["c:entreprises"]||0)-(X["d:entreprises"]||0)-typeDe(X,"w"),pret:(X["p:pret"]||0)-(X["q:pret"]||0),
+      tva:typeDe(X,"v")-typeDe(X,"u")-(X["t:tva"]||0)+(X["z:tva"]||0),impot:typeDe(X,"y")-(X["t:impot"]||0),dividende:typeDe(X,"b")}, k;
     for(k in X) if(k.charAt(0)==="k"&&k!=="k:economat") f.invest+=X[k];
-    f.total=recettesDe(X)-depensesDe(X)+f.amort-f.invest-f.stock-f.creances+f.pret;
+    f.total=recettesDe(X)-depensesDe(X)+f.amort-f.invest-f.stock-f.creances+f.pret+f.tva+f.impot-f.dividende;
     return f;
   }
   lignes+='<tr class="sous"><td colspan="3">Recettes</td></tr>';
@@ -1959,7 +2060,7 @@ function pageResultat(){
   lignes+=rang("Total des charges",mt(dT),mt(dA),"total");
   lignes+='<tr class="total"><td>Résultat</td><td class="'+(rT-dT>=0?"plus-c":"moins-c")+'">'+signeM(rT-dT)+'</td><td class="avant">'+signeM(rA-dA)+'</td></tr>';
   fT=flux(T); fA=flux(A);
-  [["amort","Amortissements (non payés)",1],["creances","Factures en attente chez les sociétés",-1],["stock","Stock de l'économat",-1],["invest","Investissements",-1],["pret","Prêts du directeur, nets",1]].forEach(function(l){
+  [["amort","Amortissements (non payés)",1],["creances","Factures en attente chez les sociétés",-1],["stock","Stock de l'économat",-1],["invest","Investissements",-1],["tva","TVA encaissée, moins celle payée",1],["impot","Impôt compté, pas encore payé",1],["dividende","Dividende versé",-1],["pret","Prêts du directeur, nets",1]].forEach(function(l){
     if(fT[l[0]]||fA[l[0]]) tresorerie+=rang(l[1],cel(fT[l[0]]*l[2],true),cel(fA[l[0]]*l[2],true));
   });
   if(tresorerie) lignes+='<tr class="sous"><td colspan="3">Du résultat à la caisse</td></tr>'+tresorerie+rang("Variation de la caisse",signeM(fT.total),signeM(fA.total),"total");
@@ -1971,28 +2072,29 @@ function pageResultat(){
     +'<div class="periode"><button type="button" class="btn" data-a="decal" data-d="-1" aria-label="Période précédente"'+(U.vue==="jour"&&U.decal<=-(JOURS_GARDES-2)?" disabled":"")+'>'+I.retour+'</button><b>'+p.titre.charAt(0).toUpperCase()+p.titre.slice(1)+'</b><button type="button" class="btn" data-a="decal" data-d="1" aria-label="Période suivante"'+(U.decal>=0?" disabled":"")+'>'+I.suivant+'</button></div>'
     +'<div class="carte"><div class="tableau"><table><thead><tr><th>Poste</th><th>Période</th><th>Précédente</th></tr></thead><tbody>'+lignes+'</tbody></table></div></div>'
     +'<div class="bloc"><h2>Résultat par service (en '+h(S.devise)+')</h2>'+(services?'<div class="carte"><div class="tableau serre"><table><thead><tr><th>Service</th><th>Recettes</th><th>Charges</th><th>Résultat</th></tr></thead><tbody>'+services+'</tbody></table></div></div>':'<p class="vide">Aucun mouvement sur cette période.</p>')+'</div>'
-    +'<p class="aide">Une nuit est comptée à minuit, un repas quand la table se lève. Les salaires, les cotisations et les charges sont payés chaque nuit à minuit. Les détails par jour sont gardés '+JOURS_GARDES+' jours.</p>';
+    +'<p class="aide">Les recettes et les charges sont hors TVA. Une nuit est comptée à minuit, un repas quand la table se lève. Les salaires, les cotisations et les charges sont payés chaque nuit à minuit. Les détails par jour sont gardés '+JOURS_GARDES+' jours.</p>';
 }
 function pageBilan(){
-  var b=bilan(), an=periode("annee",0).tot, res=recettesDe(an)-depensesDe(an);
+  var b=bilan();
   var ch={nom:"Chambres ("+S.chambres.length+")",v:0,c:0}, biens=[ch];
   function rang(nom,v,cl){ return '<tr'+(cl?' class="'+cl+'"':"")+'><td>'+nom+'</td><td>'+v+'</td></tr>'; }
   S.immos.forEach(function(im){ if(im.sv==="chambres"){ ch.v+=im.v; ch.c+=im.c; } else biens.push(im); });
   return '<div class="carte"><div class="tableau"><table><thead><tr><th>Actif</th><th>Aujourd\'hui</th></tr></thead><tbody>'
     +rang("Chambres et équipements, à l'achat",mt(b.brut))+rang("Amortissements",b.amort?"−"+mt(b.amort):"–")+rang("Chambres et équipements, valeur nette",mt(b.brut-b.amort),"total")
-    +rang("Stock de l'économat",mt(b.stock))+rang("À recevoir des sociétés",mt(b.creances))+rang("Caisse",mt(b.tresorerie))+rang("Total de l'actif",mt(b.actif),"total")
+    +rang("Stock de l'économat",mt(b.stock))+rang("À recevoir des sociétés",mt(b.creances))+(b.tvaActif?rang("TVA à récupérer",mt(b.tvaActif)):"")+rang("Caisse",mt(b.tresorerie))+rang("Total de l'actif",mt(b.actif),"total")
     +'</tbody></table></div></div>'
     +'<div class="carte"><div class="tableau"><table><thead><tr><th>Passif</th><th>Aujourd\'hui</th></tr></thead><tbody>'
-    +rang("Capitaux propres",mt(b.propres))+rang("dont résultat de l'année",signeM(res))+rang("Prêt du directeur",mt(b.pret))+rang("Découvert à la banque",mt(b.decouvert))+rang("Total du passif",mt(b.actif),"total")
+    +rang("Capital",mt(b.capital))+(b.reserve?rang("Réserve légale",mt(b.reserve)):"")+(b.reporte?rang(b.reporte>0?"Bénéfice reporté":"Perte reportée",signeM(b.reporte)):"")+(b.aAffecter?rang("Résultat à affecter",mt(b.aAffecter)):"")+rang("Résultat de l'exercice en cours",signeM(b.exercice))+rang("Capitaux propres",mt(b.propres),"total")
+    +(b.pret?rang("Prêt du directeur",mt(b.pret)):"")+(b.tvaPassif?rang("TVA à payer",mt(b.tvaPassif)):"")+(b.impots?rang("Impôt des sociétés à payer",mt(b.impots)):"")+(b.decouvert?rang("Découvert à la banque",mt(b.decouvert)):"")+rang("Total du passif",mt(b.actif),"total")
     +'</tbody></table></div></div>'
     +(S.immos.length?'<div class="bloc"><h2>Immobilisations</h2><div class="carte"><div class="tableau serre"><table><thead><tr><th>Bien</th><th>Achat</th><th>Amorti</th><th>Net</th></tr></thead><tbody>'+biens.map(function(im){ return '<tr><td>'+h(im.nom)+'</td><td>'+nombre(im.v)+'</td><td>'+nombre(im.c)+'</td><td>'+nombre(im.v-im.c)+'</td></tr>'; }).join("")+'</tbody></table></div></div></div>':"")
-    +'<p class="aide">Une chambre, une amélioration ou un équipement ne sont pas des charges le jour de l\'achat : ils sont amortis sur cinq ans. Les capitaux propres sont ce qui reste à l\'hôtel une fois ses dettes retirées.</p>';
+    +'<p class="aide">Une chambre, une amélioration ou un équipement ne sont pas des charges le jour de l\'achat : ils sont amortis sur cinq ans, pour leur prix hors TVA. Les capitaux propres sont ce qui reste à l\'hôtel une fois ses dettes retirées.</p>';
 }
 function pageSocietes(){
   var attente=0, conteste=0;
   S.bordereaux.forEach(function(b){ attente+=b.m; }); S.contestes.forEach(function(c){ conteste+=c.m; });
   return '<div class="carte">'+ligne("En attente de paiement",mt(attente))+ligne("Contesté",mt(conteste))
-    +'<p class="aide">Les voyageurs d\'affaires dont la société paie, et les séminaires, sont réglés sur facture : chaque journée part en un lot, payé '+DELAI_FACTURE[0]+' à '+DELAI_FACTURE[1]+' jours plus tard. Les autres clients paient sur place. Les plateformes de réservation prennent '+Math.round(COMMISSION*100)+' % de commission sur les nuits qu\'elles apportent.</p></div>'
+    +'<p class="aide">Les voyageurs d\'affaires dont la société paie, et les séminaires, sont réglés sur facture : chaque journée part en un lot, payé '+DELAI_FACTURE[0]+' à '+DELAI_FACTURE[1]+' jours plus tard. Les autres clients paient sur place. Les plateformes de réservation prennent '+Math.round(COMMISSION*100)+' % de commission sur les nuits qu\'elles apportent.</p></div>'
     +(S.contestes.length?'<div class="bloc"><h2>Factures contestées</h2><ul class="liste">'+S.contestes.map(function(c){
       return '<li class="rang"><div><b>'+mt(c.m)+'</b><small>Factures du '+dateCourte(c.t)+'</small><small>'+(c.relance?'Relancée : paiement dans <span data-reste="'+c.relance+'">'+resteTxt(c.relance)+'</span>':'Sans relance, perdu dans <span data-reste="'+c.limite+'">'+resteTxt(c.limite)+'</span>')+'</small></div>'
         +'<div class="droite">'+(c.relance?'<span class="puce ok">Relancée</span>':'<button type="button" class="btn petit principal" data-a="relancer" data-k="'+c.id+'">Relancer</button>')+'</div></li>';
@@ -2001,20 +2103,58 @@ function pageSocietes(){
       return '<li class="rang"><div><b>'+mt(b.m)+'</b><small>Factures du '+dateCourte(b.t)+' · '+pl(b.n,"ligne","lignes")+'</small></div><div class="droite"><span class="puce num">paiement vers le '+dateCourte(b.ech)+'</span></div></li>';
     }).join("")+'</ul>':'<p class="vide">Aucun lot en attente.</p>')+'</div>';
 }
+function grillesHtml(X){
+  var s=X.g54-X.g59;
+  return '<span class="sous-titre">Ventes, hors TVA</span>'+ligne("Grille 01 · à 6 % (nuitées)",mt(X.g01))+ligne("Grille 02 · à 12 % (repas)",mt(X.g02))+ligne("Grille 03 · à 21 % (le reste)",mt(X.g03))+ligne("Grille 54 · TVA due",mt(X.g54))
+    +'<span class="sous-titre">Achats, hors TVA</span>'+ligne("Grille 81 · marchandises",mt(X.g81))+ligne("Grille 82 · services et biens divers",mt(X.g82))+ligne("Grille 83 · investissements",mt(X.g83))+ligne("Grille 59 · TVA déductible",mt(X.g59))
+    +'<span class="sous-titre">Solde</span>'+ligne(s>=0?"Grille 71 · à payer à l'État":"Grille 72 · à récupérer de l'État",'<span class="'+(s>0?"moins-c":s<0?"plus-c":"")+'">'+mt(Math.abs(s))+'</span>');
+}
+function pageTva(){
+  var t=maintenant(), fin=finTrimestre(t), L=new Date(fin);
+  L.setDate(20);
+  return (S.declarations.length?'<div class="bloc"><h2>À déposer</h2>'+S.declarations.map(function(d){
+      var s=d.g54-d.g59;
+      return '<div class="carte"><div class="carte-haut"><h3>'+d.nom.charAt(0).toUpperCase()+d.nom.slice(1)+'<small>À déposer avant le '+dateLongue(d.limite-1000)+'</small></h3><span class="puce warn num">encore <span data-reste="'+d.limite+'">'+resteTxt(d.limite)+'</span></span></div>'+grillesHtml(d)
+        +'<div class="actions"><button type="button" class="btn principal" data-a="deposer" data-k="'+d.id+'">'+(s>0?"Déposer et payer "+mt(s):s<0?"Déposer et récupérer "+mt(-s):"Déposer la déclaration")+'</button></div>'
+        +'<p class="aide">Passé le délai, la déclaration est déposée d\'office, avec une amende de 10 % de la TVA due ('+mt(50)+' au moins).</p></div>';
+    }).join("")+'</div>':"")
+    +'<div class="bloc"><h2>Trimestre en cours</h2><div class="carte"><div class="carte-haut"><h3>'+nomTrimestre(t).charAt(0).toUpperCase()+nomTrimestre(t).slice(1)+'<small>Déclaration à déposer entre le '+dateLongue(fin)+' et le '+dateLongue(L.getTime())+'</small></h3></div>'+grillesHtml(S.tvaP)+'</div></div>'
+    +(S.tvaHisto.length?'<div class="bloc"><h2>Déclarations déposées</h2><ul class="liste">'+S.tvaHisto.map(function(x){ return '<li class="rang"><div><b>'+x.nom.charAt(0).toUpperCase()+x.nom.slice(1)+'</b><small>Déposée le '+dateCourte(x.t)+(x.amende?' · en retard, amende de '+mt(x.amende):"")+'</small></div><div class="droite"><span class="puce num '+(x.solde>0?"":"ok")+'">'+(x.solde>0?mt(x.solde)+" payés":x.solde<0?mt(-x.solde)+" récupérés":"rien à payer")+'</span></div></li>'; }).join("")+'</ul></div>':"")
+    +'<p class="aide">Tous les prix du jeu sont TVA comprise, ce que vous encaissez comme ce que vous payez. Sur une vente, la TVA n\'est pas une recette : vous la devez à l\'État. Sur un achat, elle n\'est pas une charge : vous la récupérez. Taux : 6 % sur les nuitées et les denrées, 12 % sur les repas, 21 % sur le reste. Pas de TVA sur les salaires, l\'assurance, les amendes, ni sur les commissions des plateformes.</p>';
+}
+function pageExercice(){
+  var t=maintenant(), R=resultatExercice(t), est=Math.round(Math.max(0,R-S.pertes)*TAUX_ISOC), X=S.affectation, max=dividendeMax(), D=X?Math.round(max*U.div/100):0, plafond=Math.round(S.capital*PLAFOND_RESERVE), nom=nomTrimestre(t);
+  return (S.impots.length?'<div class="bloc"><h2>Impôt à payer</h2><ul class="liste">'+S.impots.map(function(x){
+      return '<li class="rang"><div><b>Impôt des sociétés · '+x.nom+'</b><small>À payer avant le '+dateLongue(x.limite-1000)+' · en retard, 10 % de majoration</small></div><div class="droite"><button type="button" class="btn petit principal" data-a="impot" data-k="'+x.id+'">Payer '+mt(x.m)+'</button></div></li>';
+    }).join("")+'</ul></div>':"")
+    +(X?'<div class="carte"><div class="carte-haut"><h3>Résultat du '+X.nom+' à affecter<small>À décider avant le '+dateLongue(X.limite-1000)+'. Sans décision, tout est reporté.</small></h3></div>'
+      +ligne("Bénéfice net, après réserve",mt(X.net))+ligne("Disponible, avec le report",mt(X.dispo))+ligne("En caisse",mt(S.caisse))
+      +'<div class="champ"><span>Part versée en dividende</span><div class="puces-choix">'+[0,25,50,75,100].map(function(p){ return '<button type="button" class="choix'+(U.div===p?" actif":"")+'" data-a="div" data-k="'+p+'">'+p+' %</button>'; }).join("")+'</div></div>'
+      +ligne("Dividende",mt(D))+ligne("Précompte mobilier, "+Math.round(PRECOMPTE*100)+" %",mt(D-Math.round(D*(1-PRECOMPTE))))+ligne("Pour vous",mt(Math.round(D*(1-PRECOMPTE))))+ligne("Reporté à l'exercice suivant",mt(X.dispo-D))
+      +(max<X.dispo?'<p class="aide">La caisse ne permet pas de verser plus de '+mt(max)+'.</p>':"")
+      +'<div class="actions"><button type="button" class="btn principal" data-a="affecter">'+(D?"Verser "+mt(D)+" de dividende":"Tout reporter")+'</button></div></div>':"")
+    +'<div class="bloc"><h2>Exercice en cours</h2><div class="carte"><div class="carte-haut"><h3>'+nom.charAt(0).toUpperCase()+nom.slice(1)+'<small>Clôture le '+dateLongue(finTrimestre(t)-1000)+' à minuit</small></h3></div>'
+      +ligne("Résultat avant impôt, à ce jour",'<span class="'+(R>=0?"plus-c":"moins-c")+'">'+signeM(R)+'</span>')+(S.pertes?ligne("Pertes reportées, à déduire",mt(S.pertes)):"")+ligne("Impôt des sociétés estimé, "+Math.round(TAUX_ISOC*100)+" %",mt(est))+ligne("Résultat net estimé",signeM(R-est))+'</div></div>'
+    +'<div class="bloc"><h2>Capitaux propres</h2><div class="carte">'+ligne("Capital",mt(S.capital))+ligne("Réserve légale",mt(S.reserve)+' <span class="aide">(plafond '+mt(plafond)+')</span>')+ligne(S.reporte<0?"Perte reportée":"Bénéfice reporté",signeM(S.reporte))+'</div></div>'
+    +(S.exercices.length?'<div class="bloc"><h2>Exercices clôturés (en '+h(S.devise)+')</h2><div class="carte"><div class="tableau serre"><table><thead><tr><th>Exercice</th><th>Résultat</th><th>Impôt</th><th>Dividende</th></tr></thead><tbody>'+S.exercices.map(function(e){
+      return '<tr><td>'+e.nom.replace(" trimestre "," trim. ")+'</td><td class="'+(e.resultat>=0?"plus-c":"moins-c")+'">'+(e.resultat<0?"−":"")+nombre(Math.abs(e.resultat))+'</td><td>'+(e.impot?nombre(e.impot):"–")+'</td><td>'+(e.dividende?nombre(e.dividende):"–")+'</td></tr>';
+    }).join("")+'</tbody></table></div></div></div>':"")
+    +'<p class="aide">L\'exercice dure un trimestre. À la clôture, l\'hôtel doit '+Math.round(TAUX_ISOC*100)+' % d\'impôt des sociétés sur son bénéfice, à payer dans le mois ; une perte se reporte et réduit l\'impôt des exercices suivants. '+Math.round(PART_RESERVE*100)+' % du bénéfice net vont à la réserve légale, jusqu\'à '+Math.round(PLAFOND_RESERVE*100)+' % du capital. Vous décidez ensuite du dividende : l\'État retient '+Math.round(PRECOMPTE*100)+' % de précompte mobilier, le reste arrive sur votre fiche.</p>';
+}
 function ecranFinances(){
   var page=U.finPage||"resultat";
   function onglet(k,nom){ return '<button type="button" class="onglet'+(page===k?" actif":"")+'" data-a="finpage" data-k="'+k+'">'+nom+'</button>'; }
   return barre()+entete("Finances","Caisse : "+mt(S.caisse)+" · à recevoir : "+mt(creances()))
-    +'<div class="onglets">'+onglet("resultat","Résultat")+onglet("bilan","Bilan")+onglet("societes","Sociétés")+'</div>'
-    +(page==="bilan"?pageBilan():page==="societes"?pageSocietes():pageResultat());
+    +'<div class="onglets cinq">'+onglet("resultat","Résultat")+onglet("bilan","Bilan")+onglet("tva","TVA")+onglet("exercice","Exercice")+onglet("societes","Sociétés")+'</div>'
+    +(page==="bilan"?pageBilan():page==="societes"?pageSocietes():page==="tva"?pageTva():page==="exercice"?pageExercice():pageResultat());
 }
 function ecranJournal(){
   var plaintes=S.plaintes.map(function(x){
-    return '<li class="rang"><div><b>'+h(x.nom)+'</b><small>'+h(x.motif.charAt(0).toUpperCase()+x.motif.slice(1))+' · réclame '+mt(x.montant)+' · l\'assurance en couvre 70 %</small><small>Sans décision, accord à l\'amiable d\'office dans <span data-reste="'+x.limite+'">'+resteTxt(x.limite)+'</span></small></div>'
+    return '<li class="rang"><div><b>'+h(x.nom)+'</b><small>'+h(x.motif.charAt(0).toUpperCase()+x.motif.slice(1))+' · réclame '+mt(x.montant)+' · l\'assurance en couvre 70 %</small><small>Sans décision, accord à l\'amiable d\'office dans <span data-reste="'+x.limite+'">'+resteTxt(x.limite)+'</span></small></div>'
       +'<div class="droite"><button type="button" class="btn petit principal" data-a="plainte" data-k="'+x.id+'" data-d="amiable">Indemniser · '+mt(partHotel(x.montant/2))+'</button><button type="button" class="btn petit" data-a="plainte" data-k="'+x.id+'" data-d="justice">Aller au tribunal</button></div></li>';
   }).join("");
   return barre()+entete("Journal","Ce qui s'est passé à l'hôtel.")
-    +(plaintes?'<div class="carte"><h2>Réclamations</h2><ul class="liste">'+plaintes+'</ul><p class="aide">À l\'amiable, la moitié de la somme réclamée est versée. Au tribunal, l\'hôtel perd un peu plus d\'une fois sur deux : la somme entière est due, et sa réputation en souffre. Le tribunal coûte toujours '+mt(FRAIS_JUSTICE)+' de frais. L\'assurance paie 70 % des indemnités ; les montants affichés sur les boutons sont votre part.</p></div>':"")
+    +(plaintes?'<div class="carte"><h2>Réclamations</h2><ul class="liste">'+plaintes+'</ul><p class="aide">À l\'amiable, la moitié de la somme réclamée est versée. Au tribunal, l\'hôtel perd un peu plus d\'une fois sur deux : la somme entière est due, et sa réputation en souffre. Le tribunal coûte toujours '+mt(FRAIS_JUSTICE)+' de frais. L\'assurance paie 70 % des indemnités ; les montants affichés sur les boutons sont votre part.</p></div>':"")
     +(S.journal.length?'<div class="carte"><ul class="journal">'+S.journal.map(function(j){ return '<li><time>'+dateCourte(j.t)+' · '+heureTxt(j.t)+'</time><span class="'+(j.c||"")+'">'+h(j.m)+'</span></li>'; }).join("")+'</ul></div>':'<p class="vide">Rien à signaler pour le moment.</p>');
 }
 function resteActivite(){ return dureeTxt(TRANCHE-S.moi.tranche); }
@@ -2032,11 +2172,11 @@ function ecranMoi(){
           +(forme(f[0])?"":'<div class="actions"><button type="button" class="btn principal" data-a="former" data-k="'+f[0]+'"'+(M.argent>=f[2]?"":" disabled")+'>Suivre la formation</button>'+(M.argent>=f[2]?"":'<span class="aide">Il vous manque '+mt(f[2]-M.argent)+'.</span>')+'</div>')+'</div>';
       }).join("");
   } else if(v==="argent"){
-    corps='<div class="carte"><div class="carte-haut"><h3>Portefeuille d\'actions<small>Rapporte entre '+TAUX_MIN+' % et '+TAUX_MAX+' % par an. Le taux bouge un peu chaque jour.</small></h3></div>'
-      +ligne("Valeur du portefeuille",mt2(M.place))+ligne("Rendement du moment",M.taux.toLocaleString("fr-FR",{minimumFractionDigits:1,maximumFractionDigits:1})+" % par an")+ligne("Gains depuis le début",mt2(M.gainsPlace))
+    corps='<div class="carte"><div class="carte-haut"><h3>Portefeuille d\'actions<small>Rapporte entre '+TAUX_MIN+' % et '+TAUX_MAX+' % par an. Le taux bouge un peu chaque jour.</small></h3></div>'
+      +ligne("Valeur du portefeuille",mt2(M.place))+ligne("Rendement du moment",M.taux.toLocaleString("fr-FR",{minimumFractionDigits:1,maximumFractionDigits:1})+" % par an")+ligne("Gains depuis le début",mt2(M.gainsPlace))
       +'<div class="actions">'+bouton("placer","in",100,"Placer 100",M.argent>=100,true)+bouton("placer","in",1000,"Placer 1 000",M.argent>=1000,true)+bouton("placer","in","tout","Tout placer",M.argent>=1,true)+'</div>'
       +'<div class="actions">'+bouton("placer","out",100,"Retirer 100",M.place>=100)+bouton("placer","out",1000,"Retirer 1 000",M.place>=1000)+bouton("placer","out","tout","Tout retirer",M.place>0)+'</div></div>'
-      +'<div class="carte"><div class="carte-haut"><h3>Prêt à l\'hôtel<small>L\'hôtel vous verse '+TAUX_PRET+' % par an. Utile quand la caisse est à sec.</small></h3></div>'
+      +'<div class="carte"><div class="carte-haut"><h3>Prêt à l\'hôtel<small>L\'hôtel vous verse '+TAUX_PRET+' % par an. Utile quand la caisse est à sec.</small></h3></div>'
       +ligne("Prêté à l'hôtel",mt(M.pret))+ligne("Intérêts reçus",mt(M.gainsPret))+ligne("Caisse de l'hôtel",mt(S.caisse))
       +'<div class="actions">'+bouton("preter","in",500,"Prêter 500",M.argent>=500,true)+bouton("preter","in",2000,"Prêter 2 000",M.argent>=2000,true)+bouton("preter","out",500,"Reprendre 500",M.pret>=500&&S.caisse>=500)+bouton("preter","out","tout","Tout reprendre",M.pret>0&&S.caisse>=M.pret)+'</div></div>'
       +'<div class="carte"><div class="carte-haut"><h3>Dons à l\'hôtel<small>Un don entre dans la caisse et fait monter la réputation.</small></h3>'+(plaque?'<span class="puce ok">'+plaque[1]+'</span>':"")+'</div>'
@@ -2058,7 +2198,7 @@ function ecranMoi(){
       +ligne("Formations suivies",FORMATIONS.filter(function(f){ return forme(f[0]); }).length+" sur "+FORMATIONS.length)+'</div>'
       +'<div class="carte"><h2>Votre accueil</h2><p>'+(S.accueil.ok+S.accueil.moyen?S.accueil.ok+" bien choisies sur "+pl(S.accueil.ok+S.accueil.moyen,"chambre attribuée","chambres attribuées")+" par vous.":"Vous n'avez encore attribué aucune chambre.")+(S.accueil.auto?" La réception en a attribué "+S.accueil.auto+", dont "+S.accueil.autoMoyen+" qu'on pouvait mieux choisir.":"")
         +(S.req.ok+S.req.moyen?" "+S.req.ok+" bonnes réponses sur "+pl(S.req.ok+S.req.moyen,"demande traitée","demandes traitées")+" par vous.":"")+(S.req.sans?" "+pl(S.req.sans,"demande est restée","demandes sont restées")+" sans réponse.":"")+'</p></div>'
-      +'<div class="carte"><h2>Votre hôtel</h2><p>Ouvert le '+new Date(S.fondeLe).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})+'. '+pl(S.finis,"séjour terminé","séjours terminés")+' depuis l\'ouverture, '+pl(S.chambres.length,"chambre","chambres")+' aujourd\'hui.'+(plaque?' '+plaque[1]+'.':"")+'</p></div>';
+      +'<div class="carte"><h2>Votre hôtel</h2><p>Ouvert le '+new Date(S.fondeLe).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})+'. '+pl(S.finis,"séjour terminé","séjours terminés")+' depuis l\'ouverture, '+pl(S.chambres.length,"chambre","chambres")+' aujourd\'hui.'+(M.dividendes?' Dividendes reçus : '+mt(M.dividendes)+'.':"")+(plaque?' '+plaque[1]+'.':"")+'</p></div>';
   }
   return barre()+entete(S.prenom,"Directeur de "+h(S.nom)+" · "+mt(M.argent)+" disponibles")
     +'<div class="onglets">'+onglet("fiche","Fiche")+onglet("formations","Formations")+onglet("argent","Argent")+onglet("achats","Achats")+'</div>'+corps;
@@ -2079,13 +2219,15 @@ function ecranReglages(){
     +'<p class="aide"><b>Réputation.</b> Elle suit la note des derniers séjours : chambre bien choisie, attentes remplies (petit-déjeuner, parking, bar…), demandes bien traitées, chambres bien tenues, attente à l\'arrivée, prix. Une bonne réputation attire plus de monde.</p>'
     +'<p class="aide"><b>Équipe.</b> Le salaire se règle par métier, pour un poste de 8 heures. Mal payée ou surchargée, une personne perd le moral, travaille moins bien et finit par démissionner. Chacun progresse en travaillant : junior, confirmé, senior. Un stage payé par l\'hôtel, une fois par jour et par personne, accélère la progression.</p>'
     +'<p class="aide"><b>Planning.</b> Chaque personne a sa semaine type : matin (6 h à 14 h), après-midi (14 h à 22 h) ou repos. Il n\'y a pas de poste de nuit. On ne paie que les postes travaillés. De temps en temps, une personne tombe malade ou demande un congé : vous répondez dans le planning, et un intérimaire peut tenir ses postes.</p>'
-    +'<p class="aide"><b>Économat.</b> Linge, produits d\'accueil, petits-déjeuners, denrées, boissons, produits de soin. Les commandes arrivent en 30 minutes ; la commande automatique évite les ruptures, pour 15 % de plus.</p>'
+    +'<p class="aide"><b>Économat.</b> Linge, produits d\'accueil, petits-déjeuners, denrées, boissons, produits de soin. Les commandes arrivent en 30 minutes ; la commande automatique évite les ruptures, pour 15 % de plus.</p>'
     +'<p class="aide"><b>Prix.</b> Personne ne refuse votre prix, mais un hôtel cher attire peu à peu moins de monde (voir Tarifs). Un client seul dans une grande chambre paie le prix d\'une chambre à sa taille.</p>'
-    +'<p class="aide"><b>Qui paie.</b> La plupart des clients paient sur place. Les plateformes de réservation prennent 15 % de commission. Les sociétés paient sur facture, 5 à 8 jours plus tard, et en contestent parfois une partie : il faut alors les relancer dans Finances, sinon l\'argent est perdu.</p>'
-    +'<p class="aide"><b>Comptabilité.</b> L\'hôtel paie 25 % de cotisations patronales sur les salaires. Une chambre, une amélioration ou un équipement sont amortis sur cinq ans. Une marchandise devient une charge quand elle sort du stock. Finances montre le résultat, le bilan et le passage du résultat à la caisse.</p>'
+    +'<p class="aide"><b>Qui paie.</b> La plupart des clients paient sur place. Les plateformes de réservation prennent 15 % de commission. Les sociétés paient sur facture, 5 à 8 jours plus tard, et en contestent parfois une partie : il faut alors les relancer dans Finances, sinon l\'argent est perdu.</p>'
+    +'<p class="aide"><b>Comptabilité.</b> L\'hôtel paie 25 % de cotisations patronales sur les salaires. Une chambre, une amélioration ou un équipement sont amortis sur cinq ans. Une marchandise devient une charge quand elle sort du stock. Finances montre le résultat, le bilan et le passage du résultat à la caisse.</p>'
+    +'<p class="aide"><b>TVA.</b> Tous les prix sont TVA comprise : 6 % sur les nuitées et les denrées, 12 % sur les repas, 21 % sur le reste. La TVA encaissée est due à l\'État, celle payée sur vos achats se récupère. Chaque trimestre, vous déposez la déclaration dans Finances avant le 20 du mois suivant : vous payez la différence, ou l\'État vous la rembourse. En retard, elle est déposée d\'office avec une amende.</p>'
+    +'<p class="aide"><b>Clôture et impôt.</b> L\'exercice dure un trimestre. À la clôture, l\'hôtel doit 25 % d\'impôt des sociétés sur son bénéfice, à payer dans le mois ; une perte se reporte sur les exercices suivants. Une part du bénéfice va à la réserve légale, puis vous décidez du dividende : après 30 % de précompte mobilier, il arrive sur votre fiche.</p>'
     +'<p class="aide"><b>Votre argent.</b> Votre salaire vous appartient. Dans Ma fiche, vous pouvez suivre des formations, le placer en actions, le prêter à l\'hôtel, faire des dons ou vous offrir une vie en dehors de l\'hôtel.</p>'
     +'<p class="aide"><b>Paliers.</b> Chambres d\'hôtes, Petit hôtel ★★, Hôtel ★★★, Grand hôtel ★★★★, Palace ★★★★★. Chaque palier demande des séjours terminés et une réputation, et rapporte une prime.</p>'
-    +'<p class="aide"><b>Argent.</b> L\'hôtel ne peut pas faire faillite. À découvert, la banque prélève 0,2 % par jour et les achats sont bloqués.</p></div>'
+    +'<p class="aide"><b>Argent.</b> L\'hôtel ne peut pas faire faillite. À découvert, la banque prélève 0,2 % par jour et les achats sont bloqués.</p></div>'
     +'<div class="carte"><h2>Recommencer</h2><p class="aide">Efface cette partie et repart de deux chambres vides.</p><div class="actions"><button type="button" class="btn danger" data-a="recommencer">'+(U.confirme==="recommencer"?"Confirmer : tout effacer":"Recommencer une partie")+'</button></div></div>';
 }
 function navigation(){
@@ -2100,7 +2242,7 @@ function ajouterChambre(type,cote,etage){
   S.nChambre++; S.chambres.push(c); return c;
 }
 var A={
-  aller:function(d){ if(d.e==="societes"){ d={e:"finances"}; U.finPage="societes"; } U.ecran=d.e; U.confirme=null; U.retour=null; U.dossier=null; U.choix=null; if(d.e==="recrutement"){ candidatsDe(roleCourant()); return true; } return false; },
+  aller:function(d){ if(d.e==="societes"||d.e==="tva"||d.e==="exercice"){ U.finPage=d.e; d={e:"finances"}; } U.ecran=d.e; U.confirme=null; U.retour=null; U.dossier=null; U.choix=null; if(d.e==="recrutement"){ candidatsDe(roleCourant()); return true; } return false; },
   devise:function(d){ U.fond.devise=d.k; return false; },
   fonder:function(){
     var t=Date.now(), heure=new Date(t).getHours();
@@ -2110,6 +2252,7 @@ var A={
     produitsConnus().forEach(function(k){ S.stock[k]=STOCK_DEPART; S.valStock[k]=STOCK_DEPART*PRODUITS[k].cout; });
     noter(t,"ok",S.prenom+" ouvre « "+S.nom+" » avec deux chambres. Les premières réservations ne vont pas tarder.");
     prendreReservations(t); planifierJour(minuit(t),t,true); S.stat.complet=0;
+    S.capital=Math.round(bilan().propres);
     // Un premier client se présente dans la demi-heure, pour ne pas ouvrir sur un hôtel vide
     if(heure>=7&&heure<20&&!S.sejours.some(function(x){ return x.arrive<t+3*HEURE; })) S.sejours.push(creerSejour(t+Math.round(alea(15,35))*MIN,"couple",false));
     U.ecran="accueil"; return true;
@@ -2248,6 +2391,10 @@ var A={
     if(!c||c.relance) return false;
     c.relance=jourApres(t,DELAI_RELANCE); return true;
   },
+  deposer:function(d){ var x=parId(S.declarations,+d.k); if(!x) return false; deposerTva(x,maintenant(),false); return true; },
+  impot:function(d){ var x=parId(S.impots,+d.k); if(!x) return false; payerImpot(x,maintenant(),false); return true; },
+  div:function(d){ U.div=+d.k; return false; },
+  affecter:function(){ if(!S.affectation) return false; affecterResultat(Math.round(dividendeMax()*U.div/100),maintenant(),false); return true; },
   decal:function(d){ U.decal=Math.min(0,U.decal+(+d.d)); return false; },
   resume:function(){ U.resume=null; return false; },
   moivue:function(d){ U.moiVue=d.k; return false; },
@@ -2424,7 +2571,7 @@ if(chaud&&chaud.snapshot) chaud.snapshot(function(){ return {S:S,U:U}; });
 if(chaud&&chaud.ready) chaud.ready(demarrer); else demarrer(chaud&&chaud.data);
 window.__hotel={etat:function(){ return S; },ecran:function(e){ U.ecran=e; rendre(); },agir:function(a,d){ var r=A[a](d||{}); rendre(); return r; },faire:function(a,d){ return A[a](d||{}); },avancer:function(ms){ S.decalage=(S.decalage||0)+ms; return avancer(maintenant()); },regles:{REQUETES:REQUETES},vue:function(){ return U; },
   sauter:function(ms){ S.decalage=(S.decalage||0)+ms; var c=avancer(maintenant()); rendre(); return c; },
-  calc:{demandeCible:demandeCible,bilan:bilan,creances:creances,tient:tient,adequation:adequation,prixPour:prixPour,pretes:pretes,reputation:reputation,attendus:attendus,periode:periode,optionsDe:optionsDe,couvMenage:couvMenage,recettesDe:recettesDe,depensesDe:depensesDe}};
+  calc:{resultatExercice:resultatExercice,soldeTva:soldeTva,demandeCible:demandeCible,bilan:bilan,creances:creances,tient:tient,adequation:adequation,prixPour:prixPour,pretes:pretes,reputation:reputation,attendus:attendus,periode:periode,optionsDe:optionsDe,couvMenage:couvMenage,recettesDe:recettesDe,depensesDe:depensesDe}};
 })();
 </script>
 <script>if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});</script>
