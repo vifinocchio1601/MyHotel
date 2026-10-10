@@ -535,11 +535,19 @@ var EXP=[{nom:"Junior",paie:0.85,qualite:0.88,vitesse:1.15,age:[20,28]},{nom:"Co
 // k achat d'immobilisation ou de stock ; c facture envoyée à une société, d paiement reçu ; p prêt du directeur, q remboursement.
 // v TVA collectée sur une vente (encaissée, due à l'État), u TVA payée sur un achat (à récupérer), t paiement d'une dette fiscale,
 // z remboursement de TVA reçu ; y impôt des sociétés (charge, payée plus tard) ; b dividende versé.
-var SENS={r:1,p:1,d:1,v:1,z:1,g:0,a:0,w:0,y:0}, TYPES_CHARGE="sogmeaxwy";
+// h acompte reçu d'un client pour un événement à venir (encaissé, dû jusqu'au jour de la fête)
+var SENS={r:1,p:1,d:1,v:1,z:1,h:1,g:0,a:0,w:0,y:0}, TYPES_CHARGE="sogmeaxwy";
 var TYPES_D=[["s","Salaires"],["o","Cotisations patronales"],["g","Marchandises et linge consommés"],["m","Commissions des plateformes"],["e","Charges et entretien"],["a","Amortissements"],["x","Amendes, intérêts et indemnités"],["w","Créances perdues"],["y","Impôt des sociétés"]];
 // La TVA : les prix sont TVA comprise, à l'achat comme à la vente. Taux belges : 6 % sur les nuitées, 12 % sur les repas, 21 % sur le reste.
 // Chaque trimestre, une déclaration à déposer avant le 20 du mois suivant. Les grilles sont celles de la déclaration belge.
-var TVA_NORMALE=0.21, TVA_VENTE={chambres:0.06,resto:0.12,bar:0.21,spa:0.21,parking:0.21,seminaire:0.21};
+var TVA_NORMALE=0.21, TVA_VENTE={chambres:0.06,resto:0.12,bar:0.21,spa:0.21,parking:0.21,seminaire:0.21,banquets:0.12};
+// Mariages et banquets : jours possibles (0 = lundi), part des places du restaurant occupée, chambres demandées par invité
+var EVENEMENTS={
+  mariage:{nom:"Mariage",service:"soir",jours:[5],taille:[0.6,1],chambres:0.12},
+  anniversaire:{nom:"Anniversaire",service:"soir",jours:[4,5],taille:[0.35,0.7],chambres:0.05},
+  societe:{nom:"Dîner",service:"soir",jours:[1,2,3],taille:[0.4,0.8],chambres:0.08},
+  famille:{nom:"Fête de famille",service:"midi",jours:[6],taille:[0.4,0.8],chambres:0.04}};
+var ACOMPTE=0.3, TAUX_BANQUET=0.2;
 var TVA_PRODUIT={linge:0.21,accueil:0.21,pdj:0.06,denrees:0.06,boissons:0.21,soins:0.21}, GRILLE_VENTE={"0.06":"g01","0.12":"g02","0.21":"g03"};
 // L'exercice comptable dure un trimestre. À la clôture : impôt des sociétés de 25 % sur le bénéfice (les pertes se reportent),
 // 5 % du bénéfice en réserve légale jusqu'à 10 % du capital, puis le directeur décide du dividende, soumis à 30 % de précompte mobilier.
@@ -548,7 +556,7 @@ var TAUX_ISOC=0.25, PRECOMPTE=0.3, PART_RESERVE=0.05, PLAFOND_RESERVE=0.1, DELAI
 var DELAI_FACTURE=[5,8], TAUX_CONTESTE=0.25, DELAI_RELANCE=5, LIMITE_CONTESTE=20;
 // L'employeur paie 25 % de cotisations sur les salaires. Les achats durables sont amortis sur cinq ans.
 var TAUX_COTISATIONS=0.25, DUREE_AMORT=5*365;
-var COMPTES_SERVICES=[["chambres","Hébergement"],["resto","Restaurant"],["bar","Bar"],["spa","Spa"],["parking","Parking"],["seminaire","Séminaires"],["reception","Réception"],["etages","Étages et technique"],["economat","Économat"],["entreprises","Factures aux sociétés"],["equipements","Équipements"],["direction","Direction"],["batiment","Bâtiment"],["litiges","Assurance, indemnités et justice"],["impot","Impôt des sociétés"],["pret","Intérêts versés au directeur"],["divers","Primes, dons et divers"]];
+var COMPTES_SERVICES=[["chambres","Hébergement"],["resto","Restaurant"],["bar","Bar"],["spa","Spa"],["parking","Parking"],["banquets","Mariages et banquets"],["seminaire","Séminaires"],["reception","Réception"],["etages","Étages et technique"],["economat","Économat"],["entreprises","Factures aux sociétés"],["equipements","Équipements"],["direction","Direction"],["batiment","Bâtiment"],["litiges","Assurance, indemnités et justice"],["impot","Impôt des sociétés"],["pret","Intérêts versés au directeur"],["divers","Primes, dons et divers"]];
 var ISSUES={parti:["Séjour terminé","ok"],reparti:["Reparti sans chambre","bad"],deloge:["Envoyé ailleurs","bad"]};
 var PRENOMS_F=["Élise","Noor","Camille","Inès","Solange","Ludmila","Odette","Jeanne","Maëlle","Clémence","Yasmine","Agathe","Margaux","Salomé","Apolline","Hortense","Lucie","Nadia","Roxane","Zélie","Bérénice","Colette","Fanny","Garance","Ilona","Justine","Karima","Léonie","Mathilde","Ophélie"];
 var PRENOMS_M=["Bastien","Théo","Gaspard","Honoré","Victor","Marius","Armand","Cédric","Lucien","Octave","Rémi","Samir","Tristan","Ulysse","Valentin","Yanis","Achille","Baptiste","Corentin","Damien","Émile","Félix","Gabin","Hugo","Ismaël","Joachim","Karim","Léandre","Maxence","Noé"];
@@ -566,6 +574,7 @@ function etatInitial(){
     equipe:[],nEquipe:1,candidats:{},nCandidat:1,sejours:[],nSejour:1,visites:[],nVisite:1,requetes:[],nRequete:1,arrivees:[],evts:[],
     avis:[55,55,55,55,55,55,55,55,55,55],finis:0,stat:statVide(),accueil:{ok:0,moyen:0,auto:0,autoMoyen:0},req:{ok:0,moyen:0,auto:0,sans:0},
     stock:{},commandes:[],auto:true,demandes:[],nDemande:1,demande:{},plaintes:[],nPlainte:1,bordereaux:[],contestes:[],nBord:1,immos:[],frac:{},valStock:{},
+    evenements:[],nEv:1,acomptes:0,
     tvaP:tvaVide(),declarations:[],tvaHisto:[],nFisc:1,impots:[],exercices:[],capital:0,reserve:0,reporte:0,pertes:0,affectation:null,
     registre:[],journal:[],cj:{},cm:{},prochaineCloture:0,
     moi:moiVide(),releve:0,decalage:0};
@@ -759,9 +768,9 @@ function payerImpot(x,t,retard){
 function bilan(){
   var tva=soldeTva(), b={brut:0,amort:0,stock:valeurStock(),creances:creances(),tresorerie:Math.max(0,S.caisse),decouvert:Math.max(0,-S.caisse),pret:S.moi.pret};
   S.immos.forEach(function(im){ b.brut+=im.v; b.amort+=im.c; });
-  b.tvaActif=Math.max(0,-tva); b.tvaPassif=Math.max(0,tva); b.impots=dettesImpot();
+  b.tvaActif=Math.max(0,-tva); b.tvaPassif=Math.max(0,tva); b.impots=dettesImpot(); b.acomptes=S.acomptes||0;
   b.actif=b.brut-b.amort+b.stock+b.creances+b.tvaActif+b.tresorerie;
-  b.propres=b.actif-b.pret-b.decouvert-b.tvaPassif-b.impots;
+  b.propres=b.actif-b.pret-b.decouvert-b.tvaPassif-b.impots-b.acomptes;
   b.capital=S.capital; b.reserve=S.reserve; b.reporte=S.reporte; b.aAffecter=S.affectation?S.affectation.net:0;
   b.exercice=b.propres-b.capital-b.reserve-b.reporte-b.aAffecter;
   return b;
@@ -884,7 +893,7 @@ function produitsConnus(){
   return ORDRE_PRODUITS.filter(function(k){
     if(k==="pdj") return niv("resto")>=1;
     if(k==="denrees") return niv("resto")>=2;
-    if(k==="boissons") return niv("bar")>=1||niv("seminaire")>=1;
+    if(k==="boissons") return niv("bar")>=1||niv("seminaire")>=1||niv("resto")>=2;
     if(k==="soins") return niv("spa")>=1;
     return true;
   });
@@ -1263,7 +1272,7 @@ function finMenage(c,t){
 function enService(sv){ var n=0; S.visites.forEach(function(v){ if(v.sv===sv&&v.etat==="service") n++; }); return n; }
 function enFile(sv){ var n=0; S.visites.forEach(function(v){ if(v.sv===sv&&v.etat==="attente") n++; }); return n; }
 function moiCharge(){ var n=0; S.visites.forEach(function(v){ if(v.etat==="service"&&v.moi) n++; }); return n; }
-function ouvertPour(k){ return niv(SV[k].sv)>=(k==="midi"||k==="soir"?2:1); }
+function ouvertPour(k){ return niv(SV[k].sv)>=(k==="midi"||k==="soir"?2:1)&&!((k==="midi"||k==="soir")&&evenementLe(S.horloge,k)); }
 function creerVisite(t,k,n,sj){
   S.visites.push({id:S.nVisite++,k:k,sv:SV[k].sv,n:n,sj:sj||null,arrive:t,limite:t+SV[k].patience*MIN,etat:"attente",staff:[]});
 }
@@ -1375,6 +1384,93 @@ function requetePerdue(r,t){
   S.req.sans++; S.stat.sansReponse++; oterRequete(r);
 }
 
+/* ------------------------------------------------------------------ Mariages et banquets */
+// Le restaurant se privatise pour un repas. Le client demande un devis par invité ; s'il le trouve trop cher, il annonce son maximum.
+// À la signature, il verse un acompte. Le jour venu, tout dépend du personnel prévu, du stock et des chambres bloquées pour les invités.
+function placesBanquet(){ return capDe("resto")*4; }
+function refBanquet(){ return Math.round(refDe("repas")*1.5); }
+function besoinsEv(ev){ return {serveurs:Math.ceil(ev.n/20),cuisiniers:Math.ceil(ev.n/40),denrees:ev.n,boissons:ev.n*2}; }
+function posteEv(ev){ return ev.service==="midi"?"M":"A"; }
+function prevusEv(ev){ var j=jourSemaine(ev.debut), k=posteEv(ev); return {serveurs:prevusLe(["serveur"],j,k,ev.debut),cuisiniers:prevusLe(CUISINE,j,k,ev.debut)}; }
+function sejoursEv(ev){ return S.sejours.filter(function(x){ return x.ev===ev.id; }); }
+function evenementLe(t,service){ var k=cleJour(t); return S.evenements.some(function(e){ return e.etat==="confirme"&&e.service===service&&cleJour(e.debut)===k; }); }
+function nomEv(ev){ return EVENEMENTS[ev.type].nom+" "+ev.qui; }
+function nomEvBas(ev){ var s=nomEv(ev); return s.charAt(0).toLowerCase()+s.slice(1); }
+// Les chambres demandées pour les invités : des réservations d'une nuit, à placer dans l'agenda. Renvoie false s'il n'y a pas la place.
+function reserverEv(ev,essai){
+  var l=[], i, sj, ok;
+  for(i=0;i<ev.chambres;i++){
+    sj=creerSejour(aHeure(ev.debut,alea(15,17.5)),tirer(["couple","couple","amis","senior"]),false);
+    sj.nuits=1; sj.finPrevue=aHeure(jourApres(jourHotel(sj.arrive),1),11); sj.canal="direct"; sj.ev=ev.id; sj.attentes=[]; sj.voiture=false;
+    l.push(sj); S.sejours.push(sj);
+  }
+  ok=tient();
+  if(!ok||essai){ l.forEach(function(x){ S.sejours.splice(S.sejours.indexOf(x),1); }); S.nSejour-=l.length; }
+  return ok;
+}
+function creerEvenement(t){
+  var cles=Object.keys(EVENEMENTS), k=tirer(cles), E=EVENEMENTS[k], places=placesBanquet(), a=identite(Math.random()<0.5), b=identite(Math.random()<0.5), d, jour, i, n, ev;
+  if(!places) return null;
+  // La date : entre quatre et dix jours plus tard, le bon jour de la semaine
+  for(i=4;i<=10;i++){ jour=jourApres(minuit(t),i); d=jourSemaine(jour+12*HEURE); if(E.jours.indexOf(d)>=0) break; }
+  if(i>10) return null;
+  n=Math.min(places,entre(Math.max(8,Math.round(places*E.taille[0])),Math.max(10,Math.round(places*E.taille[1]))));
+  ev={id:S.nEv++,type:k,service:E.service,debut:aHeure(jour,E.service==="midi"?12.5:19),n:n,etat:"demande",limite:jourApres(minuit(t),2)+12*HEURE,prix:refBanquet(),offre:0};
+  ev.qui=k==="mariage"?"de "+a.prenom+" et "+b.prenom+" "+b.nom:k==="societe"?"de la société "+a.nom:k==="anniversaire"?"de "+a.prenom+" "+a.nom:"chez les "+a.nom;
+  ev.chambres=Math.min(Math.floor(S.chambres.length*0.4),Math.round(n*E.chambres*alea(0.6,1.2)));
+  ev.max=Math.round(refBanquet()*alea(0.85,1.35));
+  if(S.evenements.some(function(x){ return x.etat!=="fini"&&x.service===ev.service&&cleJour(x.debut)===cleJour(ev.debut); })) return null;
+  S.evenements.push(ev);
+  noter(t,"","Nouvelle demande : "+nomEvBas(ev)+", "+ev.n+" invités, le "+dateLongue(ev.debut)+". Un devis est attendu.");
+  return ev;
+}
+function ambianceBudget(ev){ var r=ev.max/Math.max(1,refBanquet()); return r<0.97?"Budget serré":r<1.17?"Budget dans la moyenne":"Budget large"; }
+// Le devis part. Accepté s'il tient dans le budget ; sinon le client annonce son maximum.
+function envoyerDevis(ev,t){
+  if(ev.etat!=="demande") return "";
+  if(ev.prix<=ev.max) return signerEv(ev,ev.prix,t);
+  ev.offre=ev.max; return "offre";
+}
+function signerEv(ev,prix,t){
+  var acompte;
+  if(!reserverEv(ev,false)) return "chambres";
+  ev.prix=prix; ev.total=prix*ev.n; acompte=Math.round(ev.total*ACOMPTE);
+  ev.acompte=acompte; ev.etat="confirme"; ev.offre=0;
+  inscrire(t,"h:acomptes",acompte); S.acomptes+=acompte;
+  noter(t,"ok","Devis signé : "+nomEvBas(ev)+", "+ev.n+" invités à "+mt(prix)+", soit "+mt(ev.total)+". Acompte de "+mt(acompte)+" reçu."+(ev.chambres?" "+pl(ev.chambres,"chambre est","chambres sont")+" à bloquer dans l'agenda pour les invités.":""));
+  return "ok";
+}
+function refuserEv(ev,t,expire){
+  var i=S.evenements.indexOf(ev); if(i>=0) S.evenements.splice(i,1);
+  if(expire){ avis(40); noter(t,"warn","La demande pour "+nomEvBas(ev)+" est restée sans devis : le client s'est adressé ailleurs."); }
+}
+// Le repas a lieu. La note dépend du personnel en poste, du stock et du niveau du restaurant.
+function tenirEv(ev,t){
+  var B=besoinsEv(ev), serv=enPosteRole(["serveur"],t), cuis=enPosteRole(CUISINE,t), qs, qc, d=0, bo=0, i, q, qm=0, note, paye, tous=serv.concat(cuis);
+  qs=Math.min(1,serv.length/B.serveurs); qc=Math.min(1,cuis.length/B.cuisiniers);
+  for(i=0;i<B.denrees;i++){ if(stockDe("denrees")>0){ sortirStock("denrees",t,"banquets"); d++; } }
+  for(i=0;i<B.boissons;i++){ if(stockDe("boissons")>0){ sortirStock("boissons",t,"banquets"); bo++; } }
+  if(d<B.denrees) manquer("denrees"); if(bo<B.boissons) manquer("boissons");
+  tous.forEach(function(e){ qm+=qualite(e); e.faits=(e.faits||0)+1; if(!remplace(e,t)) gagnerXp(e,3,t); });
+  qm=tous.length?qm/tous.length:0.8;
+  q=qs*qc*0.6+(d/B.denrees*0.6+bo/B.boissons*0.4)*0.4;
+  note=borne(Math.round(20+65*q+(qm-1)*40+(niv("resto")-2)*3-(ev.prix>refBanquet()*1.2?5:0)),0,100);
+  paye=note<45?Math.round(ev.total*0.5):ev.total;
+  recette(t,"banquets",paye,"direct"); inscrire(t,"h:acomptes",-ev.acompte); S.acomptes-=ev.acompte;
+  for(i=0;i<(ev.type==="mariage"?3:2);i++) avis(note);
+  ev.etat="fini"; ev.note=note; ev.paye=paye; ev.manques=[qs<1?"serveurs":"",qc<1?"cuisiniers":"",d<B.denrees?"denrées":"",bo<B.boissons?"boissons":""].filter(Boolean);
+  if(note<45) porterPlainte(nomEv(ev),t,0.4,ev.total*0.5,"fête gâchée");
+  noter(t,note>=65?"ok":note>=45?"warn":"bad",nomEv(ev)+" : "+ev.n+" invités, note "+note+" / 100, "+mt(paye)+" encaissés"+(paye<ev.total?" (le client ne paie que la moitié)":"")+"."+(ev.manques.length?" Il manquait : "+ev.manques.join(", ")+".":""));
+  S.evenements=S.evenements.filter(function(x){ return x.etat!=="fini"; }).concat(S.evenements.filter(function(x){ return x.etat==="fini"; }).slice(-6));
+  reappro(t);
+}
+// Chaque nuit, une demande peut tomber, plus souvent quand le restaurant et la réputation sont bons
+function demandesEv(t){
+  var n=niv("resto"), enCours=S.evenements.filter(function(x){ return x.etat!=="fini"; }).length;
+  if(n<2||enCours>=3) return;
+  if(Math.random()<TAUX_BANQUET*(0.5+reputation()/100)*(1+0.2*(n-2))) creerEvenement(t);
+}
+
 /* ------------------------------------------------------------------ Le calendrier */
 // Les clients de passage et les clients extérieurs d'une journée. Le restaurant, le bar et le spa ne reçoivent du monde
 // de l'extérieur que pendant les postes où ils ont du personnel prévu.
@@ -1390,8 +1486,8 @@ function planifierJour(debut,apres,complet){
     if(niv("seminaire")&&j<5&&Math.random()<Math.min(0.85,(0.25+0.07*niv("seminaire"))*demande("seminaire")*rep)) semer(1,9,9.2,{k:"sem"});
   }
   if(n>=2){
-    if(prevusLe(["serveur"],j,"M",midi)&&prevusLe(CUISINE,j,"M",midi)) semer(EXT.midi[n]*rep*demande("resto")*alea(0.8,1.2),12,13.6,{k:"vis",v:"midi"});
-    if(prevusLe(["serveur"],j,"A",midi)&&prevusLe(CUISINE,j,"A",midi)) semer(EXT.soir[n]*rep*demande("resto")*alea(0.8,1.2),19,20.8,{k:"vis",v:"soir"});
+    if(!evenementLe(midi,"midi")&&prevusLe(["serveur"],j,"M",midi)&&prevusLe(CUISINE,j,"M",midi)) semer(EXT.midi[n]*rep*demande("resto")*alea(0.8,1.2),12,13.6,{k:"vis",v:"midi"});
+    if(!evenementLe(midi,"soir")&&prevusLe(["serveur"],j,"A",midi)&&prevusLe(CUISINE,j,"A",midi)) semer(EXT.soir[n]*rep*demande("resto")*alea(0.8,1.2),19,20.8,{k:"vis",v:"soir"});
   }
   if(niv("bar")&&prevusLe(["barman"],j,"A",midi)) semer(EXT.bar[niv("bar")]*rep*demande("bar")*alea(0.8,1.2),17,21.2,{k:"vis",v:"bar"});
   if(niv("spa")){
@@ -1489,7 +1585,7 @@ function cloturer(t){
   monterPalier(t);
   absences(t); reglements(t); ajusterDemande();
   S.plaintes.slice().forEach(function(x){ if(x.limite<=t) indemniser(x,t,true); });
-  prendreReservations(t); planifierJour(t,t,true); planifierEvenement(t);
+  prendreReservations(t); demandesEv(t); planifierJour(t,t,true); planifierEvenement(t);
   affecterMenage(t); affecterVisites(t); reappro(t);
 }
 // Le temps réel : on rejoue dans l'ordre tout ce qui devait arriver jusqu'à l'instant donné
@@ -1524,6 +1620,11 @@ function avancer(jusqua){
       if(x.auto&&x.auto<=x.limite&&relaisRequete()){ e=x.auto; q="rauto"; } else { e=x.limite; q="rfin"; }
       if(e<t){ t=e; quoi=q; qui=x; }
     }
+    for(i=0;i<S.evenements.length;i++){
+      x=S.evenements[i];
+      if(x.etat==="demande"){ e=x.limite; q="evfin"; } else if(x.etat==="confirme"){ e=x.debut; q="ev"; } else continue;
+      if(e<t){ t=e; quoi=q; qui=x; }
+    }
     if(t>jusqua) break;
     if(t<S.horloge) t=S.horloge;
     change=true; S.horloge=t;
@@ -1551,6 +1652,8 @@ function avancer(jusqua){
     else if(quoi==="vfin") finVisite(qui,t);
     else if(quoi==="vrate") visiteRatee(qui,t);
     else if(quoi==="rauto") repondreSeul(qui,t);
+    else if(quoi==="ev") tenirEv(qui,t);
+    else if(quoi==="evfin") refuserEv(qui,t,true);
     else requetePerdue(qui,t);
   }
   if(jusqua>S.horloge) S.horloge=jusqua;
@@ -1671,6 +1774,18 @@ function alertes(){
   n=Math.ceil((finTrimestre(S.horloge)-S.horloge)/JOUR); m=Math.round(Math.max(0,resultatExercice(S.horloge)-S.pertes)*TAUX_ISOC);
   if(n<=10&&m>0) a("","Clôture du trimestre dans "+pl(n,"jour","jours")+" : impôt des sociétés estimé à "+mt(m)+", à payer dans le mois qui suit.","exercice","Voir l'exercice");
   if(S.affectation) a("","Le résultat du "+S.affectation.nom+" attend votre décision : dividende ou report.","exercice","Voir l'exercice");
+  n=S.evenements.filter(function(x){ return x.etat==="demande"; }).length;
+  if(n) a("",pl(n,"demande de devis attend","demandes de devis attendent")+" votre réponse : mariage ou banquet.","evenements","Voir les événements");
+  S.evenements.forEach(function(ev){
+    var B, P, l=[];
+    if(ev.etat!=="confirme"||ev.debut-S.horloge>2*JOUR) return;
+    B=besoinsEv(ev); P=prevusEv(ev);
+    if(P.serveurs<B.serveurs) l.push(pl(B.serveurs-P.serveurs,"serveur","serveurs"));
+    if(P.cuisiniers<B.cuisiniers) l.push(pl(B.cuisiniers-P.cuisiniers,"cuisinier","cuisiniers"));
+    if(stockDe("denrees")<B.denrees) l.push("des denrées");
+    if(stockDe("boissons")<B.boissons) l.push("des boissons");
+    if(l.length) a("warn",nomEv(ev)+", "+dateLongue(ev.debut)+" : il manque "+l.join(", ")+".","evenements","Voir les événements");
+  });
   if(S.plaintes.length) a("bad",pl(S.plaintes.length,"réclamation attend","réclamations attendent")+" votre décision.","journal","Voir les réclamations");
   if(S.demandes.length) a("",pl(S.demandes.length,"demande de congé attend","demandes de congé attendent")+" votre réponse.","planning","Voir le planning");
   n=S.equipe.filter(function(e){ return absentLe(e,S.horloge)&&!e.absent.interim; }).map(function(e){ return nomComplet(e)+" ("+(e.absent.motif==="maladie"?"malade":"en congé")+")"; });
@@ -1746,12 +1861,14 @@ function ecranAccueil(){
     +tuile("g1","lit","Chambres",nc+" sur "+PALIERS[S.palier].chambres+" · "+pl(nl,"occupée","occupées"),"chambres")
     +tuile("g3","guide","Clientèle","Profils et souhaits","clientele")
     +tuile("g7","equipements","Équipements",ORDRE_EQUIP.filter(function(k){ return niv(k); }).length+" sur "+ORDRE_EQUIP.length+" construits","equipements")
+    +tuile("g3","verre","Événements",pl(S.evenements.filter(function(x){ return x.etat==="demande"; }).length,"devis","devis")+" à faire","evenements")
     +tuile("g2","equipe","Équipe",pl(S.equipe.length,"personne","personnes"),"equipe")
     +tuile("g6","horloge","Planning",enPosteMaintenant()+" en poste","planning")
     +tuile("g2","caisse","Économat",pl(produitsConnus().filter(function(k){ return stockDe(k)<=seuilStock(); }).length,"stock bas","stocks bas"),"economat")
     +tuile("g5","tarifs","Tarifs","Chambres à "+S.tarifs.chambre+" %","tarifs")
     +tuile("g6","finances","Finances","Aujourd'hui "+signeM(jr),"finances")
     +tuile("g1","journal","Journal",S.journal.length?quandTxt(S.journal[0].t):"Rien à signaler","journal")
+    +tuile("g4","recrut","Recrutement","Engager du personnel","recrutement")
     +tuile("g8","moi","Ma fiche",mt(S.moi.argent)+" à vous","moi")
     +'</div>'
     +palierHtml()
@@ -1853,6 +1970,7 @@ function grilleAgenda(){
     }).join("")+'</tr>';
   }).join("");
   bas='<tr><th>À placer</th>'+jours.map(function(j){ var n=0; attente.forEach(function(x){ if(x.arrive<aHeure(j,35)&&x.finPrevue>aHeure(j,14)) n++; }); return '<td class="'+(n?"manque":"zero")+'">'+(n||"–")+'</td>'; }).join("")+'</tr>';
+  if(S.evenements.some(function(e){ return e.etat==="confirme"; })) bas+='<tr><th>Fête</th>'+jours.map(function(j){ var n=0; S.evenements.forEach(function(e){ if(e.etat==="confirme"&&cleJour(e.debut)===cleJour(j+12*HEURE)) n=e.n; }); return '<td class="'+(n?"manque":"zero")+'">'+(n||"–")+'</td>'; }).join("")+'</tr>';
   return '<div class="tableau"><table class="grille agenda"><thead>'+tete+'</thead><tbody>'+corps+bas+'</tbody></table></div>';
 }
 function ecranAgenda(){
@@ -1878,6 +1996,39 @@ function ecranAgenda(){
       return '<li class="rang'+(U.resa===x.id?" moi":"")+'"><div><b>'+h(nomComplet(x))+'</b> · chambre '+(c?c.n:"?")+'<small>'+resumeSejour(x)+' · '+periodeSejour(x)+'</small></div><div class="droite"><button type="button" class="btn petit" data-a="resa" data-k="'+x.id+'">Changer</button><button type="button" class="btn petit danger" data-a="debloquer" data-k="'+x.id+'">Libérer</button></div></li>';
     }).join("")+'</ul>':'<p class="vide">Aucune chambre n\'est bloquée pour le moment.</p>')+'</div>'
     +'<p class="aide">Une chambre bloquée n\'est plus proposée aux autres clients pour ces nuits-là : un client sans réservation ne peut pas s\'y installer si son séjour déborde sur la réservation. À l\'arrivée, le client qui a une chambre bloquée s\'y installe tout seul, dès qu\'elle est prête. Sans chambre bloquée, il attend à la réception que vous lui en donniez une.</p>';
+}
+function ligneCheck(nom,a,b){ return ligne(nom,'<span class="'+(a>=b?"plus-c":"moins-c")+'">'+a+' sur '+b+'</span>'); }
+function carteDemandeEv(ev){
+  var B=besoinsEv(ev), ref=refBanquet(), cout=ev.n*PRODUITS.denrees.cout+ev.n*2*PRODUITS.boissons.cout, total=ev.prix*ev.n, ok=ev.chambres?reserverEv(ev,true):true;
+  return '<div class="carte"><div class="carte-haut"><h3>'+h(nomEv(ev))+'<small>'+dateLongue(ev.debut)+' · '+(ev.service==="midi"?"déjeuner":"dîner")+' · '+ev.n+' invités'+(ev.chambres?' · '+pl(ev.chambres,"chambre","chambres")+' pour la nuit':"")+'</small></h3><span class="puce warn num">répondre sous <span data-reste="'+ev.limite+'">'+resteTxt(ev.limite)+'</span></span></div>'
+    +'<div class="badges"><span class="puce">'+ambianceBudget(ev)+'</span>'+(ok?"":'<span class="puce bad">Pas assez de chambres libres ce soir-là</span>')+'</div>'
+    +(ev.offre?'<div class="alertes"><div class="alerte warn"><span>« C\'est au-dessus de nos moyens. Nous pouvons aller jusqu\'à '+mt(ev.offre)+' par invité. »</span></div></div>':"")
+    +'<div class="reglage"><div><b>Votre prix par invité</b><br><span class="aide">Prix habituel d\'un banquet : '+mt(ref)+'</span></div>'+pas("evprix",ev.id,mt(ev.prix),2,ev.prix>4,ev.prix<ref*4,"le prix")+'</div>'
+    +ligne("Total du devis",mt(total))+ligne("Acompte à la signature, "+Math.round(ACOMPTE*100)+" %",mt(Math.round(total*ACOMPTE)))+ligne("Denrées et boissons, environ",mt(cout))
+    +ligne("Il faudra ce jour-là",pl(B.serveurs,"serveur","serveurs")+", "+pl(B.cuisiniers,"cuisinier","cuisiniers"))
+    +'<div class="actions">'+(ev.offre?'<button type="button" class="btn principal" data-a="evaccepter" data-k="'+ev.id+'"'+(ok?"":" disabled")+'>Accepter à '+mt(ev.offre)+'</button>':"")
+    +'<button type="button" class="btn'+(ev.offre?"":" principal")+'" data-a="evdevis" data-k="'+ev.id+'"'+(ok?"":" disabled")+'>'+(ev.offre?"Renvoyer un devis":"Envoyer le devis")+'</button>'
+    +'<button type="button" class="btn danger" data-a="evrefuser" data-k="'+ev.id+'">'+(U.confirme==="ev"+ev.id?"Confirmer":"Refuser")+'</button></div></div>';
+}
+function carteConfirmeEv(ev){
+  var B=besoinsEv(ev), P=prevusEv(ev), l=sejoursEv(ev), places=l.filter(function(x){ return x.bloc||x.etat==="loge"; }).length;
+  return '<div class="carte"><div class="carte-haut"><h3>'+h(nomEv(ev))+'<small>'+dateLongue(ev.debut)+' à '+heureTxt(ev.debut)+' · '+ev.n+' invités à '+mt(ev.prix)+'</small></h3><span class="puce info num">dans <span data-reste="'+ev.debut+'">'+resteTxt(ev.debut)+'</span></span></div>'
+    +ligne("Total",mt(ev.total))+ligne("Acompte reçu",mt(ev.acompte))+ligne("Reste à encaisser le jour même",mt(ev.total-ev.acompte))
+    +'<span class="sous-titre">À préparer</span>'
+    +ligneCheck("Serveurs prévus au planning",P.serveurs,B.serveurs)+ligneCheck("Cuisiniers prévus au planning",P.cuisiniers,B.cuisiniers)
+    +ligneCheck("Denrées en stock",Math.min(stockDe("denrees"),B.denrees),B.denrees)+ligneCheck("Boissons en stock",Math.min(stockDe("boissons"),B.boissons),B.boissons)
+    +(ev.chambres?ligneCheck("Chambres bloquées pour les invités",places,l.length||ev.chambres):"")
+    +'<div class="actions"><button type="button" class="btn petit" data-a="aller" data-e="planning">Planning</button><button type="button" class="btn petit" data-a="aller" data-e="economat">Économat</button>'+(ev.chambres?'<button type="button" class="btn petit" data-a="aller" data-e="agenda">Agenda</button>':"")+'</div></div>';
+}
+function ecranEvenements(){
+  var d=S.evenements.filter(function(x){ return x.etat==="demande"; }), c=S.evenements.filter(function(x){ return x.etat==="confirme"; }).sort(function(a,b){ return a.debut-b.debut; }), f=S.evenements.filter(function(x){ return x.etat==="fini"; }).reverse();
+  return barre()+entete("Événements",pl(d.length,"demande","demandes")+" · "+pl(c.length,"confirmé","confirmés"))
+    +(U.retour?'<div class="alertes"><div class="alerte '+U.retour.c+'"><span>'+h(U.retour.m)+'</span></div></div>':"")
+    +(niv("resto")<2?'<p class="vide">Il faut un restaurant de niveau 2, la brasserie, pour recevoir des mariages et des banquets. Il se débloque au palier '+nomPalier(1)+'.</p>'
+      :'<div class="bloc"><h2>Demandes de devis ('+d.length+')</h2>'+(d.length?d.map(carteDemandeEv).join(""):'<p class="vide">Aucune demande pour le moment. Le restaurant peut asseoir '+placesBanquet()+' invités.</p>')+'</div>'
+      +'<div class="bloc"><h2>Confirmés ('+c.length+')</h2>'+(c.length?c.map(carteConfirmeEv).join(""):'<p class="vide">Aucun événement confirmé.</p>')+'</div>'
+      +(f.length?'<div class="bloc"><h2>Passés</h2><ul class="liste">'+f.map(function(ev){ return '<li class="rang"><div><b>'+h(nomEv(ev))+'</b><small>'+dateCourte(ev.debut)+' · '+ev.n+' invités'+(ev.manques&&ev.manques.length?' · il manquait : '+ev.manques.join(", "):"")+'</small></div><div class="droite"><span class="puce num">'+mt(ev.paye)+'</span>'+notePuce(ev.note)+'</div></li>'; }).join("")+'</ul></div>':""))
+    +'<p class="aide">Le soir d\'un banquet, le restaurant est réservé aux invités. Vous fixez le prix par invité : si le client le trouve trop cher, il annonce son maximum, à prendre ou à laisser. À la signature, il verse '+Math.round(ACOMPTE*100)+' % d\'acompte, qui reste une dette de l\'hôtel jusqu\'au jour de la fête. Il faut un serveur pour 20 invités et un cuisinier pour 40, prévus au planning ce jour-là, une part de denrées et deux boissons par invité. Si la fête est ratée, le client ne paie que la moitié.</p>';
 }
 function detailOption(sj,o){
   var l=[];
@@ -2096,7 +2247,7 @@ function ecranEconomat(){
     +'<p class="aide">La commande automatique coûte 15 % de plus qu\'une commande faite à la main. Un lot de '+G+' coûte 15 % de moins. Livraison en 30 minutes.</p></div>'
     +(S.commandes.length?'<div class="bloc"><h2>Commandes en route</h2><ul class="liste">'+S.commandes.map(function(c){ return '<li class="rang"><div><b>'+c.n+' × '+PRODUITS[c.p].nom+'</b></div><div class="droite"><span class="puce num">livraison dans <span data-reste="'+c.t+'">'+resteTxt(c.t)+'</span></span></div></li>'; }).join("")+'</ul></div>':"")
     +'<div class="bloc"><h2>Stock</h2><ul class="liste">'+connus.map(function(k){
-      var n=stockDe(k), a=prixLot(k,L,false), b=prixLot(k,G,false), usage={linge:"Un jeu par chambre refaite",accueil:"Un lot par chambre refaite",pdj:"Une portion par personne",denrees:"Un couvert par personne au déjeuner et au dîner",boissons:"Un verre par personne au bar, et les pauses des séminaires",soins:"Un par soin au spa"}[k];
+      var n=stockDe(k), a=prixLot(k,L,false), b=prixLot(k,G,false), usage={linge:"Un jeu par chambre refaite",accueil:"Un lot par chambre refaite",pdj:"Une portion par personne",denrees:"Un couvert par personne au déjeuner, au dîner et aux banquets",boissons:"Un verre par personne au bar, deux par invité aux banquets, et les pauses des séminaires",soins:"Un par soin au spa"}[k];
       return '<li class="rang"><div><b>'+PRODUITS[k].nom+'</b><small>'+usage+' · '+mt(PRODUITS[k].cout)+' pièce'+(enCommande(k)?' · '+enCommande(k)+' en route':"")+'</small></div>'
         +'<div class="droite"><span class="puce num '+(n===0?"bad":n<=seuilStock()?"warn":"ok")+'">'+n+' en stock</span>'
         +'<button type="button" class="btn petit" data-a="commander" data-k="'+k+'" data-d="'+L+'"'+(S.caisse-a>=-DECOUVERT_MAX?"":" disabled")+'>+'+L+' · '+mt(a)+'</button>'
@@ -2143,9 +2294,9 @@ function pageResultat(){
   // Du résultat à la caisse : ce qui est compté sans être payé, et ce qui est payé sans être une charge
   function flux(X){
     var f={amort:typeDe(X,"a"),invest:0,stock:(X["k:economat"]||0)-typeDe(X,"g"),creances:(X["c:entreprises"]||0)-(X["d:entreprises"]||0)-typeDe(X,"w"),pret:(X["p:pret"]||0)-(X["q:pret"]||0),
-      tva:typeDe(X,"v")-typeDe(X,"u")-(X["t:tva"]||0)+(X["z:tva"]||0),impot:typeDe(X,"y")-(X["t:impot"]||0),dividende:typeDe(X,"b")}, k;
+      tva:typeDe(X,"v")-typeDe(X,"u")-(X["t:tva"]||0)+(X["z:tva"]||0),impot:typeDe(X,"y")-(X["t:impot"]||0),dividende:typeDe(X,"b"),acomptes:typeDe(X,"h")}, k;
     for(k in X) if(k.charAt(0)==="k"&&k!=="k:economat") f.invest+=X[k];
-    f.total=recettesDe(X)-depensesDe(X)+f.amort-f.invest-f.stock-f.creances+f.pret+f.tva+f.impot-f.dividende;
+    f.total=recettesDe(X)-depensesDe(X)+f.amort-f.invest-f.stock-f.creances+f.pret+f.tva+f.impot-f.dividende+f.acomptes;
     return f;
   }
   lignes+='<tr class="sous"><td colspan="3">Recettes</td></tr>';
@@ -2156,7 +2307,7 @@ function pageResultat(){
   lignes+=rang("Total des charges",mt(dT),mt(dA),"total");
   lignes+='<tr class="total"><td>Résultat</td><td class="'+(rT-dT>=0?"plus-c":"moins-c")+'">'+signeM(rT-dT)+'</td><td class="avant">'+signeM(rA-dA)+'</td></tr>';
   fT=flux(T); fA=flux(A);
-  [["amort","Amortissements (non payés)",1],["creances","Factures en attente chez les sociétés",-1],["stock","Stock de l'économat",-1],["invest","Investissements",-1],["tva","TVA encaissée, moins celle payée",1],["impot","Impôt compté, pas encore payé",1],["dividende","Dividende versé",-1],["pret","Prêts du directeur, nets",1]].forEach(function(l){
+  [["amort","Amortissements (non payés)",1],["creances","Factures en attente chez les sociétés",-1],["stock","Stock de l'économat",-1],["invest","Investissements",-1],["tva","TVA encaissée, moins celle payée",1],["impot","Impôt compté, pas encore payé",1],["dividende","Dividende versé",-1],["acomptes","Acomptes reçus, moins ceux soldés",1],["pret","Prêts du directeur, nets",1]].forEach(function(l){
     if(fT[l[0]]||fA[l[0]]) tresorerie+=rang(l[1],cel(fT[l[0]]*l[2],true),cel(fA[l[0]]*l[2],true));
   });
   if(tresorerie) lignes+='<tr class="sous"><td colspan="3">Du résultat à la caisse</td></tr>'+tresorerie+rang("Variation de la caisse",signeM(fT.total),signeM(fA.total),"total");
@@ -2181,7 +2332,7 @@ function pageBilan(){
     +'</tbody></table></div></div>'
     +'<div class="carte"><div class="tableau"><table><thead><tr><th>Passif</th><th>Aujourd\'hui</th></tr></thead><tbody>'
     +rang("Capital",mt(b.capital))+(b.reserve?rang("Réserve légale",mt(b.reserve)):"")+(b.reporte?rang(b.reporte>0?"Bénéfice reporté":"Perte reportée",signeM(b.reporte)):"")+(b.aAffecter?rang("Résultat à affecter",mt(b.aAffecter)):"")+rang("Résultat de l'exercice en cours",signeM(b.exercice))+rang("Capitaux propres",mt(b.propres),"total")
-    +(b.pret?rang("Prêt du directeur",mt(b.pret)):"")+(b.tvaPassif?rang("TVA à payer",mt(b.tvaPassif)):"")+(b.impots?rang("Impôt des sociétés à payer",mt(b.impots)):"")+(b.decouvert?rang("Découvert à la banque",mt(b.decouvert)):"")+rang("Total du passif",mt(b.actif),"total")
+    +(b.pret?rang("Prêt du directeur",mt(b.pret)):"")+(b.acomptes?rang("Acomptes reçus des clients",mt(b.acomptes)):"")+(b.tvaPassif?rang("TVA à payer",mt(b.tvaPassif)):"")+(b.impots?rang("Impôt des sociétés à payer",mt(b.impots)):"")+(b.decouvert?rang("Découvert à la banque",mt(b.decouvert)):"")+rang("Total du passif",mt(b.actif),"total")
     +'</tbody></table></div></div>'
     +(S.immos.length?'<div class="bloc"><h2>Immobilisations</h2><div class="carte"><div class="tableau serre"><table><thead><tr><th>Bien</th><th>Achat</th><th>Amorti</th><th>Net</th></tr></thead><tbody>'+biens.map(function(im){ return '<tr><td>'+h(im.nom)+'</td><td>'+nombre(im.v)+'</td><td>'+nombre(im.c)+'</td><td>'+nombre(im.v-im.c)+'</td></tr>'; }).join("")+'</tbody></table></div></div></div>':"")
     +'<p class="aide">Une chambre, une amélioration ou un équipement ne sont pas des charges le jour de l\'achat : ils sont amortis sur cinq ans, pour leur prix hors TVA. Les capitaux propres sont ce qui reste à l\'hôtel une fois ses dettes retirées.</p>';
@@ -2311,6 +2462,7 @@ function ecranReglages(){
     +'<p class="aide"><b>Chambres.</b> Vous commencez avec deux chambres doubles de niveau 1. Chaque palier permet d\'en acheter davantage. Une chambre a un type (simple, double, twin, familiale), un côté, un étage, et un niveau de 1 à 10 : chaque niveau ajoute un équipement et relève son prix.</p>'
     +'<p class="aide"><b>Ménage.</b> Après un départ, la chambre est à refaire avant d\'être relouée : une demi-heure pour une femme de chambre en poste, deux heures si c\'est vous. Chaque chambre refaite prend un jeu de linge et un lot de produits d\'accueil.</p>'
     +'<p class="aide"><b>Équipements.</b> Restaurant, parking, hall, buanderie, puis bar, spa, salles de séminaire et piscine : chacun se construit et s\'améliore sur cinq niveaux. Le restaurant sert le petit-déjeuner au niveau 1, le déjeuner et le dîner dès le niveau 2. Restaurant, bar et spa reçoivent aussi des clients de l\'extérieur, quand le personnel est prévu au planning.</p>'
+    +'<p class="aide"><b>Mariages et banquets.</b> Dès que le restaurant est au niveau 2, des clients demandent un devis pour un mariage, un anniversaire, un dîner de société ou une fête de famille. Vous fixez le prix par invité ; à la signature, le client verse 30 % d\'acompte. Le jour venu, le restaurant lui est réservé : il faut assez de serveurs et de cuisiniers au planning, des denrées et des boissons en stock, et bloquer dans l\'agenda les chambres des invités.</p>'
     +'<p class="aide"><b>Clientèle.</b> Voyageurs d\'affaires en semaine, couples et familles le week-end, familles l\'été, séminaires l\'automne. La tuile Clientèle donne les souhaits habituels de chacun.</p>'
     +'<p class="aide"><b>Réputation.</b> Elle suit la note des derniers séjours : chambre bien choisie, attentes remplies (petit-déjeuner, parking, bar…), demandes bien traitées, chambres bien tenues, attente à l\'arrivée, prix. Une bonne réputation attire plus de monde.</p>'
     +'<p class="aide"><b>Équipe.</b> Le salaire se règle par métier, pour un poste de 8 heures. Mal payée ou surchargée, une personne perd le moral, travaille moins bien et finit par démissionner. Chacun progresse en travaillant : junior, confirmé, senior. Un stage payé par l\'hôtel, une fois par jour et par personne, accélère la progression.</p>'
@@ -2500,6 +2652,27 @@ var A={
   impot:function(d){ var x=parId(S.impots,+d.k); if(!x) return false; payerImpot(x,maintenant(),false); return true; },
   div:function(d){ U.div=+d.k; return false; },
   affecter:function(){ if(!S.affectation) return false; affecterResultat(Math.round(dividendeMax()*U.div/100),maintenant(),false); return true; },
+  evprix:function(d){ var ev=parId(S.evenements,+d.k); if(!ev||ev.etat!=="demande") return false; ev.prix=borne(ev.prix+(+d.d),4,refBanquet()*4); return true; },
+  evdevis:function(d){
+    var ev=parId(S.evenements,+d.k), r;
+    if(!ev||ev.etat!=="demande") return false;
+    r=envoyerDevis(ev,maintenant());
+    U.retour=r==="ok"?{c:"ok",m:"Devis accepté : "+nomEvBas(ev)+" est confirmé. L'acompte est encaissé."}:r==="offre"?{c:"warn",m:"Trop cher pour ce client : il annonce son maximum."}:{c:"bad",m:"Il n'y a pas assez de chambres libres ce soir-là pour les invités."};
+    return true;
+  },
+  evaccepter:function(d){
+    var ev=parId(S.evenements,+d.k), r;
+    if(!ev||ev.etat!=="demande"||!ev.offre) return false;
+    r=signerEv(ev,ev.offre,maintenant());
+    U.retour=r==="ok"?{c:"ok",m:nomEv(ev)+" est confirmé au prix du client. L'acompte est encaissé."}:{c:"bad",m:"Il n'y a pas assez de chambres libres ce soir-là pour les invités."};
+    return true;
+  },
+  evrefuser:function(d){
+    var ev=parId(S.evenements,+d.k);
+    if(!ev||ev.etat!=="demande") return false;
+    if(U.confirme!=="ev"+ev.id){ U.confirme="ev"+ev.id; return false; }
+    U.confirme=null; refuserEv(ev,maintenant(),false); U.retour={c:"",m:"Demande refusée."}; return true;
+  },
   decal:function(d){ U.decal=Math.min(0,U.decal+(+d.d)); return false; },
   resume:function(){ U.resume=null; return false; },
   moivue:function(d){ U.moiVue=d.k; return false; },
@@ -2611,7 +2784,7 @@ function revenir(){
 
 /* ------------------------------------------------------------------ Boucle */
 var app=document.getElementById("app"), dernier="", dernierBattement=Date.now();
-var ECRANS={agenda:ecranAgenda,accueil:ecranAccueil,clients:ecranClients,fiche:ecranFiche,requete:ecranRequete,chambres:ecranChambres,clientele:ecranClientele,equipements:ecranEquipements,economat:ecranEconomat,planning:ecranPlanning,equipe:ecranEquipe,recrutement:ecranRecrutement,tarifs:ecranTarifs,finances:ecranFinances,journal:ecranJournal,moi:ecranMoi,reglages:ecranReglages};
+var ECRANS={evenements:ecranEvenements,agenda:ecranAgenda,accueil:ecranAccueil,clients:ecranClients,fiche:ecranFiche,requete:ecranRequete,chambres:ecranChambres,clientele:ecranClientele,equipements:ecranEquipements,economat:ecranEconomat,planning:ecranPlanning,equipe:ecranEquipe,recrutement:ecranRecrutement,tarifs:ecranTarifs,finances:ecranFinances,journal:ecranJournal,moi:ecranMoi,reglages:ecranReglages};
 function rendre(){
   var y=window.scrollY, cle=S.fondeLe?U.ecran:"fondation";
   app.innerHTML='<div class="ecran">'+(S.fondeLe?(ECRANS[U.ecran]||ecranAccueil)():ecranFondation())+'</div>'+(S.fondeLe?navigation():"");
@@ -2645,7 +2818,7 @@ document.addEventListener("click",function(ev){
   var el=ev.target.closest?ev.target.closest("[data-a]"):null, a, change;
   if(!el||el.disabled||!A[el.dataset.a]) return;
   a=el.dataset.a;
-  if(a!=="licencier"&&a!=="recommencer"&&a!=="refuser") U.confirme=null;
+  if(a!=="licencier"&&a!=="recommencer"&&a!=="refuser"&&a!=="evrefuser") U.confirme=null;
   change=A[a](el.dataset);
   if(change) marquer();
   rendre();
@@ -2676,7 +2849,7 @@ if(chaud&&chaud.snapshot) chaud.snapshot(function(){ return {S:S,U:U}; });
 if(chaud&&chaud.ready) chaud.ready(demarrer); else demarrer(chaud&&chaud.data);
 window.__hotel={etat:function(){ return S; },ecran:function(e){ U.ecran=e; rendre(); },agir:function(a,d){ var r=A[a](d||{}); rendre(); return r; },faire:function(a,d){ return A[a](d||{}); },avancer:function(ms){ S.decalage=(S.decalage||0)+ms; return avancer(maintenant()); },regles:{REQUETES:REQUETES},vue:function(){ return U; },
   sauter:function(ms){ S.decalage=(S.decalage||0)+ms; var c=avancer(maintenant()); rendre(); return c; },
-  calc:{chambresABloquer:chambresABloquer,chambresPour:chambresPour,resultatExercice:resultatExercice,soldeTva:soldeTva,demandeCible:demandeCible,bilan:bilan,creances:creances,tient:tient,adequation:adequation,prixPour:prixPour,pretes:pretes,reputation:reputation,attendus:attendus,periode:periode,optionsDe:optionsDe,couvMenage:couvMenage,recettesDe:recettesDe,depensesDe:depensesDe}};
+  calc:{refBanquet:refBanquet,besoinsEv:besoinsEv,chambresABloquer:chambresABloquer,chambresPour:chambresPour,resultatExercice:resultatExercice,soldeTva:soldeTva,demandeCible:demandeCible,bilan:bilan,creances:creances,tient:tient,adequation:adequation,prixPour:prixPour,pretes:pretes,reputation:reputation,attendus:attendus,periode:periode,optionsDe:optionsDe,couvMenage:couvMenage,recettesDe:recettesDe,depensesDe:depensesDe}};
 })();
 </script>
 <script>if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});</script>
