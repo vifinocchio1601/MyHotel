@@ -575,7 +575,7 @@ function etatInitial(){
     avis:[55,55,55,55,55,55,55,55,55,55],finis:0,stat:statVide(),accueil:{ok:0,moyen:0,auto:0,autoMoyen:0},req:{ok:0,moyen:0,auto:0,sans:0},
     stock:{},commandes:[],auto:true,demandes:[],nDemande:1,demande:{},plaintes:[],nPlainte:1,bordereaux:[],contestes:[],nBord:1,immos:[],frac:{},valStock:{},
     evenements:[],nEv:1,acomptes:0,
-    tvaP:tvaVide(),declarations:[],tvaHisto:[],nFisc:1,impots:[],exercices:[],capital:0,apport5000:1,reserve:0,reporte:0,pertes:0,affectation:null,
+    tvaP:tvaVide(),declarations:[],tvaHisto:[],nFisc:1,impots:[],exercices:[],capital:0,apport5000:1,moi25000:1,reserve:0,reporte:0,pertes:0,affectation:null,
     registre:[],journal:[],cj:{},cm:{},prochaineCloture:0,
     moi:moiVide(),releve:0,decalage:0};
 }
@@ -587,7 +587,7 @@ function valide(o){ return !!(o&&o.v===V&&o.postes&&o.tarifs&&o.equipe&&o.chambr
 function sauver(){ try{ localStorage.setItem(CLE,JSON.stringify(S)); }catch(e){} }
 // Une partie enregistrée par une version plus ancienne reçoit les rubriques apparues depuis
 function migrer(){
-  var neuf=etatInitial(), k, apport=S.fondeLe&&!S.apport5000;
+  var neuf=etatInitial(), k, apport=S.fondeLe&&!S.apport5000, cadeau=S.fondeLe&&!S.moi25000;
   for(k in neuf) if(S[k]===undefined) S[k]=neuf[k];
   neuf=statVide(); for(k in neuf) if(S.stat[k]===undefined) S.stat[k]=neuf[k];
   neuf=moiVide(); for(k in neuf) if(S.moi[k]===undefined) S.moi[k]=neuf[k];
@@ -600,6 +600,7 @@ function migrer(){
   if(S.fondeLe&&!S.capital) S.capital=Math.round(bilan().propres-resultatExercice(S.horloge||Date.now()));
   // Apport de 5 000 € demandé par le directeur : versé une seule fois, au capital
   if(apport){ var ta=S.horloge||Date.now(); S.apport5000=1; inscrire(ta,"f:capital",5000); S.capital+=5000; noter(ta,"",S.prenom+" apporte 5 000 € au capital de l'hôtel."); }
+  if(cadeau){ S.moi25000=1; S.moi.argent+=25000; noter(S.horloge||Date.now(),"",S.prenom+" reçoit 25 000 € sur son compte personnel."); }
 }
 function charger(){ try{ var t=localStorage.getItem(CLE); if(!t) return null; var o=JSON.parse(t); return valide(o)?o:null; }catch(e){ return null; } }
 
