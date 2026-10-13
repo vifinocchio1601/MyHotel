@@ -536,7 +536,7 @@ var EXP=[{nom:"Junior",paie:0.85,qualite:0.88,vitesse:1.15,age:[20,28]},{nom:"Co
 // v TVA collectée sur une vente (encaissée, due à l'État), u TVA payée sur un achat (à récupérer), t paiement d'une dette fiscale,
 // z remboursement de TVA reçu ; y impôt des sociétés (charge, payée plus tard) ; b dividende versé.
 // h acompte reçu d'un client pour un événement à venir (encaissé, dû jusqu'au jour de la fête)
-var SENS={r:1,p:1,d:1,v:1,z:1,h:1,g:0,a:0,w:0,y:0}, TYPES_CHARGE="sogmeaxwy";
+var SENS={r:1,p:1,f:1,d:1,v:1,z:1,h:1,g:0,a:0,w:0,y:0}, TYPES_CHARGE="sogmeaxwy";
 var TYPES_D=[["s","Salaires"],["o","Cotisations patronales"],["g","Marchandises et linge consommés"],["m","Commissions des plateformes"],["e","Charges et entretien"],["a","Amortissements"],["x","Amendes, intérêts et indemnités"],["w","Créances perdues"],["y","Impôt des sociétés"]];
 // La TVA : les prix sont TVA comprise, à l'achat comme à la vente. Taux belges : 6 % sur les nuitées, 12 % sur les repas, 21 % sur le reste.
 // Chaque trimestre, une déclaration à déposer avant le 20 du mois suivant. Les grilles sont celles de la déclaration belge.
@@ -575,7 +575,7 @@ function etatInitial(){
     avis:[55,55,55,55,55,55,55,55,55,55],finis:0,stat:statVide(),accueil:{ok:0,moyen:0,auto:0,autoMoyen:0},req:{ok:0,moyen:0,auto:0,sans:0},
     stock:{},commandes:[],auto:true,demandes:[],nDemande:1,demande:{},plaintes:[],nPlainte:1,bordereaux:[],contestes:[],nBord:1,immos:[],frac:{},valStock:{},
     evenements:[],nEv:1,acomptes:0,
-    tvaP:tvaVide(),declarations:[],tvaHisto:[],nFisc:1,impots:[],exercices:[],capital:0,reserve:0,reporte:0,pertes:0,affectation:null,
+    tvaP:tvaVide(),declarations:[],tvaHisto:[],nFisc:1,impots:[],exercices:[],capital:0,apport5000:1,reserve:0,reporte:0,pertes:0,affectation:null,
     registre:[],journal:[],cj:{},cm:{},prochaineCloture:0,
     moi:moiVide(),releve:0,decalage:0};
 }
@@ -587,7 +587,7 @@ function valide(o){ return !!(o&&o.v===V&&o.postes&&o.tarifs&&o.equipe&&o.chambr
 function sauver(){ try{ localStorage.setItem(CLE,JSON.stringify(S)); }catch(e){} }
 // Une partie enregistrée par une version plus ancienne reçoit les rubriques apparues depuis
 function migrer(){
-  var neuf=etatInitial(), k;
+  var neuf=etatInitial(), k, apport=S.fondeLe&&!S.apport5000;
   for(k in neuf) if(S[k]===undefined) S[k]=neuf[k];
   neuf=statVide(); for(k in neuf) if(S.stat[k]===undefined) S.stat[k]=neuf[k];
   neuf=moiVide(); for(k in neuf) if(S.moi[k]===undefined) S.moi[k]=neuf[k];
@@ -598,6 +598,8 @@ function migrer(){
   S.equipe.forEach(function(e){ if(e.plan) e.plan=e.plan.map(function(k){ return k==="N"?"R":k; }); });
   // Parties commencées avant la TVA et la clôture : le capital est ce que l'hôtel possédait en net au début du trimestre en cours
   if(S.fondeLe&&!S.capital) S.capital=Math.round(bilan().propres-resultatExercice(S.horloge||Date.now()));
+  // Apport de 5 000 € demandé par le directeur : versé une seule fois, au capital
+  if(apport){ var ta=S.horloge||Date.now(); S.apport5000=1; inscrire(ta,"f:capital",5000); S.capital+=5000; noter(ta,"",S.prenom+" apporte 5 000 € au capital de l'hôtel."); }
 }
 function charger(){ try{ var t=localStorage.getItem(CLE); if(!t) return null; var o=JSON.parse(t); return valide(o)?o:null; }catch(e){ return null; } }
 
@@ -2294,9 +2296,9 @@ function pageResultat(){
   // Du résultat à la caisse : ce qui est compté sans être payé, et ce qui est payé sans être une charge
   function flux(X){
     var f={amort:typeDe(X,"a"),invest:0,stock:(X["k:economat"]||0)-typeDe(X,"g"),creances:(X["c:entreprises"]||0)-(X["d:entreprises"]||0)-typeDe(X,"w"),pret:(X["p:pret"]||0)-(X["q:pret"]||0),
-      tva:typeDe(X,"v")-typeDe(X,"u")-(X["t:tva"]||0)+(X["z:tva"]||0),impot:typeDe(X,"y")-(X["t:impot"]||0),dividende:typeDe(X,"b"),acomptes:typeDe(X,"h")}, k;
+      tva:typeDe(X,"v")-typeDe(X,"u")-(X["t:tva"]||0)+(X["z:tva"]||0),impot:typeDe(X,"y")-(X["t:impot"]||0),dividende:typeDe(X,"b"),acomptes:typeDe(X,"h"),apport:typeDe(X,"f")}, k;
     for(k in X) if(k.charAt(0)==="k"&&k!=="k:economat") f.invest+=X[k];
-    f.total=recettesDe(X)-depensesDe(X)+f.amort-f.invest-f.stock-f.creances+f.pret+f.tva+f.impot-f.dividende+f.acomptes;
+    f.total=recettesDe(X)-depensesDe(X)+f.amort-f.invest-f.stock-f.creances+f.pret+f.tva+f.impot-f.dividende+f.acomptes+f.apport;
     return f;
   }
   lignes+='<tr class="sous"><td colspan="3">Recettes</td></tr>';
@@ -2307,7 +2309,7 @@ function pageResultat(){
   lignes+=rang("Total des charges",mt(dT),mt(dA),"total");
   lignes+='<tr class="total"><td>Résultat</td><td class="'+(rT-dT>=0?"plus-c":"moins-c")+'">'+signeM(rT-dT)+'</td><td class="avant">'+signeM(rA-dA)+'</td></tr>';
   fT=flux(T); fA=flux(A);
-  [["amort","Amortissements (non payés)",1],["creances","Factures en attente chez les sociétés",-1],["stock","Stock de l'économat",-1],["invest","Investissements",-1],["tva","TVA encaissée, moins celle payée",1],["impot","Impôt compté, pas encore payé",1],["dividende","Dividende versé",-1],["acomptes","Acomptes reçus, moins ceux soldés",1],["pret","Prêts du directeur, nets",1]].forEach(function(l){
+  [["amort","Amortissements (non payés)",1],["creances","Factures en attente chez les sociétés",-1],["stock","Stock de l'économat",-1],["invest","Investissements",-1],["tva","TVA encaissée, moins celle payée",1],["impot","Impôt compté, pas encore payé",1],["dividende","Dividende versé",-1],["acomptes","Acomptes reçus, moins ceux soldés",1],["pret","Prêts du directeur, nets",1],["apport","Apport en capital",1]].forEach(function(l){
     if(fT[l[0]]||fA[l[0]]) tresorerie+=rang(l[1],cel(fT[l[0]]*l[2],true),cel(fA[l[0]]*l[2],true));
   });
   if(tresorerie) lignes+='<tr class="sous"><td colspan="3">Du résultat à la caisse</td></tr>'+tresorerie+rang("Variation de la caisse",signeM(fT.total),signeM(fA.total),"total");
