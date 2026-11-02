@@ -367,6 +367,18 @@ var NOMS_SALONS=["Salon de l'auto","Foire commerciale","Festival de musique","Co
 // Habitués et avis en ligne
 var HAB_MAX=40, HAB_SEUIL=75, HAB_CHANCE=0.12, HAB_RETOUR=0.015, HAB_PAUSE=10, AVIS_LIGNE_MAX=30, DELAI_REPONSE=2, REMISE_GESTE=0.2;
 var REPONSES_AVIS={merci:"Remercier",excuse:"S'excuser",geste:"S'excuser et offrir 20 % sur le prochain séjour"};
+// Suites à thème : un décor qui relève le prix de la chambre et ravit certains profils
+var THEMES={
+  romantique:{nom:"Romantique",txt:"lit à baldaquin, bougies, pétales",profils:["couple"],ev:true},
+  nature:{nom:"Ardennaise",txt:"bois, pierre et vue sur la forêt",profils:["famille","senior","routard"]},
+  design:{nom:"Design",txt:"lignes nettes, bureau, éclairage d'architecte",profils:["affaires","amis"]},
+  prestige:{nom:"Prestige",txt:"marbre, salon privé, majordome",profils:["luxe"],vip:true}};
+var ORDRE_THEMES=["romantique","nature","design","prestige"], THEME_PRIX=1500, THEME_NIV=4, THEME_MULT=1.2;
+// Les VIP : des personnalités qui réservent sous leur nom. Ravies, elles en parlent ; déçues aussi.
+var VIPS=[["Léa Vasseur","chanteuse"],["Marco Bellandi","footballeur"],["Inès Delcourt","actrice"],["Tom Verhaegen","chef étoilé"],["Sofia Marelli","influenceuse"],["Arnaud de Ligne","animateur télé"],["Nora Benali","romancière"],["Lukas Peeters","pilote automobile"],["Camille Rousseau","navigatrice"],["Jonas Vermeulen","acteur"]];
+var VIP_CHANCE=0.08, BUZZ_JOURS=10;
+// Le Guide Lumen : un inspecteur incognito, de temps en temps, parmi les clients
+var GUIDE="Guide Lumen", DISTINCTIONS=["Aucune distinction","Recommandé","Une lampe","Deux lampes","Trois lampes"], INSP_CHANCE=0.04;
 var ROTATION=0.6, PART_PASSAGE=0.2, COMMISSION=0.15;
 var PATIENCE_ACCUEIL=60, DELAI_RELAIS=15*MIN, DELAI_REQ=40*MIN, RELAIS_REQ=12*MIN, TAUX_REQUETE=0.45;
 var DUREE_MENAGE=30, DUREE_MENAGE_MOI=90, PAR_FEMME=12, PAR_ACCUEIL=25;
@@ -586,7 +598,7 @@ function etatInitial(){
     equipe:[],nEquipe:1,candidats:{},nCandidat:1,sejours:[],nSejour:1,visites:[],nVisite:1,requetes:[],nRequete:1,arrivees:[],evts:[],
     avis:[55,55,55,55,55,55,55,55,55,55],finis:0,stat:statVide(),accueil:{ok:0,moyen:0,auto:0,autoMoyen:0},req:{ok:0,moyen:0,auto:0,sans:0},
     stock:{},commandes:[],auto:true,demandes:[],nDemande:1,demande:{},plaintes:[],nPlainte:1,bordereaux:[],contestes:[],nBord:1,immos:[],frac:{},valStock:{},
-    evenements:[],nEv:1,acomptes:0,salons:[],salonsJusqua:0,habitues:[],nHab:1,roomService:false,avisLigne:[],nAvisL:1,
+    evenements:[],nEv:1,acomptes:0,salons:[],salonsJusqua:0,habitues:[],nHab:1,distinction:0,buzz:null,roomService:false,avisLigne:[],nAvisL:1,
     tvaP:tvaVide(),declarations:[],tvaHisto:[],nFisc:1,impots:[],exercices:[],capital:0,apport5000:1,moi25000:1,reserve:0,reporte:0,pertes:0,affectation:null,
     registre:[],journal:[],cj:{},cm:{},prochaineCloture:0,
     moi:moiVide(),releve:0,decalage:0};
@@ -605,6 +617,7 @@ function migrer(){
   neuf=moiVide(); for(k in neuf) if(S.moi[k]===undefined) S.moi[k]=neuf[k];
   for(k in ROLES) if(!S.postes[k]) S.postes[k]={salaire:ROLES[k].salaire,heures:8};
   for(k in REF) if(S.tarifs[k]===undefined) S.tarifs[k]=REF[k];
+  S.chambres.forEach(function(c){ if(c.niv>=NIV_DE.minibar&&!c.mb){ c.mb=1; c.mbN=0; } });
   PERIODES.forEach(function(P){ if(S.tarifs[P.cle]===undefined) S.tarifs[P.cle]=S.tarifs.chambre; });
   if(S.fondeLe) prevoirSalons(S.horloge||Date.now());
   if(!S.releve) S.releve=prochaineReleve(S.horloge||Date.now());
@@ -881,12 +894,15 @@ function raisonJour(j){
 
 // Chambres
 function chambre(id){ return parId(S.chambres,id); }
-function prixRef(c){ return Math.round(TYPES[c.type].prix*COTES[c.cote].mult*NIVEAUX[c.niv].mult); }
+function multTheme(c){ return c.theme?THEME_MULT:1; }
+function prixRef(c){ return Math.round(TYPES[c.type].prix*COTES[c.cote].mult*NIVEAUX[c.niv].mult*multTheme(c)); }
+// Le thème plaît-il à ce client ?
+function aimeTheme(sj,c){ var T=c.theme?THEMES[c.theme]:null; return !!T&&(T.profils.indexOf(sj.profil)>=0||(T.ev&&!!sj.ev)||(T.vip&&!!sj.vip)); }
 // Le prix d'une chambre une nuit donnée (aujourd'hui par défaut) : il suit la période de cette nuit
 function prixChambre(c,j){ return Math.round(prixRef(c)*pctLe(j===undefined?jourHotel(S.horloge):j)/100); }
 function typePour(n){ return n<=1?"simple":n===2?"double":"familiale"; }
 // Un client logé dans une chambre plus grande que nécessaire paie le prix d'une chambre à sa taille
-function prixPourNuit(sj,c,j){ return Math.min(prixChambre(c,j),Math.round(TYPES[typePour(sj.pers)].prix*COTES[c.cote].mult*NIVEAUX[c.niv].mult*pctLe(j)/100)); }
+function prixPourNuit(sj,c,j){ return Math.min(prixChambre(c,j),Math.round(TYPES[typePour(sj.pers)].prix*COTES[c.cote].mult*NIVEAUX[c.niv].mult*(aimeTheme(sj,c)?multTheme(c):1)*pctLe(j)/100)); }
 // Les nuits d'un séjour : le prix de chacune, selon sa période
 function nuitsDe(sj){ var j0=jourHotel(Math.max(S.horloge,sj.arrive)), l=[], d; for(d=0;d<Math.max(1,sj.nuits);d++) l.push(jourApres(j0,d)); return l; }
 function prixNuits(sj,c){ return nuitsDe(sj).map(function(j){ return prixPourNuit(sj,c,j); }); }
@@ -913,6 +929,8 @@ function adequation(sj,c,prix){
   if(c.niv>=sj.att) n+=Math.min(10,4+(c.niv-sj.att)*3); else n-=Math.min(24,(sj.att-c.niv)*6);
   if(c.defaut) n-=10;
   if(sj.pref) n+=c.id===sj.pref?12:-4;
+  if(aimeTheme(sj,c)) n+=12;
+  if(sj.vip){ if(c.niv<sj.att) n-=10; if(!c.theme) n-=4; }
   return borne(n,0,100);
 }
 function parEtat(e){ return S.sejours.filter(function(x){ return x.etat===e; }); }
@@ -1011,7 +1029,8 @@ function ajusterDemande(){
   ["ch0","ch2","ch3"].forEach(function(d){ S.demande[d]=demande(d)+(demandeCible(d)-demande(d))*INERTIE_PRIX; });
 }
 // Arrivées attendues par jour : elles suivent le nombre de chambres, la réputation, la saison et les prix
-function attendus(t){ var j=jourHotel(t); return facteurAvis()*S.chambres.length*ROTATION*(0.5+reputation()/100)*facteurJour(j)*demande(clePeriode(periodeDe(j)))*(forme("communicant")?1.1:1)*(1+0.03*niv("piscine")); }
+function facteurBuzz(t){ return S.buzz&&S.buzz.fin>t?S.buzz.f:1; }
+function attendus(t){ var j=jourHotel(t); return facteurAvis()*facteurBuzz(t)*(1+0.06*(S.distinction||0))*S.chambres.length*ROTATION*(0.5+reputation()/100)*facteurJour(j)*demande(clePeriode(periodeDe(j)))*(forme("communicant")?1.1:1)*(1+0.03*niv("piscine")); }
 
 // Personnel
 function absentLe(e,t){ return !!(e.absent&&t>=e.absent.debut&&t<e.absent.fin); }
@@ -1188,7 +1207,9 @@ function prendreReservations(t){
       a=aHeure(jourApres(minuit(t),i),alea(14,21));
       if(a<=t+30*MIN) continue;
       sj=creerSejour(a,null,false);
-      if(tient(sj)){ S.sejours.push(sj); pris++; } else { S.nSejour--; S.stat.complet++; }
+      if(S.palier>=1&&j===0&&t-(S.vipDernier||0)>10*JOUR&&Math.random()<VIP_CHANCE){ faireVip(sj,t); S.vipDernier=t; }
+      else if(S.palier>=1&&t-(S.inspDernier||0)>30*JOUR&&Math.random()<INSP_CHANCE){ sj.insp=1; S.inspDernier=t; }
+      if(tient(sj)){ S.sejours.push(sj); pris++; if(sj.vip) noter(t,"ok","Réservation VIP : "+sj.vip.nom+", "+sj.vip.metier+", arrive "+dateCourte(sj.arrive)+" : accueillez-"+(sj.femme?"la":"le")+" vous-même, dans votre plus belle chambre."); } else { S.nSejour--; S.stat.complet++; }
     }
   }
   return pris;
@@ -1289,6 +1310,8 @@ function noteSejour(sj){
   n-=Math.min(15,(sj.attente||0)/Math.max(1,sj.pat/MIN)*8);
   n-=(1-couvMenage())*15+(1-couvAccueil())*8;
   if(sj.parMoi) n+=3;
+  if(sj.vip) n+=sj.parMoi?4:-10;
+  if(sj.insp) n-=(1-couvMenage())*10+(stockDe("linge")?0:5);
   if(sj.pref) n+=chambre(sj.ch)&&sj.ch===sj.pref?6:-3;
   if(sj.ratio>1.3) n-=Math.min(15,(sj.ratio-1.3)*30);
   if(P==="famille"||P==="couple"||P==="luxe") n+=niv("piscine")*1.5;
@@ -1358,11 +1381,30 @@ function retourHabitues(t){
     }
   });
 }
+function faireVip(sj,t){
+  var v=VIPS[entre(0,VIPS.length-1)], p=v[0].split(" ");
+  sj.vip={nom:v[0],metier:v[1]}; sj.prenom=p[0]; sj.nom=p.slice(1).join(" "); sj.femme=/(e|a)$/.test(v[1])&&!/(acteur|pilote|chef étoilé|animateur|footballeur)/.test(v[1]);
+  sj.profil=S.palier>=3?"luxe":"couple"; sj.att=Math.min(PALIERS[S.palier].niv,niveauAttendu(PROFILS.luxe)+1); sj.canal="direct";
+}
+// Après le départ d'un VIP ou d'un inspecteur
+function suitesDepart(sj,note,t){
+  var i, d=S.distinction||0;
+  if(sj.vip){
+    if(note>=80){ for(i=0;i<3;i++) avis(95); S.buzz={f:1.15,fin:jourApres(t,BUZZ_JOURS)}; noter(t,"ok",sj.vip.nom+" a adoré son séjour et l'a dit à ses abonnés : les réservations s'envolent pour "+BUZZ_JOURS+" jours.");
+    } else if(note<60){ for(i=0;i<3;i++) avis(25); S.buzz={f:0.88,fin:jourApres(t,BUZZ_JOURS)}; noter(t,"bad",sj.vip.nom+" est reparti"+(sj.femme?"e":"")+" déçu"+(sj.femme?"e":"")+" et l'a fait savoir. Mauvaise presse pour "+BUZZ_JOURS+" jours.");
+    } else noter(t,"",sj.vip.nom+" est reparti"+(sj.femme?"e":"")+" sans faire de bruit.");
+  }
+  if(sj.insp){
+    if(note>=78+4*d&&d<DISTINCTIONS.length-1&&d<=S.palier){ S.distinction=d+1; for(i=0;i<3;i++) avis(92); noter(t,"ok",nomComplet(sj)+" était un inspecteur du "+GUIDE+" ! L'hôtel obtient : "+DISTINCTIONS[d+1]+".");
+    } else if(note<55&&d>0){ S.distinction=d-1; noter(t,"bad",nomComplet(sj)+" était un inspecteur du "+GUIDE+". Déçu, il retire une distinction : "+DISTINCTIONS[d-1]+".");
+    } else noter(t,"",nomComplet(sj)+" était un inspecteur du "+GUIDE+". Rien ne change cette fois"+(note>=70?" : encore un effort.":"."));
+  }
+}
 function quitter(sj,t){
   var c=chambre(sj.ch), note;
   while(sj.facturees<sj.nuits) nuitee(sj,t);
   note=noteSejour(sj);
-  suivreHabitue(sj,note,c,t); publierAvis(sj,note,c,t);
+  suivreHabitue(sj,note,c,t); publierAvis(sj,note,c,t); suitesDepart(sj,note,t);
   avis(note); S.finis++; S.stat.departs++;
   if(c){ c.sj=null; c.etat="sale"; }
   if(note<25) porterPlainte(nomComplet(sj),t,0.25,sj.paye,"séjour très décevant, remboursement demandé");
@@ -1907,7 +1949,7 @@ function barre(){
 function souhaitNom(k){ return k==="budget"?SOUHAITS[k]+" ("+mt(SEUIL_BUDGET)+" la nuit au plus)":SOUHAITS[k]; }
 function souhaitsHtml(l){ return '<span class="signes">'+l.map(function(k){ return '<span class="signe">'+souhaitNom(k)+'</span>'; }).join("")+'</span>'; }
 function attentesHtml(l){ return l.length?'<span class="signes">'+l.map(function(k){ return '<span class="signe ctx">'+ATTENTES[k][0]+'</span>'; }).join("")+'</span>':""; }
-function resumeSejour(sj){ var p=sj.pref?chambre(sj.pref):null; return (sj.hab?(sj.femme?"Habituée":"Habitué")+", "+(sj.fois||2)+"e séjour"+(p?", aime la chambre "+p.n:"")+(sj.remise?", −"+Math.round(sj.remise*100)+" % promis":"")+" · ":"")+nomProfil(sj)+" · "+pl(sj.pers,"personne","personnes")+" · "+pl(sj.nuits,"nuit","nuits"); }
+function resumeSejour(sj){ var p=sj.pref?chambre(sj.pref):null; return (sj.vip?"★ VIP, "+sj.vip.metier+" · ":"")+(sj.hab?(sj.femme?"Habituée":"Habitué")+", "+(sj.fois||2)+"e séjour"+(p?", aime la chambre "+p.n:"")+(sj.remise?", −"+Math.round(sj.remise*100)+" % promis":"")+" · ":"")+nomProfil(sj)+" · "+pl(sj.pers,"personne","personnes")+" · "+pl(sj.nuits,"nuit","nuits"); }
 function manqueHtml(prix){ return S.caisse>=prix?"":'<span class="aide">Il manque '+mt(prix-S.caisse)+'.</span>'; }
 function palierPourNiv(n){ for(var i=0;i<PALIERS.length;i++) if(PALIERS[i].niv>=n) return i; return PALIERS.length-1; }
 function besoinEquip(k){
@@ -2230,6 +2272,10 @@ function carteChambre(c){
   return '<div class="carte"><div class="carte-haut"><h3>Chambre '+c.n+' · '+TYPES[c.type].nom+'<small>'+COTES[c.cote].nom+' · '+ETAGES[c.etage].toLowerCase()+' · '+TYPES[c.type].lit+(sj?'<br>'+h(nomComplet(sj))+' · '+pl(sj.pers,"personne","personnes"):"")+'</small></h3>'+etatChambreHtml(c)+'</div>'
     +'<div class="progres nn"><div class="progres-haut"><b>Niveau '+c.niv+' / '+NIV_MAX+'</b><span>'+mt(prixChambre(c))+' la nuit</span></div><div class="piste"><div class="plein" style="width:'+(c.niv/NIV_MAX*100)+'%"></div></div></div>'
     +'<p class="equips">'+(eq.length?eq.join(", "):"Un lit, une douche, rien de plus.")+'</p>'
+    +(c.theme?'<p class="aide"><b>Suite '+THEMES[c.theme].nom.toLowerCase()+'</b> : '+THEMES[c.theme].txt+'. Prix × '+String(THEME_MULT).replace(".",",")+' pour les clients qui l\'aiment.</p>'
+      :c.niv>=THEME_NIV?(U.theme===c.id?'<div class="actions">'+ORDRE_THEMES.map(function(k){ return '<button type="button" class="btn petit" data-a="theme" data-k="'+c.id+'" data-d="'+k+'"'+(S.caisse>=THEME_PRIX?"":" disabled")+'>'+THEMES[k].nom+'</button>'; }).join("")+'</div><p class="aide">'+ORDRE_THEMES.map(function(k){ var T=THEMES[k]; return '<b>'+T.nom+'</b> : '+T.txt+' — plaît '+(T.vip?"aux VIP et ":"")+(T.ev?"aux invités des mariages et ":"")+"aux profils "+T.profils.map(function(x){ return PROFILS[x].nom.toLowerCase(); }).join(", "); }).join(". ")+'. '+mt(THEME_PRIX)+'.</p>'
+        :'<div class="actions"><button type="button" class="btn" data-a="themes" data-k="'+c.id+'">En faire une suite à thème · '+mt(THEME_PRIX)+'</button></div>')
+      :'<p class="aide">Suite à thème possible dès le niveau '+THEME_NIV+'.</p>')
     +(c.mb?'<p class="aide">Minibar : '+(c.mbN||0)+' article'+((c.mbN||0)>1?"s":"")+' sur '+MB_CAP+(c.mbN<MB_CAP?", regarni au prochain ménage":"")+'.</p>'
       :'<div class="actions"><button type="button" class="btn" data-a="minibar" data-k="'+c.id+'"'+(S.caisse>=MB_PRIX?"":" disabled")+'>Installer un minibar · '+mt(MB_PRIX)+'</button></div>')
     +action+'</div>';
@@ -2487,7 +2533,10 @@ function ecranAvis(){
     +'<div class="carte">'+ligne("Note en ligne",m===null?"pas encore d'avis":virgule(m)+" ★ sur "+pl(S.avisLigne.length,"avis","avis"))
     +ligne("Effet sur les réservations",m===null?"aucun":(facteurAvis()>=1?"+":"−")+Math.round(Math.abs(facteurAvis()-1)*100)+" %")
     +ligne("Habitués",String(S.habitues.length))
-    +'<p class="aide">Les futurs clients lisent les avis et vos réponses. Une excuse à un avis mécontent relève la note qu\'ils voient. Un simple merci à un client fâché la fait baisser. Un avis laissé sans réponse '+DELAI_REPONSE+' jours reste tel quel, et un très mauvais pèse plus lourd.</p></div>'
+    +ligne(GUIDE,DISTINCTIONS[S.distinction||0]+(S.distinction?" · +"+(6*S.distinction)+" % de réservations":""))
+    +(S.buzz&&S.buzz.fin>t?ligne(S.buzz.f>1?"On parle de vous":"Mauvaise presse",(S.buzz.f>1?"+":"−")+Math.round(Math.abs(S.buzz.f-1)*100)+" % jusqu'au "+dateCourte(S.buzz.fin)):"")
+    +'<p class="aide">Les futurs clients lisent les avis et vos réponses. Une excuse à un avis mécontent relève la note qu\'ils voient. Un simple merci à un client fâché la fait baisser. Un avis laissé sans réponse '+DELAI_REPONSE+' jours reste tel quel, et un très mauvais pèse plus lourd.</p>'
+    +'<p class="aide">Un inspecteur du '+GUIDE+' se glisse parfois parmi vos clients, sans prévenir. Il regarde tout, la propreté d\'abord. Un séjour parfait vous vaut une distinction, un séjour raté peut vous en coûter une.</p></div>'
     +'<div class="bloc"><h2>Avis'+(att?' · '+att+' à traiter':'')+'</h2>'+(liste?'<ul class="liste">'+liste+'</ul>':'<p class="vide">Pas encore d\'avis. Un client sur trois en écrit un en partant, plus souvent s\'il a adoré ou détesté.</p>')+'</div>'
     +'<div class="bloc"><h2>Habitués</h2>'+(habs?'<ul class="liste">'+habs+'</ul>':'<p class="vide">Pas encore d\'habitué.</p>')
     +'<p class="aide">Un client ravi peut devenir un habitué. Il revient de lui-même, réserve en direct (pas de commission) et aime retrouver sa chambre : donnez-la-lui. S\'il repart déçu, il ne revient plus.</p></div>';
@@ -2784,12 +2833,22 @@ var A={
     if(S.auto) reappro(t);
     return true;
   },
+  themes:function(d){ U.theme=U.theme===+d.k?null:+d.k; return false; },
+  theme:function(d){
+    var c=chambre(+d.k), t=maintenant();
+    if(!c||c.theme||!THEMES[d.d]||c.niv<THEME_NIV||S.caisse<THEME_PRIX) return false;
+    c.theme=d.d; U.theme=null; immobiliser(t,"chambres","th"+c.id,"Décor "+THEMES[d.d].nom.toLowerCase()+", chambre "+c.n,THEME_PRIX);
+    noter(t,"ok","La chambre "+c.n+" devient une suite "+THEMES[d.d].nom.toLowerCase()+".");
+    return true;
+  },
   roomservice:function(){ if(!rsPossible()) return false; S.roomService=!S.roomService; return true; },
   ameliorer:function(d){
     var c=chambre(+d.k), t=maintenant(), X;
     if(!c||c.niv>=NIV_MAX||c.niv>=PALIERS[S.palier].niv) return false;
     X=NIVEAUX[c.niv+1]; if(S.caisse<X.cout) return false;
-    c.niv++; immobiliser(t,"chambres","ch"+c.id,"Chambre "+c.n,X.cout); return true;
+    c.niv++; immobiliser(t,"chambres","ch"+c.id,"Chambre "+c.n,X.cout);
+    if(c.niv>=NIV_DE.minibar&&!c.mb){ c.mb=1; c.mbN=0; } // le niveau « Minibar et coffre-fort » apporte le minibar
+    return true;
   },
   equiper:function(d){
     var E=EQUIP[d.k], t=maintenant(), n, prix;
