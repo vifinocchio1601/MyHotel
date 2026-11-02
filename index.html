@@ -358,6 +358,12 @@ var SAISONS=[
   {nom:"Printemps",txt:"des couples et des retraités en week-end",f:1,m:{couple:1.3,senior:1.4}},
   {nom:"Été",txt:"des familles et des vacanciers",f:1.25,m:{famille:2.2,routard:1.5,couple:1.2,affaires:0.6}},
   {nom:"Automne",txt:"des séminaires et des voyageurs d'affaires",f:0.95,m:{affaires:1.4,senior:1.3,famille:0.7}}];
+// Les périodes : chaque nuit est en période basse, normale, haute ou très haute. ref : le prix que la clientèle trouve normal, en % du prix habituel.
+var PERIODES=[{nom:"Basse",cle:"basse",ref:85},{nom:"Normale",cle:"chambre",ref:100},{nom:"Haute",cle:"haute",ref:120},{nom:"Très haute",cle:"pointe",ref:140}];
+var CLES_PERIODE={basse:0,chambre:1,haute:2,pointe:3};
+// Affluence selon la nuit de la semaine, du lundi au dimanche : on vient le vendredi et le samedi soir, on rentre le dimanche
+var JOURS_F=[0.95,0.95,0.95,0.95,1.25,1.3,0.75], VEILLE_F=1.25, SALON_F=1.45;
+var NOMS_SALONS=["Salon de l'auto","Foire commerciale","Festival de musique","Congrès médical","Salon de l'habitat","Salon du vin","Course cycliste","Congrès d'ingénieurs","Festival de théâtre","Salon du tourisme"];
 var ROTATION=0.6, PART_PASSAGE=0.2, COMMISSION=0.15;
 var PATIENCE_ACCUEIL=60, DELAI_RELAIS=15*MIN, DELAI_REQ=40*MIN, RELAIS_REQ=12*MIN, TAUX_REQUETE=0.45;
 var DUREE_MENAGE=30, DUREE_MENAGE_MOI=90, PAR_FEMME=12, PAR_ACCUEIL=25;
@@ -570,11 +576,11 @@ function etatInitial(){
   var postes={}, k;
   for(k in ROLES) postes[k]={salaire:ROLES[k].salaire,heures:8};
   return {v:V,nom:"",prenom:"Vincent",devise:"$",fondeLe:0,horloge:0,modif:0,jour:1,caisse:CAISSE_DEPART,palier:0,portes:true,
-    chambres:[],nChambre:1,equip:{},postes:postes,tarifs:{chambre:100,pdj:REF.pdj,repas:REF.repas,bar:REF.bar,spa:REF.spa,parking:REF.parking,seminaire:REF.seminaire},
+    chambres:[],nChambre:1,equip:{},postes:postes,tarifs:{basse:100,chambre:100,haute:100,pointe:100,pdj:REF.pdj,repas:REF.repas,bar:REF.bar,spa:REF.spa,parking:REF.parking,seminaire:REF.seminaire},
     equipe:[],nEquipe:1,candidats:{},nCandidat:1,sejours:[],nSejour:1,visites:[],nVisite:1,requetes:[],nRequete:1,arrivees:[],evts:[],
     avis:[55,55,55,55,55,55,55,55,55,55],finis:0,stat:statVide(),accueil:{ok:0,moyen:0,auto:0,autoMoyen:0},req:{ok:0,moyen:0,auto:0,sans:0},
     stock:{},commandes:[],auto:true,demandes:[],nDemande:1,demande:{},plaintes:[],nPlainte:1,bordereaux:[],contestes:[],nBord:1,immos:[],frac:{},valStock:{},
-    evenements:[],nEv:1,acomptes:0,
+    evenements:[],nEv:1,acomptes:0,salons:[],salonsJusqua:0,
     tvaP:tvaVide(),declarations:[],tvaHisto:[],nFisc:1,impots:[],exercices:[],capital:0,apport5000:1,moi25000:1,reserve:0,reporte:0,pertes:0,affectation:null,
     registre:[],journal:[],cj:{},cm:{},prochaineCloture:0,
     moi:moiVide(),releve:0,decalage:0};
@@ -593,6 +599,8 @@ function migrer(){
   neuf=moiVide(); for(k in neuf) if(S.moi[k]===undefined) S.moi[k]=neuf[k];
   for(k in ROLES) if(!S.postes[k]) S.postes[k]={salaire:ROLES[k].salaire,heures:8};
   for(k in REF) if(S.tarifs[k]===undefined) S.tarifs[k]=REF[k];
+  PERIODES.forEach(function(P){ if(S.tarifs[P.cle]===undefined) S.tarifs[P.cle]=S.tarifs.chambre; });
+  if(S.fondeLe) prevoirSalons(S.horloge||Date.now());
   if(!S.releve) S.releve=prochaineReleve(S.horloge||Date.now());
   // Les postes de nuit n'existent plus : ceux qui en avaient passent au repos ces jours-là
   S.equipe.forEach(function(e){ if(e.plan) e.plan=e.plan.map(function(k){ return k==="N"?"R":k; }); });
@@ -819,13 +827,65 @@ function aHeure(jour,hh){ var d=new Date(jour); return new Date(d.getFullYear(),
 // De 22 h à 6 h, l'hôtel dort : personne n'arrive, personne ne travaille
 function nuit(t){ var hh=new Date(t).getHours(); return hh>=22||hh<6; }
 
+/* ------------------------------------------------------------------ Les périodes */
+// Jours fériés belges d'une année, par "mois-jour"
+var FERIES={};
+function paques(an){
+  var a=an%19,b=Math.floor(an/100),c=an%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),j=(h+l-7*m+114)%31+1;
+  return new Date(an,mo-1,j).getTime();
+}
+function feriesDe(an){
+  var l={}, p=paques(an);
+  function mettre(t,nom){ var d=new Date(t); l[(d.getMonth()+1)+"-"+d.getDate()]=nom; }
+  [[0,1,"Nouvel An"],[4,1,"Fête du Travail"],[6,21,"Fête nationale"],[7,15,"Assomption"],[10,1,"Toussaint"],[10,11,"Armistice"],[11,25,"Noël"]].forEach(function(x){ mettre(new Date(an,x[0],x[1]).getTime(),x[2]); });
+  mettre(jourApres(p,1),"Lundi de Pâques"); mettre(jourApres(p,39),"Ascension"); mettre(jourApres(p,50),"Lundi de Pentecôte");
+  return l;
+}
+function ferie(j){ var d=new Date(j), an=d.getFullYear(); if(!FERIES[an]) FERIES[an]=feriesDe(an); return FERIES[an][(d.getMonth()+1)+"-"+d.getDate()]||null; }
+// Les salons, foires et festivals en ville, annoncés deux mois à l'avance
+function prevoirSalons(t){
+  var j0=minuit(t), j=S.salonsJusqua||jourApres(j0,5), n, x;
+  if(!S.salons) S.salons=[];
+  while(j<jourApres(j0,60)){
+    j=jourApres(j,entre(12,26)); n=entre(2,3);
+    x={nom:NOMS_SALONS[entre(0,NOMS_SALONS.length-1)],debut:j,fin:jourApres(j,n-1)}; S.salons.push(x);
+    if(S.fondeLe&&S.salonsJusqua) noter(t,"",x.nom+" en ville "+(n>1?"du "+dateCourte(x.debut)+" au "+dateCourte(jourApres(x.fin,1)):"le "+dateCourte(x.debut))+" : attendez-vous à du monde.");
+    j=jourApres(j,n);
+  }
+  S.salonsJusqua=j;
+  S.salons=S.salons.filter(function(s){ return s.fin>=jourApres(j0,-1); });
+}
+function salonLe(j){ var i; for(i=0;i<(S.salons||[]).length;i++) if(S.salons[i].debut<=j&&S.salons[i].fin>=j) return S.salons[i]; return null; }
+// L'affluence d'une nuit (j : le jour de l'hôtel, à minuit) : la saison, le jour de la semaine, la veille d'un jour férié, un salon en ville
+function facteurJour(j){
+  var f=JOURS_F[jourSemaine(j)];
+  if(ferie(jourApres(j,1))) f=Math.max(f,VEILLE_F);
+  f*=SAISONS[saisonDe(j)].f;
+  if(salonLe(j)) f*=SALON_F;
+  return f;
+}
+function periodeDe(j){ var f=facteurJour(j); return f<0.9?0:f<1.12?1:f<1.4?2:3; }
+function pctLe(j){ return S.tarifs[PERIODES[periodeDe(j)].cle]; }
+function raisonJour(j){
+  var s=salonLe(j), f=ferie(jourApres(j,1)), w=jourSemaine(j);
+  if(s) return s.nom;
+  if(f) return "Veille de jour férié ("+f+")";
+  return SAISONS[saisonDe(j)].nom+(w===4||w===5?", week-end":w===6?", dimanche soir":", semaine");
+}
+
 // Chambres
 function chambre(id){ return parId(S.chambres,id); }
 function prixRef(c){ return Math.round(TYPES[c.type].prix*COTES[c.cote].mult*NIVEAUX[c.niv].mult); }
-function prixChambre(c){ return Math.round(prixRef(c)*S.tarifs.chambre/100); }
+// Le prix d'une chambre une nuit donnée (aujourd'hui par défaut) : il suit la période de cette nuit
+function prixChambre(c,j){ return Math.round(prixRef(c)*pctLe(j===undefined?jourHotel(S.horloge):j)/100); }
 function typePour(n){ return n<=1?"simple":n===2?"double":"familiale"; }
 // Un client logé dans une chambre plus grande que nécessaire paie le prix d'une chambre à sa taille
-function prixPour(sj,c){ return Math.min(prixChambre(c),Math.round(TYPES[typePour(sj.pers)].prix*COTES[c.cote].mult*NIVEAUX[c.niv].mult*S.tarifs.chambre/100)); }
+function prixPourNuit(sj,c,j){ return Math.min(prixChambre(c,j),Math.round(TYPES[typePour(sj.pers)].prix*COTES[c.cote].mult*NIVEAUX[c.niv].mult*pctLe(j)/100)); }
+// Les nuits d'un séjour : le prix de chacune, selon sa période
+function nuitsDe(sj){ var j0=jourHotel(Math.max(S.horloge,sj.arrive)), l=[], d; for(d=0;d<Math.max(1,sj.nuits);d++) l.push(jourApres(j0,d)); return l; }
+function prixNuits(sj,c){ return nuitsDe(sj).map(function(j){ return prixPourNuit(sj,c,j); }); }
+// Le prix moyen d'une nuit sur tout le séjour
+function prixPour(sj,c){ var l=prixNuits(sj,c), n=0; l.forEach(function(x){ n+=x; }); return Math.round(n/l.length); }
 function prixAchat(type,cote){ return Math.round(TYPES[type].achat*COTES[cote].achat/50)*50; }
 function pretes(){ return S.chambres.filter(function(c){ return !c.sj&&c.etat==="propre"; }); }
 function occupees(){ var n=0; S.chambres.forEach(function(c){ if(c.sj) n++; }); return n; }
@@ -920,18 +980,24 @@ function manquer(k){ S.stat.ruptures[k]=(S.stat.ruptures[k]||0)+1; }
 
 // Prix et fréquentation
 function refDe(k){ return k==="chambre"?100:Math.round(REF[k]*MULT_REF[k][niv(EQUIP_DE[k])]); }
+function cibleR(R){ return Math.max(0.2,R<=1?1+0.4*(1-R):1/(1+ELASTICITE*(R-1)*(R-1))); }
+// La fréquentation vers laquelle tend un prix. Pour les chambres, chaque période a la sienne (ch0, chambre, ch2, ch3).
 function demandeCible(d){
-  var k=CLES_DEMANDE[d], R=S.tarifs[k]/Math.max(1,refDe(k));
-  return Math.max(0.2,R<=1?1+0.4*(1-R):1/(1+ELASTICITE*(R-1)*(R-1)));
+  var p=d.charAt(0)==="c"&&d.length===3?+d.charAt(2):null, k;
+  if(p!==null&&!isNaN(p)) return cibleR(S.tarifs[PERIODES[p].cle]/PERIODES[p].ref);
+  k=CLES_DEMANDE[d]; if(k==="chambre") return cibleR(S.tarifs.chambre/100);
+  return cibleR(S.tarifs[k]/Math.max(1,refDe(k)));
 }
+function clePeriode(p){ return p===1?"chambre":"ch"+p; }
 function demande(d){ return S.demande&&S.demande[d]!==undefined?S.demande[d]:1; }
 function ajusterDemande(){
   var d;
   if(!S.demande) S.demande={};
   for(d in CLES_DEMANDE) S.demande[d]=demande(d)+(demandeCible(d)-demande(d))*INERTIE_PRIX;
+  ["ch0","ch2","ch3"].forEach(function(d){ S.demande[d]=demande(d)+(demandeCible(d)-demande(d))*INERTIE_PRIX; });
 }
 // Arrivées attendues par jour : elles suivent le nombre de chambres, la réputation, la saison et les prix
-function attendus(t){ return S.chambres.length*ROTATION*(0.5+reputation()/100)*SAISONS[saisonDe(t)].f*demande("chambre")*(forme("communicant")?1.1:1)*(1+0.03*niv("piscine")); }
+function attendus(t){ var j=jourHotel(t); return S.chambres.length*ROTATION*(0.5+reputation()/100)*facteurJour(j)*demande(clePeriode(periodeDe(j)))*(forme("communicant")?1.1:1)*(1+0.03*niv("piscine")); }
 
 // Personnel
 function absentLe(e,t){ return !!(e.absent&&t>=e.absent.debut&&t<e.absent.fin); }
@@ -1101,9 +1167,9 @@ function nomProfil(sj){
 }
 // Chaque nuit, de nouvelles réservations arrivent pour les trois jours à venir. L'hôtel n'en prend pas plus qu'il n'a de chambres.
 function prendreReservations(t){
-  var base=attendus(t)*(1-PART_PASSAGE), parts=[0.4,0.35,0.25], i, j, n, a, sj, pris=0;
+  var parts=[0.4,0.35,0.25], i, j, n, a, sj, pris=0;
   for(i=0;i<3;i++){
-    n=base*parts[i]*alea(0.7,1.3); n=Math.floor(n)+(Math.random()<n%1?1:0);
+    n=attendus(aHeure(jourApres(minuit(t),i),12))*(1-PART_PASSAGE)*parts[i]*alea(0.7,1.3); n=Math.floor(n)+(Math.random()<n%1?1:0);
     for(j=0;j<n;j++){
       a=aHeure(jourApres(minuit(t),i),alea(14,21));
       if(a<=t+30*MIN) continue;
@@ -1136,16 +1202,16 @@ function meilleureNote(sj){
   return m;
 }
 function nuitee(sj,t){
-  sj.facturees++;
-  recette(t,"chambres",sj.prixNuit,sj.canal); sj.paye+=sj.prixNuit;
-  if(sj.canal==="plateforme") inscrire(t,"m:chambres",sj.prixNuit*COMMISSION);
+  var i=sj.facturees++, prix=sj.prixN&&sj.prixN[i]!==undefined?sj.prixN[i]:sj.prixNuit;
+  recette(t,"chambres",prix,sj.canal); sj.paye+=prix;
+  if(sj.canal==="plateforme") inscrire(t,"m:chambres",prix*COMMISSION);
   if(sj.parking){ recette(t,"parking",S.tarifs.parking,sj.canal); sj.paye+=S.tarifs.parking; }
 }
 // Une fois la chambre attribuée, le client s'installe. Ses repas, ses passages au bar et ses demandes sont prévus pour tout le séjour.
 function loger(sj,c,t,auto){
   var prix=prixPour(sj,c), mieux=meilleureNote(sj), a=adequation(sj,c,prix);
   sj.etat="loge"; sj.ch=c.id; c.sj=sj.id; sj.bloc=null; sj.prixNuit=prix; sj.adeq=a; sj.parMoi=!auto; sj.auto=0; sj.entree=t;
-  sj.ratio=S.tarifs.chambre/100; sj.attente=Math.round((t-sj.arrive)/MIN);
+  sj.prixN=prixNuits(sj,c); sj.ratio=0; nuitsDe(sj).forEach(function(j){ var P=PERIODES[periodeDe(j)]; sj.ratio+=S.tarifs[P.cle]/P.ref/sj.prixN.length; }); sj.attente=Math.round((t-sj.arrive)/MIN);
   sj.fin=aHeure(jourApres(jourHotel(t),sj.nuits),alea(7,11));
   if(sj.fin<t+2*HEURE) sj.fin=t+2*HEURE;
   if(new Date(t).getHours()<6) nuitee(sj,t);
@@ -1586,7 +1652,7 @@ function cloturer(t){
   garde=cleJour(t-JOURS_GARDES*JOUR);
   for(vieux in S.cj) if(vieux<garde) delete S.cj[vieux];
   monterPalier(t);
-  absences(t); reglements(t); ajusterDemande();
+  absences(t); reglements(t); ajusterDemande(); prevoirSalons(t);
   S.plaintes.slice().forEach(function(x){ if(x.limite<=t) indemniser(x,t,true); });
   prendreReservations(t); demandesEv(t); planifierJour(t,t,true); planifierEvenement(t);
   affecterMenage(t); affecterVisites(t); reappro(t);
@@ -1868,7 +1934,7 @@ function ecranAccueil(){
     +tuile("g2","equipe","Équipe",pl(S.equipe.length,"personne","personnes"),"equipe")
     +tuile("g6","horloge","Planning",enPosteMaintenant()+" en poste","planning")
     +tuile("g2","caisse","Économat",pl(produitsConnus().filter(function(k){ return stockDe(k)<=seuilStock(); }).length,"stock bas","stocks bas"),"economat")
-    +tuile("g5","tarifs","Tarifs","Chambres à "+S.tarifs.chambre+" %","tarifs")
+    +tuile("g5","tarifs","Tarifs","Période "+PERIODES[periodeDe(jourHotel(S.horloge))].nom.toLowerCase()+" · "+pctLe(jourHotel(S.horloge))+" %","tarifs")
     +tuile("g6","finances","Finances","Aujourd'hui "+signeM(jr),"finances")
     +tuile("g1","journal","Journal",S.journal.length?quandTxt(S.journal[0].t):"Rien à signaler","journal")
     +tuile("g4","recrut","Recrutement","Engager du personnel","recrutement")
@@ -2274,11 +2340,28 @@ function carteTarif(k){
     +(dk?ligne("Fréquentation",pourcent(d)+(Math.abs(cible-d)>=0.01?' <span class="aide">(tend vers '+pourcent(cible)+')</span>':"")):"")
     +'<p class="aide'+(dk&&cible<0.75?" moins-c":"")+'">'+effet+'</p></div>';
 }
+// Les chambres : un prix par période, et les nuits qui viennent
+function carteChambres(){
+  var j0=jourHotel(S.horloge), p0=periodeDe(j0), min=null, max=null, i, j, p, nuits="";
+  S.chambres.forEach(function(c){ var x=prixChambre(c); if(min===null||x<min) min=x; if(max===null||x>max) max=x; });
+  var rangs=PERIODES.map(function(P,p){
+    var v=S.tarifs[P.cle], d=demande(clePeriode(p)), cible=demandeCible(clePeriode(p)), cls=cible<0.75?"bad":cible<0.97?"warn":"ok";
+    return '<div class="reglage"><div><b>'+P.nom+(p===p0?' <span class="puce ok">'+(new Date(S.horloge).getHours()<6?"cette nuit":"ce soir")+'</span>':"")+'</b><br><span class="aide">La clientèle trouve normal '+P.ref+' % · fréquentation '+pourcent(d)+(Math.abs(cible-d)>=0.01?' → '+pourcent(cible):"")+'</span></div>'
+      +pas("prix",P.cle,v+" %",PAS_PRIX.chambre,v>30,v<300,"le prix en période "+P.nom.toLowerCase())+'</div>';
+  }).join("");
+  for(i=0;i<14;i++){
+    j=jourApres(j0,i); p=periodeDe(j);
+    nuits+='<li class="rang"><div><b>'+(i===0?(new Date(S.horloge).getHours()<6?"Cette nuit":"Ce soir"):i===1?"Demain":dateCourte(j))+'</b><small>'+h(raisonJour(j))+'</small></div><div class="droite"><span class="puce '+["","","warn","bad"][p]+'">'+PERIODES[p].nom+' · '+S.tarifs[PERIODES[p].cle]+' %</span></div></li>';
+  }
+  return '<div class="carte"><h2>Chambres</h2><p class="aide">En pourcentage du prix habituel de chaque chambre. Chaque nuit tombe dans une période : la saison, le week-end, la veille d\'un jour férié et les salons en ville font venir du monde. Le client paie chaque nuit au prix de sa période, fixé le jour où il s\'installe.</p>'
+    +rangs+ligne("Aujourd\'hui, votre chambre la moins chère",mt(min))+ligne("Aujourd\'hui, la plus chère",mt(max))+'</div>'
+    +'<div class="bloc"><h2>Les 14 prochaines nuits</h2><ul class="liste">'+nuits+'</ul></div>';
+}
 function ecranTarifs(){
-  var cles=["chambre"].concat(["pdj","repas","bar","spa","parking","seminaire"].filter(function(k){ return niv(EQUIP_DE[k])>=(k==="repas"?2:1); }));
+  var cles=[].concat(["pdj","repas","bar","spa","parking","seminaire"].filter(function(k){ return niv(EQUIP_DE[k])>=(k==="repas"?2:1); }));
   return barre()+entete("Tarifs","Vos prix, et ce qu'ils font à la fréquentation.")
     +'<p class="aide">Tous les prix sont TVA comprise. Aucun client ne refuse votre prix. Mais un hôtel cher se fait une réputation : il y vient peu à peu moins de monde, et les clients repartent un peu moins contents. Un hôtel bon marché en attire davantage.</p>'
-    +cles.map(carteTarif).join("")
+    +carteChambres()+cles.map(carteTarif).join("")
     +'<p class="aide">Quand un équipement monte de niveau, son prix habituel monte aussi : pensez à revoir votre tarif.</p>';
 }
 function periode(vue,decal){
@@ -2498,7 +2581,7 @@ var A={
   fonder:function(){
     var t=Date.now(), heure=new Date(t).getHours();
     S=etatInitial(); S.nom=(U.fond.nom||"").trim()||"Hôtel des Tilleuls"; S.prenom=(U.fond.prenom||"").trim()||"Vincent"; S.devise=U.fond.devise;
-    S.fondeLe=t; S.horloge=t; S.prochaineCloture=prochainMinuit(t); S.releve=prochaineReleve(t);
+    S.fondeLe=t; S.horloge=t; prevoirSalons(t); S.prochaineCloture=prochainMinuit(t); S.releve=prochaineReleve(t);
     [["double","rue","haut"],["double","jardin","rez"]].forEach(function(x){ var c=ajouterChambre(x[0],x[1],x[2]); S.immos.push({cle:"ch"+c.id,nom:"Chambre "+c.n,sv:"chambres",v:prixAchat(x[0],x[1]),c:0,t:t}); });
     produitsConnus().forEach(function(k){ S.stock[k]=STOCK_DEPART; S.valStock[k]=STOCK_DEPART*PRODUITS[k].cout; });
     noter(t,"ok",S.prenom+" ouvre « "+S.nom+" » avec deux chambres. Les premières réservations ne vont pas tarder.");
@@ -2640,7 +2723,7 @@ var A={
     e.plan[j]=CYCLE_POSTES[e.plan[j]]||"M"; replanifier(t); affecterMenage(t); affecterVisites(t); return true;
   },
   prix:function(d){
-    var k=d.k, ch=k==="chambre";
+    var k=d.k, ch=CLES_PERIODE[k]!==undefined;
     if(S.tarifs[k]===undefined) return false;
     S.tarifs[k]=borne(S.tarifs[k]+(+d.d),ch?30:0,ch?300:refDe(k)*5); return true;
   },
