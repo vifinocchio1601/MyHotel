@@ -400,11 +400,11 @@ var EQUIP={
 var ORDRE_EQUIP=["resto","parking","hall","buanderie","bar","spa","seminaire","piscine"];
 var EQUIP_MAX=5, PART_ENTRETIEN=0.005;
 // Les prix habituels suivent le niveau de l'équipement
-var REF={pdj:12,repas:28,bar:9,spa:60,parking:10,seminaire:45};
-var MULT_REF={pdj:[1,1,1,1.15,1.3,1.6],repas:[1,1,1,1.25,1.6,2.3],bar:[1,1,1.1,1.3,1.6,2],spa:[1,1,1.1,1.25,1.5,1.9],seminaire:[1,1,1.1,1.2,1.35,1.5],parking:[1,1,1,1.2,1.5,2]};
-var EQUIP_DE={pdj:"resto",repas:"resto",bar:"bar",spa:"spa",parking:"parking",seminaire:"seminaire"};
-var PAS_PRIX={chambre:5,pdj:1,repas:1,bar:1,spa:5,parking:1,seminaire:5};
-var NOMS_PRIX={chambre:"Chambres",pdj:"Petit-déjeuner, par personne",repas:"Repas au restaurant, par personne",bar:"Consommation au bar, par personne",spa:"Soin au spa",parking:"Place de parking, par nuit",seminaire:"Séminaire, par participant"};
+var REF={pdj:12,repas:28,bar:9,spa:60,parking:10,seminaire:45,minibar:6,roomservice:34};
+var MULT_REF={pdj:[1,1,1,1.15,1.3,1.6],repas:[1,1,1,1.25,1.6,2.3],bar:[1,1,1.1,1.3,1.6,2],spa:[1,1,1.1,1.25,1.5,1.9],seminaire:[1,1,1.1,1.2,1.35,1.5],parking:[1,1,1,1.2,1.5,2],minibar:[1,1,1,1.1,1.2,1.35],roomservice:[1,1,1,1.25,1.6,2.3]};
+var EQUIP_DE={pdj:"resto",repas:"resto",bar:"bar",spa:"spa",parking:"parking",seminaire:"seminaire",minibar:"bar",roomservice:"resto"};
+var PAS_PRIX={minibar:1,roomservice:1,chambre:5,pdj:1,repas:1,bar:1,spa:5,parking:1,seminaire:5};
+var NOMS_PRIX={chambre:"Chambres",pdj:"Petit-déjeuner, par personne",repas:"Repas au restaurant, par personne",bar:"Consommation au bar, par personne",spa:"Soin au spa",parking:"Place de parking, par nuit",seminaire:"Séminaire, par participant",minibar:"Article du minibar",roomservice:"Repas servi en chambre, par personne"};
 // Un hôtel cher se fait une réputation : la fréquentation glisse peu à peu vers un niveau qui dépend du prix
 var ELASTICITE=2, INERTIE_PRIX=0.25, CLES_DEMANDE={chambre:"chambre",resto:"repas",bar:"bar",spa:"spa",seminaire:"seminaire"};
 // Les passages au restaurant, au bar et au spa : durée et patience en minutes réelles
@@ -422,8 +422,11 @@ var FEMMES=["femme","gouvernante"], CUISINE=["cuisinier","chef"], ACCUEIL=["rece
 // L'économat : ce que l'hôtel consomme. La taille des lots suit le palier.
 var PRODUITS={
   linge:{nom:"Linge propre",unite:"jeux",cout:4},accueil:{nom:"Produits d'accueil",unite:"lots",cout:2},pdj:{nom:"Petits-déjeuners",unite:"portions",cout:3},
-  denrees:{nom:"Denrées du restaurant",unite:"couverts",cout:8},boissons:{nom:"Boissons",unite:"verres",cout:3},soins:{nom:"Produits de soin",unite:"soins",cout:6}};
-var ORDRE_PRODUITS=["linge","accueil","pdj","denrees","boissons","soins"];
+  denrees:{nom:"Denrées du restaurant",unite:"couverts",cout:8},boissons:{nom:"Boissons",unite:"verres",cout:3},minibar:{nom:"Articles de minibar",unite:"articles",cout:1.5},soins:{nom:"Produits de soin",unite:"soins",cout:6}};
+var ORDRE_PRODUITS=["linge","accueil","pdj","denrees","boissons","minibar","soins"];
+// Minibar : installé chambre par chambre, regarni au ménage. Room service : le soir, avec un serveur et un cuisinier en poste.
+var MB_PRIX=120, MB_CAP=8, RS_HEURES=[19,21.75];
+var MB_GOUT={affaires:0.5,luxe:0.6,couple:0.4,famille:0.45,amis:0.55,senior:0.2,routard:0.1}, RS_GOUT={affaires:0.25,luxe:0.35,couple:0.18,famille:0.12,amis:0.1,senior:0.1,routard:0.03};
 var STOCK_DEPART=8, LOTS=[10,20,40,80,150], FOIS_GROS=5, REMISE_GROS=0.85, SURCOUT_AUTO=1.15, DELAI_LIVRAISON=30*MIN;
 // Les demandes des clients pendant leur séjour. Chaque réponse a un effet (e) sur la satisfaction ; la meilleure dépend
 // de ce que l'hôtel a sous la main : personnel en poste, chambre libre, stock.
@@ -557,7 +560,7 @@ var EVENEMENTS={
   societe:{nom:"Dîner",service:"soir",jours:[1,2,3],taille:[0.4,0.8],chambres:0.08},
   famille:{nom:"Fête de famille",service:"midi",jours:[6],taille:[0.4,0.8],chambres:0.04}};
 var ACOMPTE=0.3, TAUX_BANQUET=0.2;
-var TVA_PRODUIT={linge:0.21,accueil:0.21,pdj:0.06,denrees:0.06,boissons:0.21,soins:0.21}, GRILLE_VENTE={"0.06":"g01","0.12":"g02","0.21":"g03"};
+var TVA_PRODUIT={linge:0.21,accueil:0.21,pdj:0.06,denrees:0.06,boissons:0.21,minibar:0.21,soins:0.21}, GRILLE_VENTE={"0.06":"g01","0.12":"g02","0.21":"g03"};
 // L'exercice comptable dure un trimestre. À la clôture : impôt des sociétés de 25 % sur le bénéfice (les pertes se reportent),
 // 5 % du bénéfice en réserve légale jusqu'à 10 % du capital, puis le directeur décide du dividende, soumis à 30 % de précompte mobilier.
 var TAUX_ISOC=0.25, PRECOMPTE=0.3, PART_RESERVE=0.05, PLAFOND_RESERVE=0.1, DELAI_AFFECTATION=20;
@@ -574,16 +577,16 @@ var NOMS=["Marchetti","Roche","El Amrani","Vasseur","Lemoine","Bertin","Okafor",
 /* ------------------------------------------------------------------ État */
 function moiVide(){ return {argent:0,gagne:0,actif:0,tranche:0,formations:{},place:0,taux:4.5,gainsPlace:0,pret:0,interets:0,gainsPret:0,dons:0,dividendes:0,biens:{}}; }
 function tvaVide(){ return {g01:0,g02:0,g03:0,g54:0,g81:0,g82:0,g83:0,g59:0}; }
-function statVide(){ return {arrives:0,departs:0,repartis:0,deloges:0,complet:0,couverts:0,visites:{},rates:{},ruptures:{},sansReponse:0}; }
+function statVide(){ return {arrives:0,departs:0,repartis:0,deloges:0,complet:0,couverts:0,visites:{},rates:{},ruptures:{},sansReponse:0,minibar:0,mbVentes:0,rs:0,rsRates:0}; }
 function etatInitial(){
   var postes={}, k;
   for(k in ROLES) postes[k]={salaire:ROLES[k].salaire,heures:8};
   return {v:V,nom:"",prenom:"Vincent",devise:"$",fondeLe:0,horloge:0,modif:0,jour:1,caisse:CAISSE_DEPART,palier:0,portes:true,
-    chambres:[],nChambre:1,equip:{},postes:postes,tarifs:{basse:100,chambre:100,haute:100,pointe:100,pdj:REF.pdj,repas:REF.repas,bar:REF.bar,spa:REF.spa,parking:REF.parking,seminaire:REF.seminaire},
+    chambres:[],nChambre:1,equip:{},postes:postes,tarifs:{basse:100,chambre:100,haute:100,pointe:100,pdj:REF.pdj,repas:REF.repas,bar:REF.bar,spa:REF.spa,parking:REF.parking,seminaire:REF.seminaire,minibar:REF.minibar,roomservice:REF.roomservice},
     equipe:[],nEquipe:1,candidats:{},nCandidat:1,sejours:[],nSejour:1,visites:[],nVisite:1,requetes:[],nRequete:1,arrivees:[],evts:[],
     avis:[55,55,55,55,55,55,55,55,55,55],finis:0,stat:statVide(),accueil:{ok:0,moyen:0,auto:0,autoMoyen:0},req:{ok:0,moyen:0,auto:0,sans:0},
     stock:{},commandes:[],auto:true,demandes:[],nDemande:1,demande:{},plaintes:[],nPlainte:1,bordereaux:[],contestes:[],nBord:1,immos:[],frac:{},valStock:{},
-    evenements:[],nEv:1,acomptes:0,salons:[],salonsJusqua:0,habitues:[],nHab:1,avisLigne:[],nAvisL:1,
+    evenements:[],nEv:1,acomptes:0,salons:[],salonsJusqua:0,habitues:[],nHab:1,roomService:false,avisLigne:[],nAvisL:1,
     tvaP:tvaVide(),declarations:[],tvaHisto:[],nFisc:1,impots:[],exercices:[],capital:0,apport5000:1,moi25000:1,reserve:0,reporte:0,pertes:0,affectation:null,
     registre:[],journal:[],cj:{},cm:{},prochaineCloture:0,
     moi:moiVide(),releve:0,decalage:0};
@@ -954,6 +957,12 @@ function tient(extra,bloque){
 function placesLibres(){ var n=capDe("parking"); S.sejours.forEach(function(x){ if(x.etat==="loge"&&x.parking) n--; }); return n; }
 function attenteOk(k,sj){ return k==="parking"?!!sj.parking:niv(ATTENTES[k][1])>=ATTENTES[k][2]; }
 
+// Minibar et room service
+function aMinibar(){ return S.chambres.some(function(c){ return c.mb; }); }
+function rsPossible(){ return niv("resto")>=2; }
+// L'envie d'un client selon le prix : au prix habituel, elle est entière
+function envie(k){ return cibleR(S.tarifs[k]/Math.max(1,refDe(k))); }
+
 // Économat
 function stockDe(k){ return S.stock[k]||0; }
 function produitsConnus(){
@@ -962,6 +971,7 @@ function produitsConnus(){
     if(k==="denrees") return niv("resto")>=2;
     if(k==="boissons") return niv("bar")>=1||niv("seminaire")>=1||niv("resto")>=2;
     if(k==="soins") return niv("spa")>=1;
+    if(k==="minibar") return aMinibar();
     return true;
   });
 }
@@ -1206,7 +1216,11 @@ function meilleureNote(sj){
   return m;
 }
 function nuitee(sj,t){
-  var i=sj.facturees++, prix=sj.prixN&&sj.prixN[i]!==undefined?sj.prixN[i]:sj.prixNuit;
+  var i=sj.facturees++, prix=sj.prixN&&sj.prixN[i]!==undefined?sj.prixN[i]:sj.prixNuit, c=chambre(sj.ch), n;
+  if(c&&c.mb&&c.mbN>0&&Math.random()<(MB_GOUT[sj.profil]||0.35)*envie("minibar")){
+    n=Math.min(c.mbN,entre(1,Math.min(3,sj.pers+1))); c.mbN-=n; S.stat.minibar+=n;
+    recette(t,"bar",S.tarifs.minibar*n,sj.canal); sj.paye+=S.tarifs.minibar*n; S.stat.mbVentes+=S.tarifs.minibar*n;
+  }
   recette(t,"chambres",prix,sj.canal); sj.paye+=prix;
   if(sj.canal==="plateforme") inscrire(t,"m:chambres",prix*COMMISSION);
   if(sj.parking){ recette(t,"parking",S.tarifs.parking,sj.canal); sj.paye+=S.tarifs.parking; }
@@ -1234,6 +1248,7 @@ function programmerSejour(sj,t){
     if(d<sj.nuits){
       if(veut("diner",0.8,0.25)) ev(aHeure(jour,alea(19,20.8)),{k:"vis",v:"soir"});
       if(veut("bar",0.7,0.2)) ev(aHeure(jour,alea(17.2,21.2)),{k:"vis",v:"bar"});
+      if(S.roomService&&rsPossible()&&Math.random()<(RS_GOUT[sj.profil]||0.12)*envie("roomservice")) ev(aHeure(jour,alea(RS_HEURES[0],RS_HEURES[1])),{k:"rs"});
       if(Math.random()<TAUX_REQUETE) ev(aHeure(jour,alea(d?8:Math.min(21.2,Math.max(8,new Date(t).getHours()+1)),21.3)),{k:"req"});
     }
   }
@@ -1398,13 +1413,25 @@ function affecterMenage(t){
 function finMenage(c,t){
   var e=c.men&&c.men.qui?parId(S.equipe,c.men.qui):null;
   if(e){ e.faits=(e.faits||0)+1; if(!remplace(e,t)) gagnerXp(e,1,t); }
-  c.etat="propre"; c.men=null; affecterMenage(t);
+  c.etat="propre"; c.men=null;
+  // Le minibar est regarni avec le ménage. Ce qu'on y met devient une charge quand le client le consomme : on le compte au coût dès qu'il quitte le stock.
+  if(c.mb){ while((c.mbN||0)<MB_CAP&&stockDe("minibar")>0){ sortirStock("minibar",t,"bar"); c.mbN=(c.mbN||0)+1; } if(c.mbN<MB_CAP) manquer("minibar"); }
+  affecterMenage(t);
 }
 
 /* ------------------------------------------------------------------ Restaurant, bar et spa */
 function enService(sv){ var n=0; S.visites.forEach(function(v){ if(v.sv===sv&&v.etat==="service") n++; }); return n; }
 function enFile(sv){ var n=0; S.visites.forEach(function(v){ if(v.sv===sv&&v.etat==="attente") n++; }); return n; }
 function moiCharge(){ var n=0; S.visites.forEach(function(v){ if(v.etat==="service"&&v.moi) n++; }); return n; }
+// Une commande en chambre : il faut un serveur pour monter le plateau et quelqu'un en cuisine
+function roomService(sj,t){
+  var n=sj.pers, i, manque=0;
+  if(!S.roomService||!rsPossible()) return;
+  if(!enPosteRole(["serveur"],t).length||!enPosteRole(CUISINE,t).length){ S.stat.rsRates++; sj.plus=(sj.plus||0)-4; return; }
+  for(i=0;i<n;i++){ if(stockDe("denrees")>0) sortirStock("denrees",t,"resto"); else { manque++; manquer("denrees"); } }
+  var prix=Math.round(S.tarifs.roomservice*n*(manque?0.5:1));
+  recette(t,"resto",prix,sj.canal); sj.paye+=prix; sj.plus=(sj.plus||0)+(manque?-2:3); S.stat.rs++;
+}
 function ouvertPour(k){ return niv(SV[k].sv)>=(k==="midi"||k==="soir"?2:1)&&!((k==="midi"||k==="soir")&&evenementLe(S.horloge,k)); }
 function creerVisite(t,k,n,sj){
   S.visites.push({id:S.nVisite++,k:k,sv:SV[k].sv,n:n,sj:sj||null,arrive:t,limite:t+SV[k].patience*MIN,etat:"attente",staff:[]});
@@ -1767,6 +1794,7 @@ function avancer(jusqua){
       if(a.k==="walk") passage(t,false);
       else if(a.k==="sem") seminaire(t);
       else if(a.k==="req"){ if(sj&&sj.etat==="loge") ouvrirRequete(sj,t); }
+      else if(a.k==="rs"){ if(sj&&sj.etat==="loge") roomService(sj,t); }
       else if(a.k==="vis"&&ouvertPour(a.v)){
         if(!a.sj) creerVisite(t,a.v,a.v==="spa"?1:a.v==="bar"?entre(1,3):entre(1,4),null);
         else if(sj&&sj.etat==="loge") creerVisite(t,a.v,a.v==="spa"?1:a.v==="bar"?Math.min(2,sj.pers):sj.pers,sj.id);
@@ -2201,7 +2229,10 @@ function carteChambre(c){
   else action='<div class="actions"><button type="button" class="btn principal" data-a="ameliorer" data-k="'+c.id+'"'+(S.caisse>=suiv.cout?"":" disabled")+'>Niveau '+(c.niv+1)+' : '+suiv.nom+' · '+mt(suiv.cout)+'</button>'+manqueHtml(suiv.cout)+'</div>';
   return '<div class="carte"><div class="carte-haut"><h3>Chambre '+c.n+' · '+TYPES[c.type].nom+'<small>'+COTES[c.cote].nom+' · '+ETAGES[c.etage].toLowerCase()+' · '+TYPES[c.type].lit+(sj?'<br>'+h(nomComplet(sj))+' · '+pl(sj.pers,"personne","personnes"):"")+'</small></h3>'+etatChambreHtml(c)+'</div>'
     +'<div class="progres nn"><div class="progres-haut"><b>Niveau '+c.niv+' / '+NIV_MAX+'</b><span>'+mt(prixChambre(c))+' la nuit</span></div><div class="piste"><div class="plein" style="width:'+(c.niv/NIV_MAX*100)+'%"></div></div></div>'
-    +'<p class="equips">'+(eq.length?eq.join(", "):"Un lit, une douche, rien de plus.")+'</p>'+action+'</div>';
+    +'<p class="equips">'+(eq.length?eq.join(", "):"Un lit, une douche, rien de plus.")+'</p>'
+    +(c.mb?'<p class="aide">Minibar : '+(c.mbN||0)+' article'+((c.mbN||0)>1?"s":"")+' sur '+MB_CAP+(c.mbN<MB_CAP?", regarni au prochain ménage":"")+'.</p>'
+      :'<div class="actions"><button type="button" class="btn" data-a="minibar" data-k="'+c.id+'"'+(S.caisse>=MB_PRIX?"":" disabled")+'>Installer un minibar · '+mt(MB_PRIX)+'</button></div>')
+    +action+'</div>';
 }
 function ecranChambres(){
   var max=PALIERS[S.palier].chambres, A=U.achat, prix=prixAchat(A.type,A.cote), plein=S.chambres.length>=max, p=prochainPalier(), lit=TYPES[A.type].lit;
@@ -2381,7 +2412,7 @@ function ecranEconomat(){
     +'<p class="aide">La commande automatique coûte 15 % de plus qu\'une commande faite à la main. Un lot de '+G+' coûte 15 % de moins. Livraison en 30 minutes.</p></div>'
     +(S.commandes.length?'<div class="bloc"><h2>Commandes en route</h2><ul class="liste">'+S.commandes.map(function(c){ return '<li class="rang"><div><b>'+c.n+' × '+PRODUITS[c.p].nom+'</b></div><div class="droite"><span class="puce num">livraison dans <span data-reste="'+c.t+'">'+resteTxt(c.t)+'</span></span></div></li>'; }).join("")+'</ul></div>':"")
     +'<div class="bloc"><h2>Stock</h2><ul class="liste">'+connus.map(function(k){
-      var n=stockDe(k), a=prixLot(k,L,false), b=prixLot(k,G,false), usage={linge:"Un jeu par chambre refaite",accueil:"Un lot par chambre refaite",pdj:"Une portion par personne",denrees:"Un couvert par personne au déjeuner, au dîner et aux banquets",boissons:"Un verre par personne au bar, deux par invité aux banquets, et les pauses des séminaires",soins:"Un par soin au spa"}[k];
+      var n=stockDe(k), a=prixLot(k,L,false), b=prixLot(k,G,false), usage={linge:"Un jeu par chambre refaite",accueil:"Un lot par chambre refaite",pdj:"Une portion par personne",denrees:"Un couvert par personne au déjeuner, au dîner et aux banquets",boissons:"Un verre par personne au bar, deux par invité aux banquets, et les pauses des séminaires",soins:"Un par soin au spa",minibar:"Pour regarnir les minibars, au ménage"}[k];
       return '<li class="rang"><div><b>'+PRODUITS[k].nom+'</b><small>'+usage+' · '+mt(PRODUITS[k].cout)+' pièce'+(enCommande(k)?' · '+enCommande(k)+' en route':"")+'</small></div>'
         +'<div class="droite"><span class="puce num '+(n===0?"bad":n<=seuilStock()?"warn":"ok")+'">'+n+' en stock</span>'
         +'<button type="button" class="btn petit" data-a="commander" data-k="'+k+'" data-d="'+L+'"'+(S.caisse-a>=-DECOUVERT_MAX?"":" disabled")+'>+'+L+' · '+mt(a)+'</button>'
@@ -2397,7 +2428,10 @@ function carteTarif(k){
     S.chambres.forEach(function(c){ var p=prixChambre(c); if(min===null||p<min) min=p; if(max===null||p>max) max=p; });
     corps=ligne("Votre chambre la moins chère",mt(min)+" la nuit")+ligne("Votre chambre la plus chère",mt(max)+" la nuit");
   }
-  if(!dk) effet=k==="pdj"?"Payé par les clients de l'hôtel qui prennent le petit-déjeuner.":"Payé chaque nuit par les clients venus en voiture.";
+  if(k==="minibar"){ dk=null; effet="Chaque soir, un client peut se servir. Plus c'est cher, moins il y touche. Aujourd'hui : "+S.stat.minibar+" article"+(S.stat.minibar>1?"s":"")+", "+mt(S.stat.mbVentes)+"."; corps=ligne("Envie des clients",pourcent(envie(k))); }
+  else if(k==="roomservice"){ dk=null; effet="Le soir, de 19 h à 21 h 45, avec un serveur et un cuisinier en poste. Sans eux, le client attend pour rien et le prend mal. Aujourd'hui : "+pl(S.stat.rs,"plateau servi","plateaux servis")+(S.stat.rsRates?", "+pl(S.stat.rsRates,"commande ratée","commandes ratées"):"")+".";
+    corps=ligne("Envie des clients",pourcent(envie(k)))+'<div class="actions"><button type="button" class="btn'+(S.roomService?"":" principal")+'" data-a="roomservice">'+(S.roomService?"Arrêter le room service":"Lancer le room service")+'</button></div>'; }
+  else if(!dk) effet=k==="pdj"?"Payé par les clients de l'hôtel qui prennent le petit-déjeuner.":"Payé chaque nuit par les clients venus en voiture.";
   else effet=Math.abs(cible-d)<0.01?(Math.abs(d-1)<0.01?"Vos prix sont dans la norme.":"La fréquentation s'est installée à ce niveau."):cible<d?"Trop cher pour la clientèle : la fréquentation va baisser peu à peu.":"Meilleur marché : la fréquentation va monter peu à peu.";
   return '<div class="carte"><div class="reglage"><div><b>'+NOMS_PRIX[k]+'</b><br><span class="aide">'+(k==="chambre"?"En pourcentage du prix habituel de chaque chambre":"Prix habituel : "+mt(ref))+'</span></div>'
     +pas("prix",k,k==="chambre"?prix+" %":mt(prix),PAS_PRIX[k],prix>(k==="chambre"?30:0),prix<(k==="chambre"?300:ref*5),"le prix")+'</div>'
@@ -2424,6 +2458,8 @@ function carteChambres(){
 }
 function ecranTarifs(){
   var cles=[].concat(["pdj","repas","bar","spa","parking","seminaire"].filter(function(k){ return niv(EQUIP_DE[k])>=(k==="repas"?2:1); }));
+  if(aMinibar()) cles.push("minibar");
+  if(rsPossible()) cles.push("roomservice");
   return barre()+entete("Tarifs","Vos prix, et ce qu'ils font à la fréquentation.")
     +'<p class="aide">Tous les prix sont TVA comprise. Aucun client ne refuse votre prix. Mais un hôtel cher se fait une réputation : il y vient peu à peu moins de monde, et les clients repartent un peu moins contents. Un hôtel bon marché en attire davantage.</p>'
     +carteChambres()+cles.map(carteTarif).join("")
@@ -2740,6 +2776,15 @@ var A={
     noter(t,"ok","Nouvelle chambre "+c.n+" : "+descChambre(c).toLowerCase()+" ("+mt(prix)+").");
     return true;
   },
+  minibar:function(d){
+    var c=chambre(+d.k), t=maintenant();
+    if(!c||c.mb||S.caisse<MB_PRIX) return false;
+    c.mb=1; c.mbN=0; immobiliser(t,"chambres","mb"+c.id,"Minibar, chambre "+c.n,MB_PRIX);
+    noter(t,"","Minibar installé dans la chambre "+c.n+". Il sera garni au prochain ménage, s'il y a des articles à l'économat.");
+    if(S.auto) reappro(t);
+    return true;
+  },
+  roomservice:function(){ if(!rsPossible()) return false; S.roomService=!S.roomService; return true; },
   ameliorer:function(d){
     var c=chambre(+d.k), t=maintenant(), X;
     if(!c||c.niv>=NIV_MAX||c.niv>=PALIERS[S.palier].niv) return false;
