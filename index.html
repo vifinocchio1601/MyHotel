@@ -301,6 +301,34 @@ button.option:hover:not(:disabled){border-color:var(--faint)}
 .nav-chev{color:var(--faint);display:grid;place-items:center}
 .nav-chev svg{width:16px;height:16px}
 @media (min-width:760px){.accueil-groupes{display:grid;grid-template-columns:1fr 1fr;column-gap:18px;align-items:start}.accueil-groupes .groupe:nth-child(2){margin-top:10px}}
+
+/* Tableau de bord */
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:6px 0 10px}
+.kpis>div{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.carte .kpis>div{background:none}
+.kpis span{font-size:12.5px;color:var(--muted)}
+.kpis b{font-size:17px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpis.grands b{font-size:22px}
+@media (min-width:760px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.spark{width:100%;height:56px;display:block;overflow:visible}
+.spark rect,.spark line{stroke-linecap:butt}
+.spark-l{fill:none;stroke:var(--accent);stroke-width:2;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.spark-base{stroke:var(--line);stroke-width:1;vector-effect:non-scaling-stroke}
+.spark-hit{fill:transparent;stroke:none}
+.spark-hit:hover{fill:rgba(127,127,127,.12)}
+.spark-ax{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:2px}
+.hb{display:grid;grid-template-columns:84px 1fr auto;align-items:center;gap:10px;padding:5px 0;font-size:14px}
+.hb-nom{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb-piste{height:10px;display:block}
+.hb-barre{display:block;height:10px;border-radius:0 4px 4px 0;background:var(--accent);min-width:2px}
+.hb-barre.neg{background:var(--muted)}
+.hb-val{font-variant-numeric:tabular-nums;text-align:right;min-width:80px}
+.tdb-table{overflow-x:auto;margin:14px 0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
+.tdb-table table{border-collapse:collapse;width:100%;font-size:14px;min-width:640px}
+.tdb-table th,.tdb-table td{padding:9px 12px;text-align:right;border-top:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tdb-table th{border-top:0;font-size:12.5px;color:var(--muted);font-weight:600}
+.tdb-table th:first-child,.tdb-table td:first-child{text-align:left}
+.tdb-table td small{display:block;color:var(--muted);font-size:12px}
 @media (min-width:760px){
   .jauges{grid-template-columns:repeat(4,minmax(0,1fr))}
   .tuiles{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -704,7 +732,7 @@ function appliquerPays(){
   GRILLE_VENTE={}; GRILLE_VENTE[String(T.autre)]="g03"; if(!GRILLE_VENTE[String(T.chambres)]) GRILLE_VENTE[String(T.chambres)]="g01"; if(!GRILLE_VENTE[String(T.resto)]) GRILLE_VENTE[String(T.resto)]="g02";
   TAUX_ISOC=P.isoc; PRECOMPTE=P.precompte; TAUX_COTISATIONS=P.cotis;
 }
-function ecranVide(){ return {ecran:"accueil",role:"receptionniste",vue:"jour",decal:0,confirme:null,resume:null,dossier:null,choix:null,retour:null,moiVue:"fiche",planVue:"reception",finPage:"resultat",div:50,resa:null,achat:{type:"double",cote:"rue",etage:"haut"},fond:{nom:"",prenom:"Vincent",devise:"$"},villeNeuve:null,apportNeuf:0,nomNeuf:"",nomHolding:"",apportHolding:5000,hVue:"apercu"}; }
+function ecranVide(){ return {ecran:"accueil",role:"receptionniste",vue:"jour",decal:0,confirme:null,resume:null,dossier:null,choix:null,retour:null,moiVue:"fiche",planVue:"reception",finPage:"resultat",div:50,resa:null,achat:{type:"double",cote:"rue",etage:"haut"},fond:{nom:"",prenom:"Vincent",devise:"$"},villeNeuve:null,apportNeuf:0,nomNeuf:"",nomHolding:"",apportHolding:5000,hVue:"apercu",tdb:30}; }
 var U=ecranVide();
 function valide(o){ return !!(o&&o.v===V&&o.postes&&o.tarifs&&o.equipe&&o.chambres&&o.sejours); }
 function sauver(){ try{ localStorage.setItem(CLE,JSON.stringify(S)); }catch(e){} }
@@ -1929,6 +1957,10 @@ function cloturer(t){
     }
   });
   c=S.cj[cleJour(tj)]||{}; res=recettesDe(c)-depensesDe(c);
+  // L'historique du jour, pour le tableau de bord du groupe
+  if(!S.histo) S.histo=[];
+  S.histo.push({j:minuit(tj),ch:S.chambres.length,occ:occupees(),chHT:Math.round(c["r:chambres"]||0),ca:Math.round(recettesDe(c)),res:Math.round(res),rep:Math.round(reputation())});
+  if(S.histo.length>400) S.histo.splice(0,S.histo.length-400);
   noter(tj,res>=0?"ok":"warn","Jour "+S.jour+" : "+pl(S.stat.arrives,"arrivée","arrivées")+", "+pl(S.stat.departs,"départ","départs")+", "+pl(occupees(),"chambre occupée","chambres occupées")+" cette nuit"+(S.stat.couverts?", "+pl(S.stat.couverts,"couvert","couverts"):"")+(S.stat.deloges?", "+pl(S.stat.deloges,"client envoyé","clients envoyés")+" ailleurs":"")+". Résultat de la journée : "+signeM(res)+".");
   // Le premier jour d'un trimestre : clôture de l'exercice qui s'achève et déclaration de TVA à déposer
   if(new Date(t).getDate()===1&&new Date(t).getMonth()%3===0){ cloturerExercice(tj,t); cloturerTva(tj,t); }
@@ -2374,6 +2406,7 @@ function ecranAccueil(){
     +groupe("L'argent et le groupe",[
       ["g6","finances","Finances","Aujourd'hui "+signeM(jr),"finances",0],
       ["g3","chaine","Mes hôtels",S.groupe.length?pl(S.groupe.length+1,"hôtel","hôtels")+" · ici : "+ville().nom:holding()?holding().nom:chaineOuverte()?"Créer la holding, ouvrir un 2e hôtel":"La chaîne, plus tard","chaine",0],
+      ["g5","finances","Tableau de bord","Tous vos hôtels côte à côte","tableau",0],
       ["g7","equipements","Holding",holding()?"Caisse "+mt(holding().caisse):"Pas encore créée","holding",0],
       ["g8","moi","Ma fiche",mt(S.moi.argent)+" à vous","moi",0],
       ["g1","journal","Journal",S.journal.length?quandTxt(S.journal[0].t):"Rien à signaler","journal",0]])+'</div>'
@@ -2996,6 +3029,53 @@ function ecranHolding(){
   return barre()+entete(X.nom,"Holding · caisse "+mt(X.caisse))
     +'<div class="onglets cinq">'+og("apercu","Aperçu")+og("compta","Compta")+og("moi","Vous")+og("placements","Placer")+og("siege","Siège")+'</div>'+corps;
 }
+
+/* ------------------------------------------------------------------ Tableau de bord du groupe */
+var CACHE_HISTO={};
+// L'historique d'un autre hôtel : lu dans sa partie rangée, une fois par version
+function histoDe(g){ var c=CACHE_HISTO[g.id]; if(c&&c.n===g.json.length) return c.h; var h=[]; try{ h=JSON.parse(g.json).histo||[]; }catch(e){} CACHE_HISTO[g.id]={n:g.json.length,h:h}; return h; }
+function kpi(h,jours,fin){
+  var d=jourApres(minuit(fin),-jours), l=h.filter(function(x){ return x.j>=d; }), k={jours:l.length,ch:0,occ:0,chHT:0,ca:0,res:0,serie:l};
+  l.forEach(function(x){ k.ch+=x.ch; k.occ+=x.occ; k.chHT+=x.chHT; k.ca+=x.ca; k.res+=x.res; });
+  k.to=k.ch?k.occ/k.ch:0; k.adr=k.occ?k.chHT/k.occ:0; k.revpar=k.ch?k.chHT/k.ch:0;
+  return k;
+}
+function pc(x){ return Math.round(x*100)+" %"; }
+// Taux d'occupation jour par jour : une ligne fine, une seule série, l'axe de 0 à 100 %
+function sparkTO(serie){
+  if(serie.length<2) return '<p class="aide">Pas encore assez de jours pour une courbe.</p>';
+  var W=300, H=56, n=serie.length, pts=serie.map(function(x,i){ var y=x.ch?x.occ/x.ch:0; return [Math.round(i/(n-1)*W*10)/10,Math.round((H-2-y*(H-6))*10)/10,y,x.j]; });
+  return '<svg class="spark" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Taux d\'occupation par jour">'
+    +'<line x1="0" x2="'+W+'" y1="'+(H-2)+'" y2="'+(H-2)+'" class="spark-base"/>'
+    +'<polyline points="'+pts.map(function(p){ return p[0]+','+p[1]; }).join(' ')+'" class="spark-l"/>'
+    +pts.map(function(p){ return '<rect x="'+Math.max(0,p[0]-W/n/2)+'" y="0" width="'+(W/n)+'" height="'+H+'" class="spark-hit"><title>'+dateCourte(p[3])+' : '+Math.round(p[2]*100)+' % occupé</title></rect>'; }).join("")
+    +'</svg><div class="spark-ax"><span>'+dateCourte(serie[0].j)+'</span><span>'+dateCourte(serie[n-1].j)+'</span></div>';
+}
+function ecranTableau(){
+  var t=maintenant(), J=U.tdb||30, lignes=[], tot={ch:0,occ:0,chHT:0,ca:0,res:0};
+  lignes.push({id:S.hotelId,nom:S.nom,ville:S.ville,k:kpi(S.histo||[],J,t),rep:Math.round(reputation()),ici:true});
+  S.groupe.forEach(function(g){ var h=histoDe(g); lignes.push({id:g.id,nom:g.resume.nom,ville:g.resume.ville,k:kpi(h,J,Math.max(g.resume.maj,h.length?h[h.length-1].j+JOUR:0)),rep:g.resume.rep,maj:g.resume.maj}); });
+  lignes.forEach(function(x){ ["ch","occ","chHT","ca","res"].forEach(function(c){ tot[c]+=x.k[c]; }); });
+  var to=tot.ch?tot.occ/tot.ch:0, adr=tot.occ?tot.chHT/tot.occ:0, revpar=tot.ch?tot.chHT/tot.ch:0, maxR=1;
+  lignes.forEach(function(x){ maxR=Math.max(maxR,Math.abs(x.k.res)); });
+  function og(n,txt){ return '<button type="button" class="onglet'+(J===n?" actif":"")+'" data-a="tdb" data-k="'+n+'">'+txt+'</button>'; }
+  var barres=lignes.map(function(x){ var w=Math.round(Math.abs(x.k.res)/maxR*100);
+    return '<div class="hb" title="'+h(x.nom)+' : '+signeM(x.k.res)+'"><span class="hb-nom">'+h(VILLES[x.ville].nom)+'</span><span class="hb-piste"><span class="hb-barre'+(x.k.res<0?" neg":"")+'" style="width:'+w+'%"></span></span><span class="hb-val '+(x.k.res>=0?"plus-c":"moins-c")+'">'+signeM(x.k.res)+'</span></div>'; }).join("");
+  var tableau='<div class="tdb-table"><table><thead><tr><th>Hôtel</th><th>Occupation</th><th>Prix moyen</th><th>RevPAR</th><th>Chiffre d\'affaires</th><th>Résultat</th><th>Réputation</th></tr></thead><tbody>'
+    +lignes.map(function(x){ return '<tr><td><b>'+h(x.nom)+'</b><small>'+h(VILLES[x.ville].nom)+(x.ici?" · ici":"")+'</small></td><td>'+pc(x.k.to)+'</td><td>'+mt(Math.round(x.k.adr))+'</td><td>'+mt(Math.round(x.k.revpar))+'</td><td>'+mt(x.k.ca)+'</td><td class="'+(x.k.res>=0?"plus-c":"moins-c")+'">'+signeM(x.k.res)+'</td><td>'+x.rep+'</td></tr>'; }).join("")
+    +'</tbody></table></div>';
+  var cartes=lignes.map(function(x){
+    return '<div class="carte"><div class="carte-haut"><h3>'+h(x.nom)+'<small>'+h(VILLES[x.ville].nom)+(x.ici?" · vous êtes ici":x.maj?" · état au "+dateCourte(x.maj):"")+'</small></h3>'+(x.ici?"":'<button type="button" class="btn petit" data-a="allerHotel" data-k="'+x.id+'">Y aller</button>')+'</div>'
+      +(x.k.jours?'<div class="kpis"><div><span>Occupation</span><b>'+pc(x.k.to)+'</b></div><div><span>Prix moyen</span><b>'+mt(Math.round(x.k.adr))+'</b></div><div><span>RevPAR</span><b>'+mt(Math.round(x.k.revpar))+'</b></div><div><span>Résultat</span><b class="'+(x.k.res>=0?"plus-c":"moins-c")+'">'+signeM(x.k.res)+'</b></div></div>'
+        +'<p class="aide">Occupation, jour par jour</p>'+sparkTO(x.k.serie):'<p class="aide">Pas encore de chiffres : ils s\'accumulent à chaque fin de journée.</p>')+'</div>';
+  }).join("");
+  return barre()+entete("Tableau de bord",pl(lignes.length,"hôtel","hôtels")+" · "+J+" derniers jours")
+    +'<div class="onglets">'+og(7,"7 jours")+og(30,"30 jours")+og(90,"90 jours")+og(365,"1 an")+'</div>'
+    +'<div class="kpis grands"><div><span>Chiffre d\'affaires</span><b>'+mt(tot.ca)+'</b></div><div><span>Résultat</span><b class="'+(tot.res>=0?"plus-c":"moins-c")+'">'+signeM(tot.res)+'</b></div><div><span>Occupation</span><b>'+pc(to)+'</b></div><div><span>RevPAR</span><b>'+mt(Math.round(revpar))+'</b></div></div>'
+    +'<p class="aide">Occupation : chambres occupées sur chambres disponibles. Prix moyen : recette des chambres hors TVA par nuit vendue. RevPAR : recette des chambres hors TVA par chambre disponible, vendue ou non. Les hôtels où vous n\'êtes pas s\'arrêtent à votre dernière visite.</p>'
+    +(lignes.length>1?'<div class="carte"><h2>Résultat par hôtel</h2>'+barres+'</div>':'')
+    +tableau+cartes;
+}
 function periode(vue,decal){
   var d=new Date(maintenant()), cles=[], i, q, titre, src="cm";
   if(vue==="jour"){ d.setDate(d.getDate()+decal); cles=[cleJour(d.getTime())]; src="cj"; titre=decal===0?"Aujourd'hui":decal===-1?"Hier":d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"}); }
@@ -3242,6 +3322,7 @@ var A={
     else { if(S.pretH<n||S.caisse<n) return false; S.pretH-=n; X.caisse+=n; X.prets=Math.max(0,X.prets-n); inscrire(t,"q:pret",n); noter(t,"","L'hôtel rembourse "+mt(n)+" à "+X.nom+"."); }
     return true;
   },
+  tdb:function(d){ U.tdb=+d.k; return false; },
   hvue:function(d){ U.hVue=d.k; return false; },
   remun:function(d){ var X=holding(); if(!X) return false; X.remun=borne(X.remun+(+d.d),0,30000); return true; },
   voiture:function(d){
@@ -3649,7 +3730,7 @@ function revenir(){
 
 /* ------------------------------------------------------------------ Boucle */
 var app=document.getElementById("app"), dernier="", dernierBattement=Date.now();
-var ECRANS={evenements:ecranEvenements,agenda:ecranAgenda,accueil:ecranAccueil,clients:ecranClients,fiche:ecranFiche,requete:ecranRequete,chambres:ecranChambres,clientele:ecranClientele,avis:ecranAvis,travaux:ecranTravaux,chaine:ecranChaine,holding:ecranHolding,equipements:ecranEquipements,economat:ecranEconomat,planning:ecranPlanning,equipe:ecranEquipe,recrutement:ecranRecrutement,tarifs:ecranTarifs,finances:ecranFinances,journal:ecranJournal,moi:ecranMoi,reglages:ecranReglages};
+var ECRANS={evenements:ecranEvenements,agenda:ecranAgenda,accueil:ecranAccueil,clients:ecranClients,fiche:ecranFiche,requete:ecranRequete,chambres:ecranChambres,clientele:ecranClientele,avis:ecranAvis,travaux:ecranTravaux,chaine:ecranChaine,holding:ecranHolding,tableau:ecranTableau,equipements:ecranEquipements,economat:ecranEconomat,planning:ecranPlanning,equipe:ecranEquipe,recrutement:ecranRecrutement,tarifs:ecranTarifs,finances:ecranFinances,journal:ecranJournal,moi:ecranMoi,reglages:ecranReglages};
 function rendre(){
   var y=window.scrollY, cle=S.fondeLe?U.ecran:"fondation";
   app.innerHTML='<div class="ecran">'+(S.fondeLe?(ECRANS[U.ecran]||ecranAccueil)():ecranFondation())+'</div>'+(S.fondeLe?navigation():"");
