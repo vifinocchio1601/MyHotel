@@ -2917,7 +2917,7 @@ function ecranAvis(){
   var m=noteEnLigne(), t=maintenant(), att=S.avisLigne.filter(function(a){ return !a.rep; }).length;
   var liste=S.avisLigne.map(function(a){
     var boutons="";
-    if(!a.rep) boutons='<div class="actions">'+Object.keys(REPONSES_AVIS).filter(function(k){ return k!=="geste"||a.e<=3; }).map(function(k){ return '<button type="button" class="btn petit" data-a="repondre" data-k="'+a.id+'" data-d="'+k+'">'+REPONSES_AVIS[k]+'</button>'; }).join("")+'</div><p class="aide">Encore <span data-reste="'+a.limite+'">'+resteTxt(a.limite)+'</span> pour répondre.</p>';
+    if(!a.rep) boutons='<div class="actions">'+Object.keys(REPONSES_AVIS).filter(function(k){ return k!=="geste"||a.e<=3; }).map(function(k){ return '<button type="button" class="btn petit" data-a="repondreAvis" data-k="'+a.id+'" data-d="'+k+'">'+REPONSES_AVIS[k]+'</button>'; }).join("")+'</div><p class="aide">Encore <span data-reste="'+a.limite+'">'+resteTxt(a.limite)+'</span> pour répondre.</p>';
     return '<li class="cand"><div class="fiche seule"><span class="cand-nom">'+h(a.nom)+' <span class="puce '+(a.e>=4?"ok":a.e===3?"warn":"bad")+'">'+etoiles(a.e)+'</span></span>'
       +'<span class="equips">'+h(a.profil)+' · '+dateCourte(a.t)+' · '+CANAUX[a.canal]+(a.hab?' · habitué':'')+'</span>'
       +'<p>« '+h(a.txt)+' »</p>'
@@ -3638,7 +3638,7 @@ var A={
     if(S.tarifs[k]===undefined) return false;
     S.tarifs[k]=borne(S.tarifs[k]+(+d.d),ch?30:0,ch?300:refDe(k)*5); return true;
   },
-  repondre:function(d){
+  repondreAvis:function(d){
     var a=parId(S.avisLigne,+d.k), t=maintenant(), x;
     if(!a||a.rep||!REPONSES_AVIS[d.d]) return false;
     a.rep=d.d;
