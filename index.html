@@ -396,6 +396,16 @@ var ENTREPRENEURS=["Bati-Ourthe","Delvaux & Fils","Constructions Lemaire","Gros 
 // Bon marché mais lent et peu fiable, au prix du marché, ou cher mais rapide et sérieux
 var OFFRES=[{prix:0.85,delai:1.3,fiab:0.55,nom:"Le moins cher"},{prix:1,delai:1,fiab:0.8,nom:"Au prix du marché"},{prix:1.18,delai:0.85,fiab:0.95,nom:"Le plus sérieux"}];
 var NUISANCE=5;
+// La chaîne : chaque hôtel est dans une ville, qui fixe sa clientèle, ses saisons et ses prix
+// f : affluence par saison (hiver, printemps, été, automne). m : poids des profils. we : affluence des nuits du week-end. apport : capital minimum à mettre de votre poche.
+var VILLES={
+  siege:{nom:"Hamoir",region:"Vallée de l'Ourthe",txt:"Votre premier hôtel.",prix:1,m:{}},
+  ardennes:{nom:"Durbuy",region:"Ardennes",txt:"Le week-end et les vacances : randonneurs, familles et retraités. Calme en semaine.",prix:1.05,f:[0.8,1.1,1.4,1.1],m:{routard:1.6,famille:1.3,senior:1.3,affaires:0.4},we:1.25,apport:25000},
+  liege:{nom:"Liège",region:"Cité ardente",txt:"Des gens d'affaires en semaine, des bandes d'amis le week-end. Régulier toute l'année.",prix:1.05,f:[1,1,0.9,1.05],m:{affaires:1.5,amis:1.5,famille:0.7},apport:25000},
+  bruges:{nom:"Bruges",region:"Ville d'art",txt:"Des touristes toute l'année, surtout des couples et des retraités. Prix élevés.",prix:1.25,f:[0.9,1.1,1.2,1],m:{couple:1.6,senior:1.5,luxe:1.3,routard:0.7},apport:40000},
+  cote:{nom:"Knokke",region:"Côte belge",txt:"Bondé l'été, presque vide l'hiver. Familles et couples, et une clientèle aisée.",prix:1.2,f:[0.45,0.9,1.9,0.7],m:{famille:1.8,couple:1.3,luxe:1.4,affaires:0.4},apport:40000},
+  bruxelles:{nom:"Bruxelles",region:"Capitale",txt:"Les affaires toute l'année, des salons et des congrès sans arrêt. Le week-end est plus creux. Prix les plus hauts.",prix:1.35,f:[1.05,1,0.85,1.1],m:{affaires:2.2,luxe:1.5,famille:0.5,routard:0.8},we:0.8,salons:2,apport:60000}};
+var ORDRE_VILLES=["ardennes","liege","bruges","cote","bruxelles"], PALIER_CHAINE=1;
 var ROTATION=0.6, PART_PASSAGE=0.2, COMMISSION=0.15;
 var PATIENCE_ACCUEIL=60, DELAI_RELAIS=15*MIN, DELAI_REQ=40*MIN, RELAIS_REQ=12*MIN, TAUX_REQUETE=0.45;
 var DUREE_MENAGE=30, DUREE_MENAGE_MOI=90, PAR_FEMME=12, PAR_ACCUEIL=25;
@@ -615,14 +625,14 @@ function etatInitial(){
     equipe:[],nEquipe:1,candidats:{},nCandidat:1,sejours:[],nSejour:1,visites:[],nVisite:1,requetes:[],nRequete:1,arrivees:[],evts:[],
     avis:[55,55,55,55,55,55,55,55,55,55],finis:0,stat:statVide(),accueil:{ok:0,moyen:0,auto:0,autoMoyen:0},req:{ok:0,moyen:0,auto:0,sans:0},
     stock:{},commandes:[],auto:true,demandes:[],nDemande:1,demande:{},plaintes:[],nPlainte:1,bordereaux:[],contestes:[],nBord:1,immos:[],frac:{},valStock:{},
-    evenements:[],nEv:1,acomptes:0,salons:[],salonsJusqua:0,habitues:[],nHab:1,places:PLACES_DEPART,chantier:null,faits:{},nChantier:1,distinction:0,buzz:null,roomService:false,avisLigne:[],nAvisL:1,
+    evenements:[],nEv:1,acomptes:0,salons:[],salonsJusqua:0,habitues:[],nHab:1,hotelId:1,ville:"siege",groupe:[],places:PLACES_DEPART,chantier:null,faits:{},nChantier:1,distinction:0,buzz:null,roomService:false,avisLigne:[],nAvisL:1,
     tvaP:tvaVide(),declarations:[],tvaHisto:[],nFisc:1,impots:[],exercices:[],capital:0,apport5000:1,moi25000:1,reserve:0,reporte:0,pertes:0,affectation:null,
     registre:[],journal:[],cj:{},cm:{},prochaineCloture:0,
     moi:moiVide(),releve:0,decalage:0};
 }
 var S=etatInitial();
 // L'état d'écran reste sur l'appareil : il ne fait pas partie de la partie
-function ecranVide(){ return {ecran:"accueil",role:"receptionniste",vue:"jour",decal:0,confirme:null,resume:null,dossier:null,choix:null,retour:null,moiVue:"fiche",planVue:"reception",finPage:"resultat",div:50,resa:null,achat:{type:"double",cote:"rue",etage:"haut"},fond:{nom:"",prenom:"Vincent",devise:"$"}}; }
+function ecranVide(){ return {ecran:"accueil",role:"receptionniste",vue:"jour",decal:0,confirme:null,resume:null,dossier:null,choix:null,retour:null,moiVue:"fiche",planVue:"reception",finPage:"resultat",div:50,resa:null,achat:{type:"double",cote:"rue",etage:"haut"},fond:{nom:"",prenom:"Vincent",devise:"$"},villeNeuve:null,apportNeuf:0,nomNeuf:""}; }
 var U=ecranVide();
 function valide(o){ return !!(o&&o.v===V&&o.postes&&o.tarifs&&o.equipe&&o.chambres&&o.sejours); }
 function sauver(){ try{ localStorage.setItem(CLE,JSON.stringify(S)); }catch(e){} }
@@ -635,6 +645,8 @@ function migrer(){
   for(k in ROLES) if(!S.postes[k]) S.postes[k]={salaire:ROLES[k].salaire,heures:8};
   for(k in REF) if(S.tarifs[k]===undefined) S.tarifs[k]=REF[k];
   if(S.places<S.chambres.length) S.places=S.chambres.length;
+  if(!S.hotelId) S.hotelId=1; if(!VILLES[S.ville]) S.ville="siege"; if(!S.groupe) S.groupe=[];
+  if(!S.moi.nHotel) S.moi.nHotel=1+S.groupe.length;
   S.chambres.forEach(function(c){ if(c.niv>=NIV_DE.minibar&&!c.mb){ c.mb=1; c.mbN=0; } });
   PERIODES.forEach(function(P){ if(S.tarifs[P.cle]===undefined) S.tarifs[P.cle]=S.tarifs.chambre; });
   if(S.fondeLe) prevoirSalons(S.horloge||Date.now());
@@ -864,6 +876,10 @@ function aHeure(jour,hh){ var d=new Date(jour); return new Date(d.getFullYear(),
 // De 22 h à 6 h, l'hôtel dort : personne n'arrive, personne ne travaille
 function nuit(t){ var hh=new Date(t).getHours(); return hh>=22||hh<6; }
 
+/* ------------------------------------------------------------------ La ville de l'hôtel */
+function ville(){ return VILLES[S.ville]||VILLES.siege; }
+function facteurSaison(t){ var s=saisonDe(t), V=ville(); return V.f?V.f[s]:SAISONS[s].f; }
+
 /* ------------------------------------------------------------------ Les périodes */
 // Jours fériés belges d'une année, par "mois-jour"
 var FERIES={};
@@ -884,7 +900,7 @@ function prevoirSalons(t){
   var j0=minuit(t), j=S.salonsJusqua||jourApres(j0,5), n, x;
   if(!S.salons) S.salons=[];
   while(j<jourApres(j0,60)){
-    j=jourApres(j,entre(12,26)); n=entre(2,3);
+    j=jourApres(j,Math.round(entre(12,26)/(ville().salons||1))); n=entre(2,3);
     x={nom:NOMS_SALONS[entre(0,NOMS_SALONS.length-1)],debut:j,fin:jourApres(j,n-1)}; S.salons.push(x);
     if(S.fondeLe&&S.salonsJusqua) noter(t,"",x.nom+" en ville "+(n>1?"du "+dateCourte(x.debut)+" au "+dateCourte(jourApres(x.fin,1)):"le "+dateCourte(x.debut))+" : attendez-vous à du monde.");
     j=jourApres(j,n);
@@ -895,9 +911,10 @@ function prevoirSalons(t){
 function salonLe(j){ var i; for(i=0;i<(S.salons||[]).length;i++) if(S.salons[i].debut<=j&&S.salons[i].fin>=j) return S.salons[i]; return null; }
 // L'affluence d'une nuit (j : le jour de l'hôtel, à minuit) : la saison, le jour de la semaine, la veille d'un jour férié, un salon en ville
 function facteurJour(j){
-  var f=JOURS_F[jourSemaine(j)];
+  var f=JOURS_F[jourSemaine(j)], w=jourSemaine(j);
+  if((w===4||w===5)&&ville().we) f*=ville().we;
   if(ferie(jourApres(j,1))) f=Math.max(f,VEILLE_F);
-  f*=SAISONS[saisonDe(j)].f;
+  f*=facteurSaison(j);
   if(salonLe(j)) f*=SALON_F;
   return f;
 }
@@ -913,14 +930,14 @@ function raisonJour(j){
 // Chambres
 function chambre(id){ return parId(S.chambres,id); }
 function multTheme(c){ return c.theme?THEME_MULT:1; }
-function prixRef(c){ return Math.round(TYPES[c.type].prix*COTES[c.cote].mult*NIVEAUX[c.niv].mult*multTheme(c)); }
+function prixRef(c){ return Math.round(TYPES[c.type].prix*ville().prix*COTES[c.cote].mult*NIVEAUX[c.niv].mult*multTheme(c)); }
 // Le thème plaît-il à ce client ?
 function aimeTheme(sj,c){ var T=c.theme?THEMES[c.theme]:null; return !!T&&(T.profils.indexOf(sj.profil)>=0||(T.ev&&!!sj.ev)||(T.vip&&!!sj.vip)); }
 // Le prix d'une chambre une nuit donnée (aujourd'hui par défaut) : il suit la période de cette nuit
 function prixChambre(c,j){ return Math.round(prixRef(c)*pctLe(j===undefined?jourHotel(S.horloge):j)/100); }
 function typePour(n){ return n<=1?"simple":n===2?"double":"familiale"; }
 // Un client logé dans une chambre plus grande que nécessaire paie le prix d'une chambre à sa taille
-function prixPourNuit(sj,c,j){ return Math.min(prixChambre(c,j),Math.round(TYPES[typePour(sj.pers)].prix*COTES[c.cote].mult*NIVEAUX[c.niv].mult*(aimeTheme(sj,c)?multTheme(c):1)*pctLe(j)/100)); }
+function prixPourNuit(sj,c,j){ return Math.min(prixChambre(c,j),Math.round(TYPES[typePour(sj.pers)].prix*ville().prix*COTES[c.cote].mult*NIVEAUX[c.niv].mult*(aimeTheme(sj,c)?multTheme(c):1)*pctLe(j)/100)); }
 // Les nuits d'un séjour : le prix de chacune, selon sa période
 function nuitsDe(sj){ var j0=jourHotel(Math.max(S.horloge,sj.arrive)), l=[], d; for(d=0;d<Math.max(1,sj.nuits);d++) l.push(jourApres(j0,d)); return l; }
 function prixNuits(sj,c){ return nuitsDe(sj).map(function(j){ return prixPourNuit(sj,c,j); }); }
@@ -1181,7 +1198,7 @@ function melanger(l){ return l.slice().sort(function(){ return Math.random()-0.5
 function tirerProfil(t){
   var d=new Date(t).getDay(), we=d===5||d===6||d===0, sa=SAISONS[saisonDe(t)], total=0, r, i;
   var cles=Object.keys(PROFILS).filter(function(k){ return (PROFILS[k].palier||0)<=S.palier; });
-  function poids(k){ var P=PROFILS[k]; return P.poids*(we?P.we:P.sem)*(sa.m[k]||1)*(k==="famille"||k==="couple"||k==="luxe"?1+0.06*niv("piscine"):1); }
+  function poids(k){ var P=PROFILS[k]; return P.poids*(we?P.we:P.sem)*(sa.m[k]||1)*(ville().m[k]||1)*(k==="famille"||k==="couple"||k==="luxe"?1+0.06*niv("piscine"):1); }
   cles.forEach(function(k){ total+=poids(k); });
   r=Math.random()*total;
   for(i=0;i<cles.length;i++){ r-=poids(cles[i]); if(r<=0) return cles[i]; }
@@ -1921,6 +1938,41 @@ function avancer(jusqua){
   if(jusqua>S.horloge) S.horloge=jusqua;
   return change;
 }
+
+/* ------------------------------------------------------------------ Ouvrir un hôtel */
+function fonderHotel(t,nom,prenom,devise,ville,moi,apport,dec){
+  var heure=new Date(t).getHours();
+  S=etatInitial(); S.nom=nom; S.prenom=prenom; S.devise=devise; S.ville=ville; if(moi) S.moi=moi; if(dec) S.decalage=dec; if(apport) S.caisse=apport;
+  S.fondeLe=t; S.horloge=t; prevoirSalons(t); S.prochaineCloture=prochainMinuit(t); S.releve=prochaineReleve(t);
+  [["double","rue","haut"],["double","jardin","rez"]].forEach(function(x){ var c=ajouterChambre(x[0],x[1],x[2]); S.immos.push({cle:"ch"+c.id,nom:"Chambre "+c.n,sv:"chambres",v:prixAchat(x[0],x[1]),c:0,t:t}); });
+  produitsConnus().forEach(function(k){ S.stock[k]=STOCK_DEPART; S.valStock[k]=STOCK_DEPART*PRODUITS[k].cout; });
+  noter(t,"ok",S.prenom+" ouvre « "+S.nom+" »"+(ville!=="siege"?" à "+VILLES[ville].nom:"")+" avec deux chambres. Les premières réservations ne vont pas tarder.");
+  prendreReservations(t); planifierJour(minuit(t),t,true); S.stat.complet=0;
+  S.capital=Math.round(bilan().propres);
+  // Un premier client se présente dans la demi-heure, pour ne pas ouvrir sur un hôtel vide
+  if(heure>=7&&heure<20&&!S.sejours.some(function(x){ return x.arrive<t+3*HEURE; })) S.sejours.push(creerSejour(t+Math.round(alea(15,35))*MIN,"couple",false));
+}
+
+/* ------------------------------------------------------------------ La chaîne */
+// Ce qu'on garde d'un hôtel quand on le quitte : toute sa partie, et un résumé pour l'écran de la chaîne
+function resumeHotel(){ return {id:S.hotelId,nom:S.nom,ville:S.ville,palier:S.palier,chambres:S.chambres.length,occ:occupees(),caisse:Math.round(S.caisse),rep:Math.round(reputation()),maj:S.horloge}; }
+function rangerHotel(){ var g=S.groupe, r; S.groupe=null; r={id:S.hotelId,resume:resumeHotel(),json:JSON.stringify(S)}; S.groupe=g; return r; }
+function hotelA(k){ return S.ville===k||S.groupe.some(function(x){ return x.resume.ville===k; }); }
+function chaineOuverte(){ return S.palier>=PALIER_CHAINE||S.groupe.some(function(x){ return x.resume.palier>=PALIER_CHAINE; }); }
+// Passer à un autre hôtel : celui qu'on quitte est rangé tel quel ; l'autre rattrape le temps passé sans vous, avec son équipe
+function changerHotel(id){
+  var cible=null, autres, moi=S.moi, dec=S.decalage, courant, N;
+  S.groupe.forEach(function(x){ if(x.id===id) cible=x; });
+  if(!cible) return false;
+  courant=rangerHotel();
+  autres=S.groupe.filter(function(x){ return x.id!==id; }).concat([courant]);
+  try{ N=JSON.parse(cible.json); }catch(e){ return false; }
+  S=N; S.moi=moi; S.decalage=dec; S.groupe=autres; migrer();
+  U=ecranVide();
+  var avant={t:S.horloge,finis:S.finis,caisse:S.caisse,rep:reputation()};
+  if(avancer(maintenant())&&maintenant()-avant.t>=HEURE) U.resume={duree:maintenant()-avant.t,finis:S.finis-avant.finis,caisse:Math.round(S.caisse-avant.caisse),rep:Math.round(reputation()-avant.rep)};
+  return true;
+}
 // Chaque nuit : le portefeuille d'actions rapporte entre 2 % et 7 % par an (le taux bouge un peu chaque jour),
 // et l'hôtel verse au directeur les intérêts de ce qu'il lui a prêté.
 function financesPerso(t){
@@ -2106,7 +2158,7 @@ function ecranAccueil(){
   if(r) bloc='<div class="carte"><div class="carte-haut"><h3>Pendant votre absence<small>'+dureeTxt(r.duree)+'</small></h3><button type="button" class="btn petit" data-a="resume">Fermer</button></div>'
     +'<p>'+pl(r.finis,"séjour terminé","séjours terminés")+'. Caisse : <b class="'+(r.caisse>=0?"plus-c":"moins-c")+'">'+signeM(r.caisse)+'</b>. Réputation : '+(r.rep>0?"+":r.rep<0?"−":"")+Math.abs(r.rep)+' '+(Math.abs(r.rep)>1?"points":"point")+'.</p></div>';
   return barre()
-    +'<div class="titre"><h1>'+h(S.nom)+'</h1><p>'+PALIERS[S.palier].nom+(PALIERS[S.palier].etoiles?' <span class="etoiles">'+etoiles(PALIERS[S.palier].etoiles)+'</span>':"")+' · jour '+S.jour+' · '+SAISONS[saisonDe(maintenant())].nom+' · Directeur : '+h(S.prenom)+'</p></div>'
+    +'<div class="titre"><h1>'+h(S.nom)+'</h1><p>'+PALIERS[S.palier].nom+(PALIERS[S.palier].etoiles?' <span class="etoiles">'+etoiles(PALIERS[S.palier].etoiles)+'</span>':"")+' · '+(S.ville!=="siege"||S.groupe.length?h(ville().nom)+' · ':'')+'jour '+S.jour+' · '+SAISONS[saisonDe(maintenant())].nom+' · Directeur : '+h(S.prenom)+'</p></div>'
     +'<div class="jauges">'
     +jauge("Caisse",mt(S.caisse),S.caisse<0?"n0":"",null,"Aujourd'hui "+signeM(jr))
     +jauge("Réputation",rep+" / 100",rep>=65?"n2":rep<40?"n0":"",rep,libReputation(rep))
@@ -2123,6 +2175,7 @@ function ecranAccueil(){
     +tuile("g1","lit","Chambres",nc+" sur "+maxChambres()+" · "+pl(nl,"occupée","occupées"),"chambres")
     +tuile("g3","guide","Clientèle","Profils et souhaits","clientele")
     +tuile("g8","cloche","Avis",(noteEnLigne()===null?"Aucun avis":virgule(noteEnLigne())+" ★")+" · "+pl(S.avisLigne.filter(function(a){ return !a.rep; }).length,"réponse","réponses")+" à faire","avis")
+    +tuile("g3","chaine","Mes hôtels",S.groupe.length?pl(S.groupe.length+1,"hôtel","hôtels")+" · ici : "+ville().nom:chaineOuverte()?"Ouvrir un 2e hôtel":"La chaîne, plus tard","chaine")
     +tuile("g4","travaux","Travaux",S.chantier?({plans:"Plans",permis:"Permis demandé",refus:"Permis refusé",devis:"Devis à choisir",travaux:"Chantier en cours"})[S.chantier.etape]:S.places+" places","travaux")
     +tuile("g7","equipements","Équipements",ORDRE_EQUIP.filter(function(k){ return niv(k); }).length+" sur "+ORDRE_EQUIP.length+" construits","equipements")
     +tuile("g3","verre","Événements",pl(S.evenements.filter(function(x){ return x.etat==="demande"; }).length,"devis","devis")+" à faire","evenements")
@@ -2639,6 +2692,36 @@ function ecranTravaux(){
     +'<p class="aide">Pour ajouter des chambres, il faut de la place. Un chantier passe par l\'architecte, le permis d\'urbanisme de la commune, puis un entrepreneur. Le bâtiment s\'amortit sur 30 ans. Le terrain ne s\'amortit pas.</p></div>'
     +cours+projets;
 }
+
+/* ------------------------------------------------------------------ La chaîne */
+I.chaine='<svg viewBox="0 0 24 24"><path d="M3 21V10l5-3 5 3v11M13 21V6l4-3 4 3v15M1 21h22M6 13h4M6 17h4M16 9h2M16 13h2M16 17h2"/></svg>';
+function carteHotel(r,ici){
+  var V=VILLES[r.ville]||VILLES.siege;
+  return '<div class="carte"><div class="carte-haut"><h3>'+h(r.nom)+'<small>'+h(V.nom)+' · '+h(V.region)+'</small></h3>'+(ici?'<span class="puce ok">Vous êtes ici</span>':'')+'</div>'
+    +ligne("Palier",nomPalier(r.palier))+ligne("Chambres",r.chambres+(ici?" · "+r.occ+" occupées":""))+ligne("Caisse",mt(r.caisse))+ligne("Réputation",r.rep+" / 100")
+    +(ici?"":'<p class="aide">État au '+dateCourte(r.maj)+' à '+new Date(r.maj).toTimeString().slice(0,5).replace(":"," h ")+'. Son équipe a continué sans vous : vous verrez ce qui s\'est passé en y allant.</p><div class="actions"><button type="button" class="btn principal" data-a="allerHotel" data-k="'+r.id+'">Aller à '+h(V.nom)+'</button></div>')
+    +'</div>';
+}
+function ecranChaine(){
+  var ici=resumeHotel(), tous=[ici].concat(S.groupe.map(function(x){ return x.resume; })), caisse=0, ch=0, ouvrir="";
+  tous.forEach(function(r){ caisse+=r.caisse; ch+=r.chambres; });
+  var libres=ORDRE_VILLES.filter(function(k){ return !hotelA(k); });
+  if(!chaineOuverte()) ouvrir='<div class="carte"><h2>Ouvrir un autre hôtel</h2><p class="aide">Atteignez d\'abord le palier '+nomPalier(PALIER_CHAINE)+' : il faut faire ses preuves avant d\'ouvrir une chaîne.</p></div>';
+  else if(libres.length){
+    var V=VILLES[U.villeNeuve], n=U.apportNeuf||(V?V.apport:0);
+    ouvrir='<div class="bloc"><h2>Ouvrir un autre hôtel</h2><p class="aide">Chaque hôtel est une société à part, avec sa caisse, son équipe et sa compta. Vous y mettez un capital de votre poche (Ma fiche : '+mt(S.moi.argent)+'). Il démarre avec deux chambres, comme le premier. Quand vous n\'y êtes pas, seule son équipe travaille : engagez au moins un réceptionniste avant de partir.</p>'
+      +libres.map(function(k){ var W=VILLES[k], actif=U.villeNeuve===k;
+        return '<div class="carte'+(actif?" actif":"")+'"><div class="carte-haut"><h3>'+h(W.nom)+'<small>'+h(W.region)+'</small></h3><span class="puce num">dès '+mt(W.apport)+'</span></div><p class="aide">'+h(W.txt)+' Prix des chambres × '+String(W.prix).replace(".",",")+'.</p>'
+          +(actif?'<div class="champ"><label for="g-nom">Nom de l\'hôtel</label><input type="text" id="g-nom" maxlength="40" placeholder="Hôtel de '+h(W.nom)+'" value="'+h(U.nomNeuf)+'" autocomplete="off"></div>'
+            +'<div class="reglage"><div><b>Capital apporté</b><br><span class="aide">Ce sera la caisse de départ</span></div>'+pas("apportNeuf","x",mt(n),5000,n>W.apport,n+5000<=S.moi.argent,"le capital")+'</div>'
+            +'<div class="actions"><button type="button" class="btn principal" data-a="ouvrirHotel"'+(S.moi.argent>=n?"":" disabled")+'>Ouvrir à '+h(W.nom)+' · '+mt(n)+'</button>'+(S.moi.argent<n?'<span class="aide">Il vous manque '+mt(n-S.moi.argent)+' sur Ma fiche.</span>':'')+'</div>'
+            :'<div class="actions"><button type="button" class="btn" data-a="villeChoisie" data-k="'+k+'">Choisir '+h(W.nom)+'</button></div>')+'</div>';
+      }).join("")+'</div>';
+  }
+  return barre()+entete("Mes hôtels",pl(tous.length,"hôtel","hôtels")+" · "+pl(ch,"chambre","chambres"))
+    +(tous.length>1?'<div class="carte">'+ligne("Caisse de tous les hôtels",mt(caisse))+ligne("Chambres",String(ch))+'<p class="aide">Pour faire passer de l\'argent d\'un hôtel à l\'autre : un dividende vers Ma fiche dans l\'un, puis prêt du directeur dans l\'autre.</p></div>':"")
+    +tous.map(function(r,i){ return carteHotel(r,i===0); }).join("")+ouvrir;
+}
 function periode(vue,decal){
   var d=new Date(maintenant()), cles=[], i, q, titre, src="cm";
   if(vue==="jour"){ d.setDate(d.getDate()+decal); cles=[cleJour(d.getTime())]; src="cj"; titre=decal===0?"Aujourd'hui":decal===-1?"Hier":d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"}); }
@@ -2853,18 +2936,20 @@ function ajouterChambre(type,cote,etage){
 var A={
   aller:function(d){ U.resa=null; if(d.e==="societes"||d.e==="tva"||d.e==="exercice"){ U.finPage=d.e; d={e:"finances"}; } U.ecran=d.e; U.confirme=null; U.retour=null; U.dossier=null; U.choix=null; if(d.e==="recrutement"){ candidatsDe(roleCourant()); return true; } return false; },
   devise:function(d){ U.fond.devise=d.k; return false; },
-  fonder:function(){
-    var t=Date.now(), heure=new Date(t).getHours();
-    S=etatInitial(); S.nom=(U.fond.nom||"").trim()||"Hôtel des Tilleuls"; S.prenom=(U.fond.prenom||"").trim()||"Vincent"; S.devise=U.fond.devise;
-    S.fondeLe=t; S.horloge=t; prevoirSalons(t); S.prochaineCloture=prochainMinuit(t); S.releve=prochaineReleve(t);
-    [["double","rue","haut"],["double","jardin","rez"]].forEach(function(x){ var c=ajouterChambre(x[0],x[1],x[2]); S.immos.push({cle:"ch"+c.id,nom:"Chambre "+c.n,sv:"chambres",v:prixAchat(x[0],x[1]),c:0,t:t}); });
-    produitsConnus().forEach(function(k){ S.stock[k]=STOCK_DEPART; S.valStock[k]=STOCK_DEPART*PRODUITS[k].cout; });
-    noter(t,"ok",S.prenom+" ouvre « "+S.nom+" » avec deux chambres. Les premières réservations ne vont pas tarder.");
-    prendreReservations(t); planifierJour(minuit(t),t,true); S.stat.complet=0;
-    S.capital=Math.round(bilan().propres);
-    // Un premier client se présente dans la demi-heure, pour ne pas ouvrir sur un hôtel vide
-    if(heure>=7&&heure<20&&!S.sejours.some(function(x){ return x.arrive<t+3*HEURE; })) S.sejours.push(creerSejour(t+Math.round(alea(15,35))*MIN,"couple",false));
-    U.ecran="accueil"; return true;
+  fonder:function(){ fonderHotel(Date.now(),(U.fond.nom||"").trim()||"Hôtel des Tilleuls",(U.fond.prenom||"").trim()||"Vincent",U.fond.devise,"siege",null,0); U.ecran="accueil"; return true; },
+  allerHotel:function(d){ return changerHotel(+d.k); },
+  villeChoisie:function(d){ U.villeNeuve=VILLES[d.k]?d.k:null; U.apportNeuf=U.villeNeuve?VILLES[d.k].apport:0; return false; },
+  apportNeuf:function(d){ var V=VILLES[U.villeNeuve]; if(!V) return false; U.apportNeuf=borne((U.apportNeuf||V.apport)+(+d.d),V.apport,Math.max(V.apport,Math.floor(S.moi.argent/5000)*5000)); return false; },
+  ouvrirHotel:function(){
+    var k=U.villeNeuve, V=VILLES[k], n=U.apportNeuf||0, nom=(U.nomNeuf||"").trim()||"Hôtel de "+V.nom;
+    if(!V||!chaineOuverte()||hotelA(k)||n<V.apport||S.moi.argent<n) return false;
+    var groupe=S.groupe, moi=S.moi, dec=S.decalage, t=maintenant(), courant;
+    moi.argent-=n; moi.nHotel=(moi.nHotel||1)+1;
+    noter(t,"ok",S.prenom+" ouvre un nouvel hôtel à "+V.nom+" : « "+nom+" ».");
+    courant=rangerHotel();
+    fonderHotel(t,nom,S.prenom,S.devise,k,moi,n,dec);
+    S.hotelId=moi.nHotel; S.groupe=groupe.concat([courant]);
+    U=ecranVide(); return true;
   },
   client:function(){
     var t=maintenant(), sj=passage(t,true);
@@ -3210,7 +3295,7 @@ function revenir(){
 
 /* ------------------------------------------------------------------ Boucle */
 var app=document.getElementById("app"), dernier="", dernierBattement=Date.now();
-var ECRANS={evenements:ecranEvenements,agenda:ecranAgenda,accueil:ecranAccueil,clients:ecranClients,fiche:ecranFiche,requete:ecranRequete,chambres:ecranChambres,clientele:ecranClientele,avis:ecranAvis,travaux:ecranTravaux,equipements:ecranEquipements,economat:ecranEconomat,planning:ecranPlanning,equipe:ecranEquipe,recrutement:ecranRecrutement,tarifs:ecranTarifs,finances:ecranFinances,journal:ecranJournal,moi:ecranMoi,reglages:ecranReglages};
+var ECRANS={evenements:ecranEvenements,agenda:ecranAgenda,accueil:ecranAccueil,clients:ecranClients,fiche:ecranFiche,requete:ecranRequete,chambres:ecranChambres,clientele:ecranClientele,avis:ecranAvis,travaux:ecranTravaux,chaine:ecranChaine,equipements:ecranEquipements,economat:ecranEconomat,planning:ecranPlanning,equipe:ecranEquipe,recrutement:ecranRecrutement,tarifs:ecranTarifs,finances:ecranFinances,journal:ecranJournal,moi:ecranMoi,reglages:ecranReglages};
 function rendre(){
   var y=window.scrollY, cle=S.fondeLe?U.ecran:"fondation";
   app.innerHTML='<div class="ecran">'+(S.fondeLe?(ECRANS[U.ecran]||ecranAccueil)():ecranFondation())+'</div>'+(S.fondeLe?navigation():"");
@@ -3253,6 +3338,7 @@ document.addEventListener("click",function(ev){
 document.addEventListener("input",function(ev){
   if(ev.target.id==="f-nom") U.fond.nom=ev.target.value;
   if(ev.target.id==="f-prenom") U.fond.prenom=ev.target.value;
+  if(ev.target.id==="g-nom") U.nomNeuf=ev.target.value;
 });
 document.addEventListener("visibilitychange",function(){
   if(document.hidden){ sauver(); pousser(true); } else { dernierBattement=Date.now(); revenir(); }
