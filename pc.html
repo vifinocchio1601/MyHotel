@@ -2774,7 +2774,7 @@ function carteRole(r){
 function ecranEquipe(){
   var cartes=ORDRE_ROLES.map(carteRole).join("");
   return barre()+entete("Équipe",pl(S.equipe.length,"personne","personnes")+" · "+mt(masseJour(maintenant())*(1+TAUX_COTISATIONS))+" de salaires et cotisations aujourd'hui")
-    +'<ul class="liste"><li class="rang moi"><div><b>'+h(S.prenom)+'</b> (vous)<small>Directeur de l\'hôtel · '+mt(PAIE_DIRECTEUR)+' toutes les 20 minutes de jeu</small><small>Sans personnel, vous accueillez, vous refaites les chambres et vous servez le petit-déjeuner.</small></div><div class="droite"><button type="button" class="btn petit" data-a="aller" data-e="moi">Ma fiche</button></div></li></ul>'
+    +'<ul class="liste"><li class="rang moi"><div><b>'+h(S.prenom)+'</b> (vous)<small>Directeur de l\'hôtel · sans salaire automatique</small><small>Sans personnel, vous accueillez, vous refaites les chambres et vous servez le petit-déjeuner.</small></div><div class="droite"><button type="button" class="btn petit" data-a="aller" data-e="moi">Ma fiche</button></div></li></ul>'
     +'<div class="actions"><button type="button" class="btn" data-a="aller" data-e="planning">'+I.calendrier+'Planning</button><button type="button" class="btn principal" data-a="aller" data-e="recrutement">'+I.recrut+'Recruter</button></div>'
     +(cartes||'<p class="vide">Personne ne travaille encore ici. Un réceptionniste accueille les clients quand vous n\'êtes pas là ; une femme de chambre refait une chambre en une demi-heure au lieu de deux heures.</p>');
 }
@@ -3300,9 +3300,7 @@ function ecranMoi(){
     }).join("")+'</ul>';
   } else {
     corps='<div class="jauges">'+jauge("Argent disponible",mt(M.argent),"",null,"Gagné en tout : "+mt(M.gagne))+jauge("Patrimoine",mt(total),"",null,nbBiens+" "+(nbBiens>1?"biens":"bien")+" sur "+BIENS.length)+'</div>'
-      +'<div class="carte"><div class="carte-haut"><h3>Votre salaire<small>'+mt(PAIE_DIRECTEUR)+' toutes les 20 minutes passées sur le jeu, payés par l\'hôtel.</small></h3></div>'
-      +'<div class="progres nn"><div class="progres-haut"><b>Prochain versement</b><span>dans <span id="paie-reste">'+resteActivite()+'</span></span></div><div class="piste"><div class="plein" style="width:'+borne(M.tranche/TRANCHE*100,0,100)+'%"></div></div></div>'
-      +ligne("Temps de jeu",dureeTxt(M.actif))+'</div>'
+      +'<div class="carte"><h3>Votre salaire</h3><p class="aide">Pas de salaire automatique. Pour vous payer, créez la holding et versez-vous une rémunération de dirigeant ou un dividende.</p></div>'
       +'<div class="carte"><h2>Votre argent</h2>'+ligne("Disponible",mt(M.argent))+ligne("Placé en actions",mt2(M.place))+ligne("Prêté à l'hôtel",mt(M.pret))+ligne("Donné à l'hôtel",mt(M.dons))
       +ligne("Formations suivies",FORMATIONS.filter(function(f){ return forme(f[0]); }).length+" sur "+FORMATIONS.length)+'</div>'
       +'<div class="carte"><h2>Votre accueil</h2><p>'+(S.accueil.ok+S.accueil.moyen?S.accueil.ok+" bien choisies sur "+pl(S.accueil.ok+S.accueil.moyen,"chambre attribuée","chambres attribuées")+" par vous.":"Vous n'avez encore attribué aucune chambre.")+(S.accueil.auto?" La réception en a attribué "+S.accueil.auto+", dont "+S.accueil.autoMoyen+" qu'on pouvait mieux choisir.":"")
@@ -3803,8 +3801,6 @@ function avancerA(n){
   var t=S.horloge;
   if(n<=t) return;
   S.moi.temps=n; avancer(n);
-  // Le directeur est payé pour le temps passé à diriger, de 6 h à 22 h
-  if(!nuit(t)&&!S.moi.holding) activite(Math.min(n-t,16*HEURE)/48);
 }
 function finDeJournee(t){ var f=heureDe(t,22); return t<f?f:heureDe(jourApres(minuit(t),1),22); }
 function pasPC(){
