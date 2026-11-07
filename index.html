@@ -278,6 +278,29 @@ button.option:hover:not(:disabled){border-color:var(--faint)}
 .case.sel{outline:2px solid var(--accent);outline-offset:1px}
 .case.legende{display:inline-block;width:auto;min-width:0;padding:2px 8px}
 .agenda td.manque{color:var(--warn);font-weight:700}
+
+/* Accueil : à faire, puis les écrans par thème */
+.afaires{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.afaire{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:14px;color:var(--ink)}
+.afaire b{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--accent);color:var(--on-accent);font-size:12.5px;font-variant-numeric:tabular-nums}
+.rien{margin:4px 0 0}
+.groupes{display:grid;gap:18px}
+.groupe{margin-top:22px}
+.accueil-groupes .groupe:first-child{margin-top:10px}
+.groupe h2{margin:0 0 8px}
+.nav-liste{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.nav-l{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;background:none;border:0;border-top:1px solid var(--line);text-align:left;color:var(--ink);min-height:56px}
+.nav-l:first-child{border-top:0}
+.nav-l:hover{background:var(--surface-2,rgba(127,127,127,.06))}
+.nav-ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--on-tile);flex:none}
+.nav-ic svg{width:19px;height:19px}
+.nav-t{display:flex;flex-direction:column;min-width:0;flex:1}
+.nav-t b{font-size:15px;font-weight:600}
+.nav-t small{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav-n{min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:var(--accent);color:var(--on-accent);font-size:12.5px;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.nav-chev{color:var(--faint);display:grid;place-items:center}
+.nav-chev svg{width:16px;height:16px}
+@media (min-width:760px){.accueil-groupes{display:grid;grid-template-columns:1fr 1fr;column-gap:18px;align-items:start}.accueil-groupes .groupe:nth-child(2){margin-top:10px}}
 @media (min-width:760px){
   .jauges{grid-template-columns:repeat(4,minmax(0,1fr))}
   .tuiles{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -2225,6 +2248,20 @@ function ecranFondation(){
     +'<p class="aide">Vous démarrez avec '+nombre(CAISSE_DEPART)+' '+U.fond.devise+' en caisse, sans personnel : au début, c\'est vous qui faites tout. L\'hôtel ne peut pas faire faillite.</p></div>'
     +'<button type="button" class="btn principal large" data-a="fonder">Ouvrir l\'hôtel</button>';
 }
+// L'accueil : d'abord ce qui attend une décision, puis les écrans rangés par thème, en lignes compactes
+function aFaire(al){
+  var l=[], av=S.avisLigne.filter(function(a){ return !a.rep; }).length, sb=produitsConnus().filter(function(k){ return stockDe(k)<=seuilStock(); }).length;
+  function x(n,txt,e){ if(n) l.push('<button type="button" class="afaire" data-a="aller" data-e="'+e+'"><b>'+n+'</b>'+txt+'</button>'); }
+  x(av,"avis à traiter","avis"); x(sb,sb>1?"stocks bas":"stock bas","economat");
+  if(S.chantier&&(S.chantier.etape==="devis"||S.chantier.etape==="refus")) x(1,S.chantier.etape==="devis"?"devis de travaux à choisir":"permis refusé","travaux");
+  if(!al&&!l.length) return '<p class="aide rien">Rien ne vous attend pour l\'instant.</p>';
+  return (al?'<div class="alertes">'+al+'</div>':"")+(l.length?'<div class="afaires">'+l.join("")+'</div>':"");
+}
+function groupe(titre,lignes){
+  return '<div class="groupe"><h2>'+titre+'</h2><div class="nav-liste">'+lignes.map(function(x){
+    return '<button type="button" class="nav-l" data-a="aller" data-e="'+x[4]+'"><span class="nav-ic '+x[0]+'">'+I[x[1]]+'</span><span class="nav-t"><b>'+x[2]+'</b><small>'+x[3]+'</small></span>'+(x[5]?'<span class="nav-n">'+x[5]+'</span>':'')+'<span class="nav-chev">'+I.suivant+'</span></button>';
+  }).join("")+'</div></div>';
+}
 function prochaineReservation(){ var t=0; S.sejours.forEach(function(x){ if(x.etat==="reserve"&&(!t||x.arrive<t)) t=x.arrive; }); return t; }
 function ecranAccueil(){
   var rep=Math.round(reputation()), occ=occupees(), nc=S.chambres.length, pr=pretes().length, jr=resultatJour(), al=alertes(), pro=prochaineReservation(), na=parEtat("accueil").length, nr=S.requetes.length, nl=parEtat("loge").length;
@@ -2243,26 +2280,28 @@ function ecranAccueil(){
     +'<div class="bloc"><button type="button" class="btn principal large" data-a="client"'+(pr&&!nuit(maintenant())?"":" disabled")+'>'+I.plus+'Faire venir un client</button>'
     +'<p class="aide">'+(nuit(maintenant())?"L'hôtel dort : personne n'arrive entre 22 h et 6 h. ":pr?"":"Aucune chambre n'est prête. ")+(pro?"Prochaine réservation attendue "+(cleJour(pro)===cleJour(maintenant())?"vers ":dateCourte(pro)+" vers ")+heureTxt(pro)+".":"Aucune réservation en vue pour le moment.")+'</p></div>'
     +bloc
-    +(al?'<div class="alertes">'+al+'</div>':"")
-    +'<div class="tuiles">'
-    +tuile("g5","clients","Clients",na+" à accueillir · "+pl(nr,"demande","demandes"),"clients")
-    +tuile("g4","calendrier","Agenda",pl(aPlacer().length,"réservation","réservations")+" à placer","agenda")
-    +tuile("g1","lit","Chambres",nc+" sur "+maxChambres()+" · "+pl(nl,"occupée","occupées"),"chambres")
-    +tuile("g3","guide","Clientèle","Profils et souhaits","clientele")
-    +tuile("g8","cloche","Avis",(noteEnLigne()===null?"Aucun avis":virgule(noteEnLigne())+" ★")+" · "+pl(S.avisLigne.filter(function(a){ return !a.rep; }).length,"réponse","réponses")+" à faire","avis")
-    +tuile("g3","chaine","Mes hôtels",S.groupe.length?pl(S.groupe.length+1,"hôtel","hôtels")+" · ici : "+ville().nom:chaineOuverte()?"Ouvrir un 2e hôtel":"La chaîne, plus tard","chaine")
-    +tuile("g4","travaux","Travaux",S.chantier?({plans:"Plans",permis:"Permis demandé",refus:"Permis refusé",devis:"Devis à choisir",travaux:"Chantier en cours"})[S.chantier.etape]:S.places+" places","travaux")
-    +tuile("g7","equipements","Équipements",ORDRE_EQUIP.filter(function(k){ return niv(k); }).length+" sur "+ORDRE_EQUIP.length+" construits","equipements")
-    +tuile("g3","verre","Événements",pl(S.evenements.filter(function(x){ return x.etat==="demande"; }).length,"devis","devis")+" à faire","evenements")
-    +tuile("g2","equipe","Équipe",pl(S.equipe.length,"personne","personnes"),"equipe")
-    +tuile("g6","horloge","Planning",enPosteMaintenant()+" en poste","planning")
-    +tuile("g2","caisse","Économat",pl(produitsConnus().filter(function(k){ return stockDe(k)<=seuilStock(); }).length,"stock bas","stocks bas"),"economat")
-    +tuile("g5","tarifs","Tarifs","Période "+PERIODES[periodeDe(jourHotel(S.horloge))].nom.toLowerCase()+" · "+pctLe(jourHotel(S.horloge))+" %","tarifs")
-    +tuile("g6","finances","Finances","Aujourd'hui "+signeM(jr),"finances")
-    +tuile("g1","journal","Journal",S.journal.length?quandTxt(S.journal[0].t):"Rien à signaler","journal")
-    +tuile("g4","recrut","Recrutement","Engager du personnel","recrutement")
-    +tuile("g8","moi","Ma fiche",mt(S.moi.argent)+" à vous","moi")
-    +'</div>'
+    +aFaire(al)
+    +'<div class="accueil-groupes">'+groupe("Clients",[
+      ["g5","clients","Clients",na+" à accueillir · "+pl(nr,"demande","demandes"),"clients",na+nr],
+      ["g4","calendrier","Agenda",pl(aPlacer().length,"réservation","réservations")+" à placer","agenda",aPlacer().length],
+      ["g3","verre","Événements",pl(S.evenements.filter(function(x){ return x.etat==="demande"; }).length,"devis","devis")+" à faire","evenements",S.evenements.filter(function(x){ return x.etat==="demande"; }).length],
+      ["g8","cloche","Avis",(noteEnLigne()===null?"Aucun avis":virgule(noteEnLigne())+" ★")+" · "+pl(S.avisLigne.filter(function(a){ return !a.rep; }).length,"réponse","réponses")+" à faire","avis",S.avisLigne.filter(function(a){ return !a.rep; }).length],
+      ["g3","guide","Clientèle","Profils et souhaits","clientele",0]])
+    +groupe("L'hôtel",[
+      ["g1","lit","Chambres",nc+" sur "+maxChambres()+" · "+pl(nl,"occupée","occupées"),"chambres",0],
+      ["g5","tarifs","Tarifs","Période "+PERIODES[periodeDe(jourHotel(S.horloge))].nom.toLowerCase()+" · "+pctLe(jourHotel(S.horloge))+" %","tarifs",0],
+      ["g2","caisse","Économat",pl(produitsConnus().filter(function(k){ return stockDe(k)<=seuilStock(); }).length,"stock bas","stocks bas"),"economat",produitsConnus().filter(function(k){ return stockDe(k)<=seuilStock(); }).length],
+      ["g7","equipements","Équipements",ORDRE_EQUIP.filter(function(k){ return niv(k); }).length+" sur "+ORDRE_EQUIP.length+" construits","equipements",0],
+      ["g4","travaux","Travaux",S.chantier?({plans:"Plans",permis:"Permis demandé",refus:"Permis refusé",devis:"Devis à choisir",travaux:"Chantier en cours"})[S.chantier.etape]:S.places+" places","travaux",S.chantier&&(S.chantier.etape==="devis"||S.chantier.etape==="refus")?1:0]])
+    +groupe("L'équipe",[
+      ["g2","equipe","Équipe",pl(S.equipe.length,"personne","personnes"),"equipe",0],
+      ["g6","horloge","Planning",enPosteMaintenant()+" en poste","planning",0],
+      ["g4","recrut","Recrutement","Engager du personnel","recrutement",0]])
+    +groupe("L'argent et le groupe",[
+      ["g6","finances","Finances","Aujourd'hui "+signeM(jr),"finances",0],
+      ["g3","chaine","Mes hôtels",S.groupe.length?pl(S.groupe.length+1,"hôtel","hôtels")+" · ici : "+ville().nom:holding()?holding().nom:chaineOuverte()?"Créer la holding, ouvrir un 2e hôtel":"La chaîne, plus tard","chaine",0],
+      ["g8","moi","Ma fiche",mt(S.moi.argent)+" à vous","moi",0],
+      ["g1","journal","Journal",S.journal.length?quandTxt(S.journal[0].t):"Rien à signaler","journal",0]])+'</div>'
     +palierHtml()
     +'<button type="button" class="btn" data-a="aller" data-e="reglages">'+I.reglages+'Aide et réglages</button>';
 }
