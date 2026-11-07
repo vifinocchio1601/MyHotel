@@ -3865,6 +3865,20 @@ function menuPC(){
     +g("L'argent et le groupe",[e("finances","Finances","finances",0),e("finances","Tableau de bord","tableau",0),e("chaine","Mes hôtels","chaine",0),e("equipements","Holding","holding",0),e("moi","Ma fiche","moi",0),e("journal","Journal","journal",0)])
     +g("",[e("reglages","Aide et réglages","reglages",0)]);
 }
+// Pendant que le temps défile, l'écran est redessiné sans cesse : un clic (appui puis relâchement) tomberait sur un bouton déjà remplacé.
+// On agit donc dès l'appui, tant que le temps tourne.
+document.addEventListener("pointerdown",function(ev){
+  var el, a, change;
+  if(!PC.run||ev.button!==0) return;
+  el=ev.target.closest?ev.target.closest("[data-a]"):null;
+  if(!el||el.disabled||el.tagName==="INPUT"||!A[el.dataset.a]) return;
+  ev.preventDefault();
+  a=el.dataset.a;
+  if(a!=="pcPause") arreterPC();
+  change=A[a](el.dataset);
+  if(change) marquer();
+  rendre();
+});
 
 /* ------------------------------------------------------------------ Boucle */
 var app=document.getElementById("app"), dernier="", dernierBattement=Date.now();
