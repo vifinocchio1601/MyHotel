@@ -787,6 +787,8 @@ function valide(o){ return !!(o&&o.v===V&&o.postes&&o.tarifs&&o.equipe&&o.chambr
 function sauver(){ try{ localStorage.setItem(CLE,JSON.stringify(S)); }catch(e){} }
 // Une partie enregistrée par une version plus ancienne reçoit les rubriques apparues depuis
 function migrer(){
+  // Version PC : une partie commencée avant le départ sans chambre repart de zéro, une seule fois
+  if(MODE_PC&&S.fondeLe&&!S.pcZero&&!(S.groupe&&S.groupe.length)){ var o=S; fonderHotel(DEBUT_PC,o.nom,o.prenom,o.devise,"siege",null,0); S.moi.temps=S.horloge; S.pcArrets=true; }
   var neuf=etatInitial(), k, apport=S.fondeLe&&!S.apport5000, cadeau=S.fondeLe&&!S.moi25000;
   for(k in neuf) if(S[k]===undefined) S[k]=neuf[k];
   neuf=statVide(); for(k in neuf) if(S.stat[k]===undefined) S.stat[k]=neuf[k];
@@ -2115,6 +2117,7 @@ function fonderHotel(t,nom,prenom,devise,ville,moi,apport,dec){
   S=etatInitial(); S.nom=nom; S.prenom=prenom; S.devise=devise; S.ville=ville; appliquerPays(); (function(){ var r; for(r in S.postes) S.postes[r].salaire=salaireHabituel(r); })(); if(moi) S.moi=moi; if(dec) S.decalage=dec; if(apport) S.caisse=apport;
   S.fondeLe=t; S.horloge=t; prevoirSalons(t); S.prochaineCloture=prochainMinuit(t); S.releve=prochaineReleve(t);
   // Version PC : on part de rien, sans aucune chambre
+  if(MODE_PC) S.pcZero=1;
   (MODE_PC?[]:[["double","rue","haut"],["double","jardin","rez"]]).forEach(function(x){ var c=ajouterChambre(x[0],x[1],x[2]); S.immos.push({cle:"ch"+c.id,nom:"Chambre "+c.n,sv:"chambres",v:prixAchat(x[0],x[1]),c:0,t:t}); });
   produitsConnus().forEach(function(k){ S.stock[k]=STOCK_DEPART; S.valStock[k]=STOCK_DEPART*PRODUITS[k].cout; });
   noter(t,"ok",S.prenom+" ouvre « "+S.nom+" »"+(ville!=="siege"?" à "+VILLES[ville].nom:"")+(MODE_PC?" : un bâtiment vide. Achetez votre première chambre dans Chambres.":" avec deux chambres. Les premières réservations ne vont pas tarder."));
