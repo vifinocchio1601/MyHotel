@@ -799,6 +799,8 @@ function migrer(){
   if(S.places<S.chambres.length) S.places=S.chambres.length;
   if(!S.hotelId) S.hotelId=1; if(!VILLES[S.ville]) S.ville="siege"; if(!S.groupe) S.groupe=[];
   if(!S.moi.nHotel) S.moi.nHotel=1+S.groupe.length;
+  // Version PC : 15 000 € à vous sur Ma fiche, une seule fois (au départ ou dans une partie déjà commencée)
+  if(MODE_PC&&S.fondeLe&&!S.moi.pc15000){ S.moi.pc15000=1; S.moi.argent+=15000; noter(S.horloge,"ok",S.prenom+" dispose de 15 000 € à lui, sur sa fiche."); }
   if(S.pret===undefined) S.pret=(S.hotelId||1)===1?(S.moi.pret||0):0;
   if(!S.pretH) S.pretH=0; if(!S.fraisFactures) S.fraisFactures={};
   if(S.moi.holding) completerHolding(S.moi.holding);
@@ -3358,7 +3360,7 @@ function ajouterChambre(type,cote,etage){
 var A={
   aller:function(d){ U.resa=null; if(d.e==="societes"||d.e==="tva"||d.e==="exercice"){ U.finPage=d.e; d={e:"finances"}; } U.ecran=d.e; U.confirme=null; U.retour=null; U.dossier=null; U.choix=null; if(d.e==="recrutement"){ candidatsDe(roleCourant()); return true; } return false; },
   devise:function(d){ U.fond.devise=d.k; return false; },
-  fonder:function(){ fonderHotel(MODE_PC?DEBUT_PC:Date.now(),(U.fond.nom||"").trim()||"Hôtel des Tilleuls",(U.fond.prenom||"").trim()||"Vincent",U.fond.devise,"siege",null,0); if(MODE_PC){ S.moi.temps=S.horloge; S.pcArrets=true; } U.ecran="accueil"; return true; },
+  fonder:function(){ fonderHotel(MODE_PC?DEBUT_PC:Date.now(),(U.fond.nom||"").trim()||"Hôtel des Tilleuls",(U.fond.prenom||"").trim()||"Vincent",U.fond.devise,"siege",null,0); if(MODE_PC){ S.moi.temps=S.horloge; S.pcArrets=true; S.moi.pc15000=1; S.moi.argent+=15000; } U.ecran="accueil"; return true; },
   apportHolding:function(d){ U.apportHolding=borne((U.apportHolding||5000)+(+d.d),5000,Math.max(5000,Math.floor(S.moi.argent/5000)*5000)); return false; },
   creerHolding:function(){
     var t=maintenant(), n=U.apportHolding||5000, nom=(U.nomHolding||"").trim()||S.prenom+" Holding", X, nature=0;
