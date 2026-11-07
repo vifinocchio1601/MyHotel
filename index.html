@@ -444,6 +444,27 @@ VILLES.rome={nom:"Rome",pays:"it",region:"Italie",txt:"Des touristes et des pèl
 /* La holding : une société de Vincent qui détient les hôtels. Elle reçoit leurs dividendes sans précompte (régime mère-fille)
    et presque sans impôt (revenus définitivement taxés), leur facture des frais de gestion, leur prête de l'argent et finance les nouveaux. */
 var HOLDING_FRAIS_CONSTITUTION=1500, HOLDING_CHARGES_JOUR=8, HOLDING_ISOC=0.25, HOLDING_PRECOMPTE=0.3, HOLDING_FRAIS_MAX=5;
+// Rémunération du dirigeant : cotisations sociales d'indépendant et précompte professionnel (simplifiés). Taux réduit d'impôt si au moins 45 000 par an.
+var COTIS_INDEP=0.205, PRECOMPTE_PRO=0.32, REMUN_MIN_TAUX_REDUIT=45000, TAUX_INTRA=0.04, TAUX_TERME=0.025;
+// Voitures de société en leasing : loyer mensuel, part déductible, avantage de toute nature annuel ajouté à la rémunération
+var VOITURES={
+  electrique:{nom:"Berline électrique",loyer:950,deduc:1,atn:2100},
+  hybride:{nom:"SUV hybride rechargeable",loyer:1150,deduc:0.5,atn:4200},
+  luxe:{nom:"Grand SUV de luxe",loyer:2300,deduc:0.4,atn:9800}};
+// Immobilier de rapport : prix, loyer mensuel. Droits d'enregistrement en plus ; le bâtiment (80 %) s'amortit sur 33 ans.
+var BIENS_H={
+  studio:{nom:"Un studio à Liège",prix:120000,loyer:620},
+  appart:{nom:"Un appartement deux chambres à Namur",prix:210000,loyer:950},
+  maison:{nom:"Une maison à Esneux",prix:320000,loyer:1350},
+  commerce:{nom:"Un rez commercial à Bruxelles",prix:450000,loyer:2300},
+  immeuble:{nom:"Un immeuble de six appartements à Liège",prix:900000,loyer:4600}};
+// Le siège du groupe : salaire mensuel brut et ce que la personne apporte à tous les hôtels
+var SIEGE={
+  comptable:{nom:"Comptable du groupe",salaire:3400,txt:"Dépose les déclarations de TVA et paie les impôts de chaque hôtel à temps : plus jamais d'amende."},
+  acheteur:{nom:"Responsable des achats",salaire:3200,txt:"Centrale d'achats : tout l'économat coûte 10 % moins cher dans chaque hôtel."},
+  marketing:{nom:"Responsable marketing",salaire:3800,txt:"Campagnes communes et site du groupe : +6 % de réservations dans chaque hôtel."},
+  operations:{nom:"Directeur des opérations",salaire:5200,txt:"Fait respecter les standards du groupe : les clients sont un peu plus contents partout."}};
+var ORDRE_SIEGE=["comptable","acheteur","marketing","operations"];
 var ORDRE_VILLES=["ardennes","liege","bruges","cote","bruxelles","paris","amsterdam","luxembourg","barcelone","rome"], PALIER_CHAINE=1;
 var ROTATION=0.6, PART_PASSAGE=0.2, COMMISSION=0.15;
 var PATIENCE_ACCUEIL=60, DELAI_RELAIS=15*MIN, DELAI_REQ=40*MIN, RELAIS_REQ=12*MIN, TAUX_REQUETE=0.45;
@@ -683,7 +704,7 @@ function appliquerPays(){
   GRILLE_VENTE={}; GRILLE_VENTE[String(T.autre)]="g03"; if(!GRILLE_VENTE[String(T.chambres)]) GRILLE_VENTE[String(T.chambres)]="g01"; if(!GRILLE_VENTE[String(T.resto)]) GRILLE_VENTE[String(T.resto)]="g02";
   TAUX_ISOC=P.isoc; PRECOMPTE=P.precompte; TAUX_COTISATIONS=P.cotis;
 }
-function ecranVide(){ return {ecran:"accueil",role:"receptionniste",vue:"jour",decal:0,confirme:null,resume:null,dossier:null,choix:null,retour:null,moiVue:"fiche",planVue:"reception",finPage:"resultat",div:50,resa:null,achat:{type:"double",cote:"rue",etage:"haut"},fond:{nom:"",prenom:"Vincent",devise:"$"},villeNeuve:null,apportNeuf:0,nomNeuf:"",nomHolding:"",apportHolding:5000}; }
+function ecranVide(){ return {ecran:"accueil",role:"receptionniste",vue:"jour",decal:0,confirme:null,resume:null,dossier:null,choix:null,retour:null,moiVue:"fiche",planVue:"reception",finPage:"resultat",div:50,resa:null,achat:{type:"double",cote:"rue",etage:"haut"},fond:{nom:"",prenom:"Vincent",devise:"$"},villeNeuve:null,apportNeuf:0,nomNeuf:"",nomHolding:"",apportHolding:5000,hVue:"apercu"}; }
 var U=ecranVide();
 function valide(o){ return !!(o&&o.v===V&&o.postes&&o.tarifs&&o.equipe&&o.chambres&&o.sejours); }
 function sauver(){ try{ localStorage.setItem(CLE,JSON.stringify(S)); }catch(e){} }
@@ -700,6 +721,7 @@ function migrer(){
   if(!S.moi.nHotel) S.moi.nHotel=1+S.groupe.length;
   if(S.pret===undefined) S.pret=(S.hotelId||1)===1?(S.moi.pret||0):0;
   if(!S.pretH) S.pretH=0; if(!S.fraisFactures) S.fraisFactures={};
+  if(S.moi.holding) completerHolding(S.moi.holding);
   appliquerPays();
   S.chambres.forEach(function(c){ if(c.niv>=NIV_DE.minibar&&!c.mb){ c.mb=1; c.mbN=0; } });
   PERIODES.forEach(function(P){ if(S.tarifs[P.cle]===undefined) S.tarifs[P.cle]=S.tarifs.chambre; });
@@ -1085,7 +1107,7 @@ function produitsConnus(){
 }
 function lot(){ return LOTS[S.palier]; }
 function seuilStock(){ return Math.round(lot()*0.3); }
-function prixLot(k,n,auto){ return Math.round(PRODUITS[k].cout*n*(n>=lot()*FOIS_GROS?REMISE_GROS:1)*(auto?SURCOUT_AUTO:1)*(forme("negociateur")?0.9:1)*(k==="linge"?1-0.08*niv("buanderie"):1)); }
+function prixLot(k,n,auto){ return Math.round(PRODUITS[k].cout*n*(n>=lot()*FOIS_GROS?REMISE_GROS:1)*(auto?SURCOUT_AUTO:1)*(forme("negociateur")?0.9:1)*(k==="linge"?1-0.08*niv("buanderie"):1)*(siege("acheteur")?0.9:1)); }
 function enCommande(k){ var n=0; S.commandes.forEach(function(c){ if(c.p===k) n+=c.n; }); return n; }
 function commander(k,n,t,auto){
   var prix=prixLot(k,n,auto);
@@ -1120,7 +1142,7 @@ function ajusterDemande(){
 }
 // Arrivées attendues par jour : elles suivent le nombre de chambres, la réputation, la saison et les prix
 function facteurBuzz(t){ return S.buzz&&S.buzz.fin>t?S.buzz.f:1; }
-function attendus(t){ var j=jourHotel(t); return facteurAvis()*facteurBuzz(t)*(1+0.06*(S.distinction||0))*S.chambres.length*ROTATION*(0.5+reputation()/100)*facteurJour(j)*demande(clePeriode(periodeDe(j)))*(forme("communicant")?1.1:1)*(1+0.03*niv("piscine")); }
+function attendus(t){ var j=jourHotel(t); return (siege("marketing")?1.06:1)*facteurAvis()*facteurBuzz(t)*(1+0.06*(S.distinction||0))*S.chambres.length*ROTATION*(0.5+reputation()/100)*facteurJour(j)*demande(clePeriode(periodeDe(j)))*(forme("communicant")?1.1:1)*(1+0.03*niv("piscine")); }
 
 // Personnel
 function absentLe(e,t){ return !!(e.absent&&t>=e.absent.debut&&t<e.absent.fin); }
@@ -1401,6 +1423,7 @@ function noteSejour(sj){
   n-=(1-couvMenage())*15+(1-couvAccueil())*8;
   if(sj.parMoi) n+=3;
   if(enTravaux()) n-=NUISANCE;
+  if(siege("operations")) n+=3;
   if(sj.vip) n+=sj.parMoi?4:-10;
   if(sj.insp) n-=(1-couvMenage())*10+(stockDe("linge")?0:5);
   if(sj.pref) n+=chambre(sj.ch)&&sj.ch===sj.pref?6:-3;
@@ -1909,6 +1932,7 @@ function cloturer(t){
   noter(tj,res>=0?"ok":"warn","Jour "+S.jour+" : "+pl(S.stat.arrives,"arrivée","arrivées")+", "+pl(S.stat.departs,"départ","départs")+", "+pl(occupees(),"chambre occupée","chambres occupées")+" cette nuit"+(S.stat.couverts?", "+pl(S.stat.couverts,"couvert","couverts"):"")+(S.stat.deloges?", "+pl(S.stat.deloges,"client envoyé","clients envoyés")+" ailleurs":"")+". Résultat de la journée : "+signeM(res)+".");
   // Le premier jour d'un trimestre : clôture de l'exercice qui s'achève et déclaration de TVA à déposer
   if(new Date(t).getDate()===1&&new Date(t).getMonth()%3===0){ cloturerExercice(tj,t); cloturerTva(tj,t); }
+  if(siege("comptable")){ S.declarations.slice().forEach(function(d){ deposerTva(d,t,false); }); S.impots.slice().forEach(function(x){ payerImpot(x,t,false); }); }
   S.declarations.slice().forEach(function(d){ if(d.limite<=t) deposerTva(d,t,true); });
   S.impots.slice().forEach(function(x){ if(x.limite<=t) payerImpot(x,t,true); });
   if(S.affectation&&S.affectation.limite<=t) affecterResultat(0,t,true);
@@ -2032,44 +2056,94 @@ function changerHotel(id){
 
 /* ------------------------------------------------------------------ La holding */
 function holding(){ return S.moi.holding||null; }
-function moisH(t){ var X=holding(), m=cleMois(t); if(!X.cm[m]) X.cm[m]={d:0,f:0,i:0,c:0,y:0,b:0}; return X.cm[m]; }
+function completerHolding(X){ var k, d={tva:0,remun:0,voiture:null,biens:[],actions:{parts:0,cours:100,achat:0},terme:0,siege:{},prets:0,pertes:0,exercices:[],cm:{},participations:{},nBien:1}; for(k in d) if(X[k]===undefined) X[k]=d[k]; for(k in X.cm) moisH0(X.cm[k]); return X; }
+// Les comptes du mois de la holding. Produits : f frais de gestion (HT), i intérêts des prêts aux hôtels, l loyers, n intérêts et dividendes des placements, pv plus-values.
+// Charges : c frais fixes, r rémunération du dirigeant, p personnel du siège (avec cotisations), v voiture, ci charges des immeubles, am amortissements, mv moins-values.
+// Hors résultat imposable : d dividendes des hôtels (RDT). Après résultat : y impôt, b dividendes versés. dna : dépenses non admises (part non déductible de la voiture).
+var CLES_H={d:0,f:0,i:0,l:0,n:0,pv:0,c:0,r:0,p:0,v:0,ci:0,am:0,mv:0,y:0,b:0,dna:0};
+function moisH(t){ var X=holding(), m=cleMois(t), k; if(!X.cm[m]) X.cm[m]={}; for(k in CLES_H) if(X.cm[m][k]===undefined) X.cm[m][k]=0; return X.cm[m]; }
 function holdingRecoit(t,k,n){ var X=holding(); if(!X) return; X.caisse+=n; moisH(t)[k]+=n; }
-// Le résultat de la holding sur une liste de mois : frais de gestion et intérêts, moins ses charges. Les dividendes des hôtels n'y sont pas imposés.
-function resultatH(mois){ var X=holding(), n=0; mois.forEach(function(m){ var c=X.cm[m]; if(c) n+=c.f+c.i-c.c; }); return n; }
-// Ce que la holding peut distribuer : tout ce qu'elle a gagné, moins ses impôts et ce qu'elle a déjà versé
-function reservesH(){ var X=holding(), n=0, m; for(m in X.cm){ var c=X.cm[m]; n+=c.d+c.f+c.i-c.c-c.y-c.b; } return n-HOLDING_FRAIS_CONSTITUTION; }
-// Chaque jour : le premier du mois, l'hôtel paie ses frais de gestion à la holding ; la holding paie ses propres frais ; à chaque fin de trimestre, son impôt
+function siege(k){ var X=holding(); return !!(X&&X.siege&&X.siege[k]); }
+function produitsH(c){ return c.f+c.i+c.l+c.n+c.pv; }
+function chargesH(c){ return c.c+c.r+c.p+c.v+c.ci+c.am+c.mv; }
+// Résultat comptable (sans les dividendes des hôtels) et base imposable sur une liste de mois
+function resultatH(mois){ var X=holding(), n=0; mois.forEach(function(m){ var c=X.cm[m]; if(c){ moisH0(c); n+=produitsH(c)-chargesH(c); } }); return n; }
+function sommeH(mois,k){ var X=holding(), n=0; mois.forEach(function(m){ if(X.cm[m]) n+=X.cm[m][k]||0; }); return n; }
+// Les bénéfices qu'elle peut distribuer : tout ce qu'elle a gagné, dividendes des hôtels compris, moins ses impôts et ce qu'elle a déjà versé
+function reservesH(){ var X=holding(), n=0, m, c; for(m in X.cm){ c=X.cm[m]; n+=(c.d||0)+produitsH(moisH0(c))-chargesH(c)-(c.y||0)-(c.b||0); } return n-HOLDING_FRAIS_CONSTITUTION; }
+function moisH0(c){ var k; for(k in CLES_H) if(c[k]===undefined) c[k]=0; return c; }
+// Rémunération du dirigeant : cotisations sociales d'indépendant, puis précompte professionnel, sur le brut et l'avantage de la voiture
+function voitureH(){ var X=holding(); return X&&X.voiture?VOITURES[X.voiture]:null; }
+function remunNette(brut){ var atn=voitureH()?voitureH().atn/12:0, cot=Math.round(brut*COTIS_INDEP), pp=Math.round(Math.max(0,brut-cot+atn)*PRECOMPTE_PRO); return {brut:brut,atn:Math.round(atn),cot:cot,pp:pp,net:Math.max(0,brut-cot-pp)}; }
+function salairesSiege(){ var n=0, k; for(k in SIEGE) if(siege(k)) n+=SIEGE[k].salaire; return n; }
+function valeurActions(){ var X=holding(); return X?X.actions.parts*X.actions.cours:0; }
+function valeurImmos(){ var X=holding(), n=0; (X?X.biens:[]).forEach(function(b){ n+=b.prix-b.amort; }); return n; }
+
+function premierDuMoisH(t){
+  var X=holding(), c=moisH(t), R, n, net, loy;
+  // Rémunération du dirigeant
+  if(X.remun>0){ R=remunNette(X.remun); X.caisse-=X.remun; c.r+=X.remun; S.moi.argent+=R.net; S.moi.gagne+=R.net; X.remunVersee=(X.remunVersee||0)+X.remun; X.netVerse=(X.netVerse||0)+R.net; }
+  // Personnel du siège, cotisations patronales comprises
+  n=Math.round(salairesSiege()*(1+0.25)); if(n){ X.caisse-=n; c.p+=n; }
+  // Voiture de société : la part non déductible reste à charge mais s'ajoute à la base imposable
+  if(voitureH()){ n=voitureH().loyer; X.caisse-=n; c.v+=n; c.dna+=Math.round(n*(1-voitureH().deduc)); }
+  // Immeubles : loyers (sauf bien vide), charges, amortissement
+  X.biens.forEach(function(b){
+    var B=BIENS_H[b.k];
+    if(b.vide>0){ b.vide--; if(!b.vide) noter(t,"ok",X.nom+" : nouveau locataire pour "+B.nom.toLowerCase()+"."); }
+    else { holdingRecoit(t,"l",B.loyer); if(Math.random()<0.04){ b.vide=entre(1,3); noter(t,"warn",X.nom+" : le locataire de "+B.nom.toLowerCase()+" s'en va. Logement vide pendant "+pl(b.vide,"mois","mois")+"."); } }
+    n=Math.round(B.loyer*0.12); X.caisse-=n; c.ci+=n;
+    n=Math.round(B.prix*0.8*0.03/12); b.amort+=n; c.am+=n;
+  });
+  // Compte à terme
+  if(X.terme>0){ n=Math.round(X.terme*TAUX_TERME/12); holdingRecoit(t,"n",n); }
+}
+function jourH(j){
+  var X=holding(), A=X.actions;
+  // Le cours des actions bouge chaque jour ouvrable ; un dividende chaque trimestre
+  if(jourSemaine(j)<5) A.cours=Math.max(10,A.cours*(1+0.06/252+alea(-1,1)*0.012));
+  if(A.parts>0&&new Date(j).getDate()===15&&new Date(j).getMonth()%3===2) holdingRecoit(j,"n",Math.round(A.parts*A.cours*0.02/4));
+}
+// Chaque jour : le premier du mois, l'hôtel paie ses frais de gestion et les intérêts de son prêt ; la holding vit sa journée ; à chaque fin de trimestre, sa clôture
 function holdingJour(t){
-  var X=holding(), j=minuit(t), d=new Date(j), m, ca=0, k, frais, jours, pm;
+  var X=holding(), j=minuit(t), d=new Date(j), pm, ca=0, k, frais, n;
   if(!X) return;
-  if(d.getDate()===1&&X.frais>0){
+  if(d.getDate()===1){
     pm=cleMois(j-JOUR);
-    if(!S.fraisFactures[pm]&&S.cm[pm]){
+    if(X.frais>0&&!S.fraisFactures[pm]&&S.cm[pm]){
       for(k in S.cm[pm]) if(k.indexOf("r:")===0&&k!=="r:divers") ca+=S.cm[pm][k];
       frais=Math.round(ca*X.frais/100);
       if(frais>0){
         S.fraisFactures[pm]=frais;
-        if(pays()===PAYS.be) achat(t,"e:direction",Math.round(frais*1.21),0.21,"g82"); else achat(t,"e:direction",frais,0,"g82");
+        if(pays()===PAYS.be){ achat(t,"e:direction",Math.round(frais*1.21),0.21,"g82"); X.tva+=Math.round(frais*0.21); X.caisse+=Math.round(frais*0.21); }
+        else achat(t,"e:direction",frais,0,"g82");
         holdingRecoit(t,"f",frais);
         noter(t,"",X.nom+" facture "+mt(frais)+" de frais de gestion ("+X.frais+" % du chiffre d'affaires de "+new Date(j-JOUR).toLocaleDateString("fr-BE",{month:"long"})+")"+(pays()===PAYS.be?", plus la TVA":"")+".");
       }
     }
+    if(S.pretH>0&&!S.fraisFactures["i"+pm]){ n=Math.round(S.pretH*TAUX_INTRA/12); S.fraisFactures["i"+pm]=n; inscrire(t,"x:pret",n); holdingRecoit(t,"i",n); }
   }
   if(!X.dernierJour){ X.dernierJour=j; return; }
-  if(j<=X.dernierJour) return;
-  jours=Math.round((j-X.dernierJour)/JOUR);
   while(X.dernierJour<j){
     X.dernierJour=jourApres(X.dernierJour,1);
     X.caisse-=HOLDING_CHARGES_JOUR; moisH(X.dernierJour-1000).c+=HOLDING_CHARGES_JOUR;
-    if(new Date(X.dernierJour).getDate()===1&&new Date(X.dernierJour).getMonth()%3===0) clotureH(X.dernierJour);
+    jourH(X.dernierJour);
+    if(new Date(X.dernierJour).getDate()===1){
+      premierDuMoisH(X.dernierJour);
+      if(new Date(X.dernierJour).getMonth()%3===0) clotureH(X.dernierJour);
+    }
   }
 }
+// Impôt des sociétés : taux réduit de 20 % sur les premiers 25 000 du trimestre si le dirigeant s'est versé au moins 11 250 de rémunération sur le trimestre
+function impotH(base,remun){ if(base<=0) return 0; if(remun>=REMUN_MIN_TAUX_REDUIT/4) return Math.round(Math.min(base,25000)*0.20+Math.max(0,base-25000)*HOLDING_ISOC); return Math.round(base*HOLDING_ISOC); }
 function clotureH(t){
-  var X=holding(), mois=moisDuTrimestre(t-JOUR), R=resultatH(mois), base=Math.max(0,R-X.pertes), impot=Math.round(base*HOLDING_ISOC);
-  X.pertes=Math.max(0,X.pertes-Math.max(0,R)); if(R<0) X.pertes+=-R;
+  var X=holding(), mois=moisDuTrimestre(t-JOUR), R=resultatH(mois), dna=sommeH(mois,"dna"), rem=sommeH(mois,"r"), base=Math.max(0,R+dna-X.pertes), impot=impotH(base,rem), tva=Math.round(X.tva);
+  if(R+dna<0) X.pertes+=-(R+dna); else X.pertes=Math.max(0,X.pertes-(R+dna));
   if(impot){ X.caisse-=impot; moisH(t-1000).y+=impot; }
-  X.exercices.unshift({nom:nomTrimestre(t-JOUR),r:R,impot:impot}); if(X.exercices.length>8) X.exercices.length=8;
-  noter(t,"",X.nom+" clôture le "+nomTrimestre(t-JOUR)+" : résultat "+signeM(R)+(impot?", impôt des sociétés "+mt(impot):", pas d'impôt")+". Les dividendes des hôtels ne sont pas imposés (revenus définitivement taxés).");
+  if(tva){ X.caisse-=tva; X.tvaPayee=(X.tvaPayee||0)+tva; X.tva=0; }
+  X.exercices.unshift({nom:nomTrimestre(t-JOUR),produits:mois.reduce(function(a,m){ return a+(X.cm[m]?produitsH(moisH0(X.cm[m])):0); },0),charges:mois.reduce(function(a,m){ return a+(X.cm[m]?chargesH(X.cm[m]):0); },0),div:sommeH(mois,"d"),r:R,dna:dna,impot:impot,reduit:rem>=REMUN_MIN_TAUX_REDUIT/4,tva:tva});
+  if(X.exercices.length>8) X.exercices.length=8;
+  noter(t,"",X.nom+" clôture le "+nomTrimestre(t-JOUR)+" : résultat "+signeM(R)+(impot?", impôt des sociétés "+mt(impot)+(rem>=REMUN_MIN_TAUX_REDUIT/4?" (taux réduit)":""):", pas d'impôt")+(tva?", TVA versée "+mt(tva):"")+".");
 }
 // Chaque nuit : le portefeuille d'actions rapporte entre 2 % et 7 % par an (le taux bouge un peu chaque jour),
 // et l'hôtel verse au directeur les intérêts de ce qu'il lui a prêté.
@@ -2300,6 +2374,7 @@ function ecranAccueil(){
     +groupe("L'argent et le groupe",[
       ["g6","finances","Finances","Aujourd'hui "+signeM(jr),"finances",0],
       ["g3","chaine","Mes hôtels",S.groupe.length?pl(S.groupe.length+1,"hôtel","hôtels")+" · ici : "+ville().nom:holding()?holding().nom:chaineOuverte()?"Créer la holding, ouvrir un 2e hôtel":"La chaîne, plus tard","chaine",0],
+      ["g7","equipements","Holding",holding()?"Caisse "+mt(holding().caisse):"Pas encore créée","holding",0],
       ["g8","moi","Ma fiche",mt(S.moi.argent)+" à vous","moi",0],
       ["g1","journal","Journal",S.journal.length?quandTxt(S.journal[0].t):"Rien à signaler","journal",0]])+'</div>'
     +palierHtml()
@@ -2823,17 +2898,9 @@ function carteHolding(){
     +'<div class="champ"><label for="h-nom">Nom de la holding</label><input type="text" id="h-nom" maxlength="40" placeholder="'+h(S.prenom)+' Holding" value="'+h(U.nomHolding)+'" autocomplete="off"></div>'
     +'<div class="reglage"><div><b>Apport en espèces</b><br><span class="aide">Pris sur Ma fiche ('+mt(S.moi.argent)+')</span></div>'+pas("apportHolding","x",mt(n),5000,n>5000,n+5000<=S.moi.argent,"l'apport")+'</div>'
     +'<div class="actions"><button type="button" class="btn principal" data-a="creerHolding"'+(S.moi.argent>=n?"":" disabled")+'>Constituer la holding · '+mt(n)+'</button></div></div>';
-  for(k in X.participations){ nb=X.participations[k]; tot+=nb.apport; rows+=ligne(h(nb.nom),"100 % · "+mt(nb.apport)); }
-  var mois=moisDuTrimestre(t), R=resultatH(mois), div=0; for(k in X.cm) div+=X.cm[k].d;
   return '<div class="carte"><div class="carte-haut"><h3>'+h(X.nom)+'<small>Société de participations · depuis le '+dateCourte(X.creeLe)+'</small></h3></div>'
-    +ligne("Caisse",mt(X.caisse))+ligne("Capital",mt(X.capital))+ligne("Bénéfices distribuables",mt(Math.max(0,reservesH())))
-    +ligne("Dividendes reçus des hôtels",mt(div))+ligne("Résultat imposable du trimestre",signeM(R))
-    +'<p class="aide">Participations</p>'+rows
-    +'<div class="reglage"><div><b>Frais de gestion</b><br><span class="aide">Facturés à chaque hôtel le 1er du mois, en % de son chiffre d\'affaires</span></div>'+pas("fraisHolding","x",X.frais+" %",1,X.frais>0,X.frais<HOLDING_FRAIS_MAX,"les frais de gestion")+'</div>'
-    +ligne("Prêté à cet hôtel",mt(S.pretH||0))
-    +'<div class="actions"><button type="button" class="btn" data-a="holdingPret" data-k="in" data-d="5000"'+(X.caisse>=5000?"":" disabled")+'>Prêter 5 000 à cet hôtel</button><button type="button" class="btn" data-a="holdingPret" data-k="out" data-d="5000"'+((S.pretH||0)>=5000&&S.caisse>=5000?"":" disabled")+'>Reprendre 5 000</button></div>'
-    +'<div class="actions"><button type="button" class="btn" data-a="holdingDividende" data-d="5000"'+(X.caisse>=5000&&reservesH()>=5000?"":" disabled")+'>Me verser 5 000 de dividende</button><button type="button" class="btn" data-a="holdingApport" data-d="5000"'+(S.moi.argent>=5000?"":" disabled")+'>Apporter 5 000 de ma poche</button></div>'
-    +'<p class="aide">Les dividendes des hôtels arrivent ici sans précompte et ne sont pas imposés. Les frais de gestion et les intérêts sont imposés à '+Math.round(HOLDING_ISOC*100)+' % chaque trimestre, après les frais de la holding ('+mt(HOLDING_CHARGES_JOUR*30)+' par mois : comptable, banque). Un dividende vers vous subit '+Math.round(HOLDING_PRECOMPTE*100)+' % de précompte mobilier.</p></div>';
+    +ligne("Caisse",mt(X.caisse))+ligne("Bénéfices distribuables",mt(Math.max(0,reservesH())))+ligne("Participations",pl(Object.keys(X.participations).length,"hôtel","hôtels"))
+    +'<div class="actions"><button type="button" class="btn principal" data-a="aller" data-e="holding">Ouvrir la holding</button></div></div>';
 }
 function ecranChaine(){
   var ici=resumeHotel(), tous=[ici].concat(S.groupe.map(function(x){ return x.resume; })), caisse=0, ch=0, ouvrir="";
@@ -2857,6 +2924,77 @@ function ecranChaine(){
   return barre()+entete("Mes hôtels",pl(tous.length,"hôtel","hôtels")+" · "+pl(ch,"chambre","chambres"))+carteHolding()
     +(tous.length>1?'<div class="carte">'+ligne("Caisse de tous les hôtels",mt(caisse))+ligne("Chambres",String(ch))+'<p class="aide">Pour faire passer de l\'argent d\'un hôtel à l\'autre : un dividende vers la holding dans l\'un, puis un prêt de la holding dans l\'autre.</p></div>':"")
     +tous.map(function(r,i){ return carteHotel(r,i===0); }).join("")+ouvrir;
+}
+
+/* ------------------------------------------------------------------ La holding : son écran */
+function ecranHolding(){
+  var X=holding(), v=U.hVue||"apercu", t=maintenant(), corps="";
+  if(!X) return barre()+entete("Holding","Pas encore créée")+carteHolding();
+  function og(k,n){ return '<button type="button" class="onglet'+(v===k?" actif":"")+'" data-a="hvue" data-k="'+k+'">'+n+'</button>'; }
+  if(v==="apercu"){
+    var tot=0, rows="", k, nb, div=0, m;
+    for(k in X.participations){ nb=X.participations[k]; tot+=nb.apport; rows+=ligne(h(nb.nom),"100 % · "+mt(nb.apport)); }
+    for(m in X.cm) div+=X.cm[m].d||0;
+    corps='<div class="carte">'+ligne("Caisse",mt(X.caisse))+ligne("Capital",mt(X.capital))+ligne("Bénéfices distribuables",mt(Math.max(0,reservesH())))+ligne("Dividendes reçus des hôtels",mt(div))+'</div>'
+      +'<div class="carte"><h2>Participations</h2>'+rows+'</div>'
+      +'<div class="carte"><h2>Les hôtels</h2>'
+      +'<div class="reglage"><div><b>Frais de gestion</b><br><span class="aide">Facturés à chaque hôtel le 1er du mois, en % de son chiffre d\'affaires</span></div>'+pas("fraisHolding","x",X.frais+" %",1,X.frais>0,X.frais<HOLDING_FRAIS_MAX,"les frais de gestion")+'</div>'
+      +ligne("Prêté à tous les hôtels",mt(X.prets))+ligne("Prêté à cet hôtel ("+h(S.nom)+")",mt(S.pretH||0))
+      +'<div class="actions"><button type="button" class="btn" data-a="holdingPret" data-k="in" data-d="5000"'+(X.caisse>=5000?"":" disabled")+'>Prêter 5 000 à cet hôtel</button><button type="button" class="btn" data-a="holdingPret" data-k="out" data-d="5000"'+((S.pretH||0)>=5000&&S.caisse>=5000?"":" disabled")+'>Reprendre 5 000</button></div>'
+      +'<p class="aide">Le prêt porte un intérêt de '+Math.round(TAUX_INTRA*100)+' % par an, payé par l\'hôtel chaque mois. Les dividendes des hôtels arrivent sans précompte (régime mère-fille) et ne sont pas imposés (revenus définitivement taxés).</p></div>'
+      +'<div class="carte"><h2>Vous et la holding</h2>'
+      +'<div class="actions"><button type="button" class="btn" data-a="holdingApport" data-d="5000"'+(S.moi.argent>=5000?"":" disabled")+'>Apporter 5 000 de ma poche</button></div>'
+      +'<div class="actions"><button type="button" class="btn" data-a="holdingDividende" data-d="5000"'+(X.caisse>=5000&&reservesH()>=5000?"":" disabled")+'>Me verser 5 000 de dividende</button><button type="button" class="btn" data-a="holdingDividende" data-d="max"'+(Math.min(X.caisse,reservesH())>=100?"":" disabled")+'>Tout le distribuable</button></div>'
+      +'<p class="aide">Un dividende vers vous subit '+Math.round(HOLDING_PRECOMPTE*100)+' % de précompte mobilier.</p></div>';
+  }
+  if(v==="compta"){
+    var mois=moisDuTrimestre(t), c={}, kk, R=resultatH(mois), dna=sommeH(mois,"dna"), rem=sommeH(mois,"r"), base=Math.max(0,R+dna-X.pertes);
+    for(kk in CLES_H) c[kk]=sommeH(mois,kk);
+    var actifs=X.participations, part=0; for(kk in actifs) part+=actifs[kk].apport;
+    var actif=part+valeurImmos()+X.actions.achat+X.terme+X.prets+Math.max(0,X.caisse), dette=Math.round(X.tva)+Math.max(0,-X.caisse), propres=actif-dette;
+    corps='<div class="carte"><h2>Résultat du '+nomTrimestre(t)+'</h2>'
+      +ligne("Frais de gestion facturés",mt(c.f))+ligne("Intérêts des prêts aux hôtels",mt(c.i))+ligne("Loyers",mt(c.l))+ligne("Intérêts et dividendes des placements",mt(c.n))+(c.pv?ligne("Plus-values",mt(c.pv)):"")
+      +ligne("Frais de la holding",'−'+mt(c.c))+(c.r?ligne("Rémunération du dirigeant",'−'+mt(c.r)):"")+(c.p?ligne("Personnel du siège",'−'+mt(c.p)):"")+(c.v?ligne("Voiture de société",'−'+mt(c.v)):"")+(c.ci?ligne("Charges des immeubles",'−'+mt(c.ci)):"")+(c.am?ligne("Amortissements",'−'+mt(c.am)):"")+(c.mv?ligne("Moins-values",'−'+mt(c.mv)):"")
+      +ligne("<b>Résultat</b>",'<b class="'+(R>=0?"plus-c":"moins-c")+'">'+signeM(R)+'</b>')
+      +ligne("Dividendes des hôtels (RDT, non imposés)",mt(c.d))
+      +(dna?ligne("Dépenses non admises (voiture)",mt(dna)):"")+(X.pertes?ligne("Pertes reportées",mt(X.pertes)):"")
+      +ligne("Impôt estimé",mt(impotH(base,rem))+(rem>=REMUN_MIN_TAUX_REDUIT/4?" · taux réduit":""))
+      +'<p class="aide">Taux réduit de 20 % sur les premiers 25 000 du trimestre si votre rémunération atteint '+mt(REMUN_MIN_TAUX_REDUIT/4)+' sur le trimestre ('+mt(REMUN_MIN_TAUX_REDUIT)+' par an). Sinon, '+Math.round(HOLDING_ISOC*100)+' %. Clôture et paiement le 1er jour du trimestre suivant.</p></div>'
+      +'<div class="carte"><h2>Bilan</h2>'
+      +ligne("Participations dans les hôtels",mt(part))+(X.biens.length?ligne("Immeubles (valeur nette)",mt(valeurImmos())):"")+(X.actions.parts?ligne("Actions (prix d'achat)",mt(X.actions.achat)):"")+(X.terme?ligne("Compte à terme",mt(X.terme)):"")+(X.prets?ligne("Prêts aux hôtels",mt(X.prets)):"")+ligne("Trésorerie",mt(Math.max(0,X.caisse)))
+      +ligne("<b>Total de l'actif</b>","<b>"+mt(actif)+"</b>")
+      +ligne("Capital",mt(X.capital))+ligne("Réserves et résultats",mt(propres-X.capital))+(X.tva?ligne("TVA à payer",mt(X.tva)):"")+(X.caisse<0?ligne("Découvert",mt(-X.caisse)):"")+'</div>'
+      +'<div class="bloc"><h2>Exercices clôturés</h2>'+(X.exercices.length?'<ul class="liste">'+X.exercices.map(function(e){ return '<li class="rang"><div><b>'+e.nom+'</b><small>Produits '+mt(e.produits||0)+' · charges '+mt(e.charges||0)+' · dividendes reçus '+mt(e.div||0)+(e.tva?' · TVA '+mt(e.tva):'')+'</small></div><div class="droite"><span class="puce '+(e.r>=0?"ok":"bad")+'">'+signeM(e.r)+'</span><small>impôt '+mt(e.impot)+(e.reduit?" (réduit)":"")+'</small></div></li>'; }).join("")+'</ul>':'<p class="vide">Pas encore de clôture.</p>')+'</div>';
+  }
+  if(v==="moi"){
+    var R2=remunNette(X.remun), V2=voitureH();
+    corps='<div class="carte"><h2>Votre rémunération de dirigeant</h2>'
+      +'<div class="reglage"><div><b>Brut par mois</b><br><span class="aide">Payé le 1er du mois</span></div>'+pas("remun","x",mt(X.remun),500,X.remun>0,X.remun<30000,"la rémunération")+'</div>'
+      +(X.remun?ligne("Cotisations sociales d'indépendant, "+String(COTIS_INDEP*100).replace(".",",")+" %",'−'+mt(R2.cot))+(R2.atn?ligne("Avantage de la voiture (imposé, pas versé)",mt(R2.atn)):"")+ligne("Précompte professionnel, "+Math.round(PRECOMPTE_PRO*100)+" %",'−'+mt(R2.pp))+ligne("<b>Net pour vous</b>","<b>"+mt(R2.net)+"</b>"):"")
+      +ligne("Versé depuis le début",mt(X.netVerse||0)+" net")
+      +'<p class="aide">La rémunération est une charge déductible pour la holding. À partir de '+mt(REMUN_MIN_TAUX_REDUIT)+' par an, la holding a droit au taux réduit d\'impôt des sociétés. Autre voie : le dividende, plus simple, mais sans déduction pour la holding.</p></div>'
+      +'<div class="carte"><h2>Voiture de société</h2>'+(V2?ligne("Votre voiture",V2.nom)+ligne("Leasing",mt(V2.loyer)+" par mois")+ligne("Déductible pour la holding",Math.round(V2.deduc*100)+" %")+ligne("Avantage de toute nature",mt(V2.atn)+" par an"):'<p class="aide">Pas de voiture de société.</p>')
+      +'<div class="actions">'+Object.keys(VOITURES).map(function(k){ var W=VOITURES[k]; return '<button type="button" class="btn'+(X.voiture===k?" principal":"")+'" data-a="voiture" data-k="'+k+'">'+W.nom+' · '+mt(W.loyer)+'/mois</button>'; }).join("")+(V2?'<button type="button" class="btn" data-a="voiture" data-k="aucune">Rendre la voiture</button>':'')+'</div>'
+      +'<p class="aide">Une électrique est déductible à 100 % et pèse peu sur votre avantage imposable. Une thermique ou une hybride coûte plus cher, en impôt pour la holding et pour vous.</p></div>';
+  }
+  if(v==="placements"){
+    var A=X.actions, va=valeurActions(), pvl=Math.round(va-A.achat);
+    corps='<div class="carte"><h2>Compte à terme</h2>'+ligne("Placé",mt(X.terme))+ligne("Taux",String(TAUX_TERME*100).replace(".",",")+" % par an, intérêts chaque mois")
+      +'<div class="actions"><button type="button" class="btn" data-a="terme" data-d="10000"'+(X.caisse>=10000?"":" disabled")+'>Placer 10 000</button><button type="button" class="btn" data-a="terme" data-d="-10000"'+(X.terme>=10000?"":" disabled")+'>Retirer 10 000</button></div></div>'
+      +'<div class="carte"><h2>Portefeuille d\'actions</h2>'+ligne("Valeur aujourd'hui",mt(va))+ligne("Prix d'achat",mt(A.achat))+(A.parts?ligne(pvl>=0?"Plus-value latente":"Moins-value latente",'<span class="'+(pvl>=0?"plus-c":"moins-c")+'">'+signeM(pvl)+'</span>'):"")+ligne("Indice",String(Math.round(A.cours*100)/100).replace(".",","))
+      +'<div class="actions"><button type="button" class="btn" data-a="bourse" data-d="10000"'+(X.caisse>=10000?"":" disabled")+'>Acheter pour 10 000</button><button type="button" class="btn" data-a="bourse" data-d="-10000"'+(va>=1?"":" disabled")+'>Vendre pour 10 000</button></div>'
+      +'<p class="aide">Un fonds d\'actions européennes : il monte en moyenne, avec des à-coups chaque jour. Un dividende chaque trimestre. Plus-values imposées à la vente.</p></div>'
+      +'<div class="bloc"><h2>Immobilier de rapport</h2>'+(X.biens.length?'<ul class="liste">'+X.biens.map(function(b){ var B=BIENS_H[b.k]; return '<li class="rang"><div><b>'+B.nom+'</b><small>'+mt(B.loyer)+' de loyer par mois'+(b.vide?' · vide encore '+pl(b.vide,"mois","mois"):'')+' · valeur nette '+mt(b.prix-b.amort)+'</small></div><div class="droite"><button type="button" class="btn petit" data-a="vendreBien" data-k="'+b.id+'">Vendre</button></div></li>'; }).join("")+'</ul>':"")
+      +Object.keys(BIENS_H).map(function(k){ var B=BIENS_H[k], p=Math.round(B.prix*(1+DROITS_ENREG)); return '<div class="carte"><div class="carte-haut"><h3>'+B.nom+'<small>'+mt(B.loyer)+' par mois · rendement brut '+String(Math.round(B.loyer*12/B.prix*1000)/10).replace(".",",")+' %</small></h3></div><div class="actions"><button type="button" class="btn" data-a="acheterBien" data-k="'+k+'"'+(X.caisse>=p?"":" disabled")+'>Acheter · '+mt(p)+'</button></div></div>'; }).join("")
+      +'<p class="aide">Prix avec 12,5 % de droits d\'enregistrement. Charges (précompte immobilier, entretien) : environ 12 % des loyers. Le bâtiment s\'amortit sur 33 ans. Un locataire peut partir : le bien reste vide quelques mois.</p></div>';
+  }
+  if(v==="siege"){
+    var tot2=salairesSiege();
+    corps='<div class="carte">'+ligne("Masse salariale du siège",mt(Math.round(tot2*1.25))+" par mois, cotisations comprises")+'<p class="aide">Le siège travaille pour tous vos hôtels à la fois. Ses salaires sont payés par la holding : c\'est là que vos frais de gestion trouvent leur sens.</p></div>'
+      +ORDRE_SIEGE.map(function(k){ var P=SIEGE[k], on=siege(k); return '<div class="carte"><div class="carte-haut"><h3>'+P.nom+'<small>'+mt(P.salaire)+' brut par mois</small></h3>'+(on?'<span class="puce ok">En poste</span>':'')+'</div><p class="aide">'+P.txt+'</p><div class="actions"><button type="button" class="btn'+(on?"":" principal")+'" data-a="siege" data-k="'+k+'">'+(on?"Se séparer":"Engager")+'</button></div></div>'; }).join("");
+  }
+  return barre()+entete(X.nom,"Holding · caisse "+mt(X.caisse))
+    +'<div class="onglets cinq">'+og("apercu","Aperçu")+og("compta","Compta")+og("moi","Vous")+og("placements","Placer")+og("siege","Siège")+'</div>'+corps;
 }
 function periode(vue,decal){
   var d=new Date(maintenant()), cles=[], i, q, titre, src="cm";
@@ -3079,7 +3217,7 @@ var A={
     if(holding()||S.moi.argent<n||n<HOLDING_FRAIS_CONSTITUTION+1000) return false;
     S.moi.argent-=n;
     X={nom:nom,creeLe:t,caisse:n-HOLDING_FRAIS_CONSTITUTION,capital:n,frais:2,pertes:0,cm:{},exercices:[],participations:{},dernierJour:minuit(t),recu:0};
-    S.moi.holding=X;
+    S.moi.holding=completerHolding(X);
     // Vincent apporte ses parts des hôtels existants : apport en nature, à la valeur du capital de chacun
     [{id:S.hotelId,nom:S.nom,capital:S.capital}].concat(S.groupe.map(function(g){ var o={}; try{ o=JSON.parse(g.json); }catch(e){} return {id:g.id,nom:g.resume.nom,capital:o.capital||0}; })).forEach(function(h){ X.participations[h.id]={nom:h.nom,apport:Math.round(h.capital),depuis:t,nature:1}; nature+=Math.round(h.capital); });
     X.capital+=nature;
@@ -3090,6 +3228,7 @@ var A={
   holdingApport:function(d){ var X=holding(), n=+d.d, t=maintenant(); if(!X||!(n>0)||S.moi.argent<n) return false; S.moi.argent-=n; X.caisse+=n; X.capital+=n; noter(t,"",S.prenom+" augmente le capital de "+X.nom+" de "+mt(n)+"."); return true; },
   holdingDividende:function(d){
     var X=holding(), t=maintenant(), n=+d.d, net;
+    if(d.d==="max") n=Math.floor(Math.min(X.caisse,reservesH())/100)*100;
     if(!X||!(n>0)||X.caisse<n||reservesH()<n) return false;
     net=Math.round(n*(1-HOLDING_PRECOMPTE)); X.caisse-=n; moisH(t).b+=n;
     S.moi.argent+=net; S.moi.gagne+=net; S.moi.dividendes=(S.moi.dividendes||0)+net;
@@ -3099,8 +3238,55 @@ var A={
   holdingPret:function(d){
     var X=holding(), t=maintenant(), n=+d.d;
     if(!X||!(n>0)) return false;
-    if(d.k==="in"){ if(X.caisse<n) return false; X.caisse-=n; S.pretH+=n; inscrire(t,"p:pret",n); noter(t,"",X.nom+" prête "+mt(n)+" à l'hôtel."); }
-    else { if(S.pretH<n||S.caisse<n) return false; S.pretH-=n; X.caisse+=n; inscrire(t,"q:pret",n); noter(t,"","L'hôtel rembourse "+mt(n)+" à "+X.nom+"."); }
+    if(d.k==="in"){ if(X.caisse<n) return false; X.caisse-=n; S.pretH+=n; X.prets+=n; inscrire(t,"p:pret",n); noter(t,"",X.nom+" prête "+mt(n)+" à l'hôtel."); }
+    else { if(S.pretH<n||S.caisse<n) return false; S.pretH-=n; X.caisse+=n; X.prets=Math.max(0,X.prets-n); inscrire(t,"q:pret",n); noter(t,"","L'hôtel rembourse "+mt(n)+" à "+X.nom+"."); }
+    return true;
+  },
+  hvue:function(d){ U.hVue=d.k; return false; },
+  remun:function(d){ var X=holding(); if(!X) return false; X.remun=borne(X.remun+(+d.d),0,30000); return true; },
+  voiture:function(d){
+    var X=holding(), t=maintenant();
+    if(!X) return false;
+    if(d.k==="aucune"){ if(!X.voiture) return false; noter(t,"",X.nom+" rend "+VOITURES[X.voiture].nom.toLowerCase()+" au loueur."); X.voiture=null; return true; }
+    if(!VOITURES[d.k]||X.voiture===d.k) return false;
+    X.voiture=d.k; noter(t,"ok",X.nom+" prend en leasing "+VOITURES[d.k].nom.toLowerCase()+" pour "+S.prenom+" ("+mt(VOITURES[d.k].loyer)+" par mois)."); return true;
+  },
+  terme:function(d){ var X=holding(), n=+d.d; if(!X) return false; if(n>0){ if(X.caisse<n) return false; X.caisse-=n; X.terme+=n; } else { n=-n; if(X.terme<n) return false; X.terme-=n; X.caisse+=n; } return true; },
+  bourse:function(d){
+    var X=holding(), A, n=+d.d, t=maintenant(), parts, base, pv;
+    if(!X) return false; A=X.actions;
+    if(n>0){ if(X.caisse<n) return false; X.caisse-=n; A.parts+=n/A.cours; A.achat+=n; return true; }
+    n=Math.min(-n,valeurActions()); if(n<1) return false;
+    parts=n/A.cours; base=A.achat*parts/A.parts; A.parts-=parts; A.achat-=base; if(A.parts<1e-6){ A.parts=0; A.achat=0; }
+    X.caisse+=n; pv=Math.round(n-base);
+    if(pv>=0) moisH(t).pv+=pv; else moisH(t).mv+=-pv;
+    noter(t,pv>=0?"ok":"warn",X.nom+" vend pour "+mt(n)+" d'actions : "+(pv>=0?"plus-value de "+mt(pv):"moins-value de "+mt(-pv))+".");
+    return true;
+  },
+  acheterBien:function(d){
+    var X=holding(), B=BIENS_H[d.k], t=maintenant(), prix;
+    if(!X||!B) return false; prix=Math.round(B.prix*(1+DROITS_ENREG));
+    if(X.caisse<prix) return false;
+    X.caisse-=prix; X.biens.push({id:X.nBien++,k:d.k,prix:prix,amort:0,vide:entre(0,1),depuis:t});
+    noter(t,"ok",X.nom+" achète "+B.nom.toLowerCase()+" : "+mt(prix)+", droits d'enregistrement compris.");
+    return true;
+  },
+  vendreBien:function(d){
+    var X=holding(), t=maintenant(), b=null, B, ans, vente, vnc, pv;
+    if(!X) return false;
+    X.biens.forEach(function(x){ if(x.id===+d.k) b=x; }); if(!b) return false;
+    B=BIENS_H[b.k]; ans=(t-b.depuis)/(365*JOUR);
+    vente=Math.round(B.prix*Math.pow(1.025,ans)*alea(0.93,1.07)*0.97/100)*100; vnc=b.prix-b.amort; pv=vente-vnc;
+    X.biens.splice(X.biens.indexOf(b),1); X.caisse+=vente;
+    if(pv>=0) moisH(t).pv+=pv; else moisH(t).mv+=-pv;
+    noter(t,"",X.nom+" vend "+B.nom.toLowerCase()+" "+mt(vente)+" (frais d'agence déduits) : "+(pv>=0?"plus-value de "+mt(pv):"moins-value de "+mt(-pv))+".");
+    return true;
+  },
+  siege:function(d){
+    var X=holding(), P=SIEGE[d.k], t=maintenant();
+    if(!X||!P) return false;
+    if(X.siege[d.k]){ delete X.siege[d.k]; noter(t,"",X.nom+" se sépare de son "+P.nom.toLowerCase()+"."); }
+    else { X.siege[d.k]=t; noter(t,"ok",X.nom+" engage un "+P.nom.toLowerCase()+" ("+mt(P.salaire)+" brut par mois)."); }
     return true;
   },
   allerHotel:function(d){ return changerHotel(+d.k); },
@@ -3463,7 +3649,7 @@ function revenir(){
 
 /* ------------------------------------------------------------------ Boucle */
 var app=document.getElementById("app"), dernier="", dernierBattement=Date.now();
-var ECRANS={evenements:ecranEvenements,agenda:ecranAgenda,accueil:ecranAccueil,clients:ecranClients,fiche:ecranFiche,requete:ecranRequete,chambres:ecranChambres,clientele:ecranClientele,avis:ecranAvis,travaux:ecranTravaux,chaine:ecranChaine,equipements:ecranEquipements,economat:ecranEconomat,planning:ecranPlanning,equipe:ecranEquipe,recrutement:ecranRecrutement,tarifs:ecranTarifs,finances:ecranFinances,journal:ecranJournal,moi:ecranMoi,reglages:ecranReglages};
+var ECRANS={evenements:ecranEvenements,agenda:ecranAgenda,accueil:ecranAccueil,clients:ecranClients,fiche:ecranFiche,requete:ecranRequete,chambres:ecranChambres,clientele:ecranClientele,avis:ecranAvis,travaux:ecranTravaux,chaine:ecranChaine,holding:ecranHolding,equipements:ecranEquipements,economat:ecranEconomat,planning:ecranPlanning,equipe:ecranEquipe,recrutement:ecranRecrutement,tarifs:ecranTarifs,finances:ecranFinances,journal:ecranJournal,moi:ecranMoi,reglages:ecranReglages};
 function rendre(){
   var y=window.scrollY, cle=S.fondeLe?U.ecran:"fondation";
   app.innerHTML='<div class="ecran">'+(S.fondeLe?(ECRANS[U.ecran]||ecranAccueil)():ecranFondation())+'</div>'+(S.fondeLe?navigation():"");
