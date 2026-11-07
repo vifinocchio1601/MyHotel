@@ -379,6 +379,23 @@ var VIPS=[["Léa Vasseur","chanteuse"],["Marco Bellandi","footballeur"],["Inès 
 var VIP_CHANCE=0.08, BUZZ_JOURS=10;
 // Le Guide Lumen : un inspecteur incognito, de temps en temps, parmi les clients
 var GUIDE="Guide Lumen", DISTINCTIONS=["Aucune distinction","Recommandé","Une lampe","Deux lampes","Trois lampes"], INSP_CHANCE=0.04;
+/* Construire et agrandir. Le bâtiment a un nombre de places : on ne peut pas avoir plus de chambres que de places.
+   Un chantier : dossier d'architecte (honoraires), permis d'urbanisme de la commune, devis de trois entrepreneurs, travaux, réception. */
+var PLACES_DEPART=5, HONORAIRES=0.06, DROITS_ENREG=0.125, DUREE_BAT=30*365;
+var CHANTIERS={
+  combles:{nom:"Aménager les combles",txt:"Trois chambres mansardées sous le toit.",places:3,budget:18000,jours:25,permis:false,palier:0},
+  etage:{nom:"Surélever d'un étage",txt:"Un étage de plus sur le bâtiment.",places:6,budget:45000,jours:50,permis:true,palier:0,req:"combles"},
+  terrain:{nom:"Acheter le terrain voisin",txt:"Une prairie de 20 ares, côté jardin. Droits d'enregistrement de 12,5 % en plus.",terrain:true,budget:35000,palier:1},
+  aile:{nom:"Construire une aile côté jardin",txt:"Une aile neuve sur le terrain voisin.",places:12,budget:110000,jours:90,permis:true,palier:1,req:"terrain"},
+  maison:{nom:"Racheter la maison d'à côté",txt:"Une grande maison de maître, à transformer. Droits d'enregistrement de 12,5 % en plus.",terrain:true,budget:90000,palier:2,req:"aile"},
+  annexe:{nom:"Transformer la maison en annexe",txt:"La maison de maître devient une annexe de l'hôtel.",places:10,budget:80000,jours:60,permis:true,palier:2,req:"maison"},
+  aile2:{nom:"Construire une seconde aile",txt:"Une aile de deux étages, de l'autre côté du jardin.",places:20,budget:240000,jours:120,permis:true,palier:3,req:"annexe"},
+  tour:{nom:"Élever une tour panoramique",txt:"Une tour de huit étages avec vue sur toute la vallée.",places:28,budget:520000,jours:180,permis:true,palier:3,req:"aile2"}};
+var ORDRE_CHANTIERS=["combles","etage","terrain","aile","maison","annexe","aile2","tour"];
+var ENTREPRENEURS=["Bati-Ourthe","Delvaux & Fils","Constructions Lemaire","Gros Œuvre Mosan","Renard Bâtiment","Entreprise Collard","Hennen Construct","Batimeuse","Thiry Frères","Ardenne Bâtir"];
+// Bon marché mais lent et peu fiable, au prix du marché, ou cher mais rapide et sérieux
+var OFFRES=[{prix:0.85,delai:1.3,fiab:0.55,nom:"Le moins cher"},{prix:1,delai:1,fiab:0.8,nom:"Au prix du marché"},{prix:1.18,delai:0.85,fiab:0.95,nom:"Le plus sérieux"}];
+var NUISANCE=5;
 var ROTATION=0.6, PART_PASSAGE=0.2, COMMISSION=0.15;
 var PATIENCE_ACCUEIL=60, DELAI_RELAIS=15*MIN, DELAI_REQ=40*MIN, RELAIS_REQ=12*MIN, TAUX_REQUETE=0.45;
 var DUREE_MENAGE=30, DUREE_MENAGE_MOI=90, PAR_FEMME=12, PAR_ACCUEIL=25;
@@ -598,7 +615,7 @@ function etatInitial(){
     equipe:[],nEquipe:1,candidats:{},nCandidat:1,sejours:[],nSejour:1,visites:[],nVisite:1,requetes:[],nRequete:1,arrivees:[],evts:[],
     avis:[55,55,55,55,55,55,55,55,55,55],finis:0,stat:statVide(),accueil:{ok:0,moyen:0,auto:0,autoMoyen:0},req:{ok:0,moyen:0,auto:0,sans:0},
     stock:{},commandes:[],auto:true,demandes:[],nDemande:1,demande:{},plaintes:[],nPlainte:1,bordereaux:[],contestes:[],nBord:1,immos:[],frac:{},valStock:{},
-    evenements:[],nEv:1,acomptes:0,salons:[],salonsJusqua:0,habitues:[],nHab:1,distinction:0,buzz:null,roomService:false,avisLigne:[],nAvisL:1,
+    evenements:[],nEv:1,acomptes:0,salons:[],salonsJusqua:0,habitues:[],nHab:1,places:PLACES_DEPART,chantier:null,faits:{},nChantier:1,distinction:0,buzz:null,roomService:false,avisLigne:[],nAvisL:1,
     tvaP:tvaVide(),declarations:[],tvaHisto:[],nFisc:1,impots:[],exercices:[],capital:0,apport5000:1,moi25000:1,reserve:0,reporte:0,pertes:0,affectation:null,
     registre:[],journal:[],cj:{},cm:{},prochaineCloture:0,
     moi:moiVide(),releve:0,decalage:0};
@@ -617,6 +634,7 @@ function migrer(){
   neuf=moiVide(); for(k in neuf) if(S.moi[k]===undefined) S.moi[k]=neuf[k];
   for(k in ROLES) if(!S.postes[k]) S.postes[k]={salaire:ROLES[k].salaire,heures:8};
   for(k in REF) if(S.tarifs[k]===undefined) S.tarifs[k]=REF[k];
+  if(S.places<S.chambres.length) S.places=S.chambres.length;
   S.chambres.forEach(function(c){ if(c.niv>=NIV_DE.minibar&&!c.mb){ c.mb=1; c.mbN=0; } });
   PERIODES.forEach(function(P){ if(S.tarifs[P.cle]===undefined) S.tarifs[P.cle]=S.tarifs.chambre; });
   if(S.fondeLe) prevoirSalons(S.horloge||Date.now());
@@ -806,7 +824,7 @@ function bilan(){
   return b;
 }
 function amortir(t){
-  S.immos.forEach(function(im){ var d; if(im.c>=im.v) return; d=Math.min(im.v/DUREE_AMORT,im.v-im.c); im.c+=d; inscrireF(t,"a:"+im.sv,d); });
+  S.immos.forEach(function(im){ var d; if(im.c>=im.v||im.terrain) return; d=im.perdu?im.v-im.c:Math.min(im.v/(im.duree||DUREE_AMORT),im.v-im.c); im.c+=d; inscrireF(t,"a:"+im.sv,d); });
 }
 function valeurStock(){ var n=0, k; for(k in S.valStock) n+=S.valStock[k]; S.commandes.forEach(function(c){ n+=c.v||0; }); return n; }
 function additionner(src,cles){ var tot={}, i, k, o; for(i=0;i<cles.length;i++){ o=src[cles[i]]; if(o) for(k in o) tot[k]=(tot[k]||0)+o[k]; } return tot; }
@@ -1310,6 +1328,7 @@ function noteSejour(sj){
   n-=Math.min(15,(sj.attente||0)/Math.max(1,sj.pat/MIN)*8);
   n-=(1-couvMenage())*15+(1-couvAccueil())*8;
   if(sj.parMoi) n+=3;
+  if(enTravaux()) n-=NUISANCE;
   if(sj.vip) n+=sj.parMoi?4:-10;
   if(sj.insp) n-=(1-couvMenage())*10+(stockDe("linge")?0:5);
   if(sj.pref) n+=chambre(sj.ch)&&sj.ch===sj.pref?6:-3;
@@ -1398,6 +1417,46 @@ function suitesDepart(sj,note,t){
     if(note>=78+4*d&&d<DISTINCTIONS.length-1&&d<=S.palier){ S.distinction=d+1; for(i=0;i<3;i++) avis(92); noter(t,"ok",nomComplet(sj)+" était un inspecteur du "+GUIDE+" ! L'hôtel obtient : "+DISTINCTIONS[d+1]+".");
     } else if(note<55&&d>0){ S.distinction=d-1; noter(t,"bad",nomComplet(sj)+" était un inspecteur du "+GUIDE+". Déçu, il retire une distinction : "+DISTINCTIONS[d-1]+".");
     } else noter(t,"",nomComplet(sj)+" était un inspecteur du "+GUIDE+". Rien ne change cette fois"+(note>=70?" : encore un effort.":"."));
+  }
+}
+/* ------------------------------------------------------------------ Travaux */
+function maxChambres(){ return Math.min(PALIERS[S.palier].chambres,S.places); }
+function enTravaux(){ return !!(S.chantier&&S.chantier.etape==="travaux"); }
+function chantierPossible(k){ var X=CHANTIERS[k]; return !S.faits[k]&&S.palier>=X.palier&&(!X.req||S.faits[X.req]); }
+// Un paiement au chantier : la TVA est déductible, le bâtiment s'amortit sur 30 ans
+function payerChantier(t,ch,montant){
+  var X=CHANTIERS[ch.k], cle="bat-"+ch.k, ht=achat(t,"k:equipements",montant,TVA_NORMALE,"g83"), im=null;
+  S.immos.forEach(function(x){ if(x.cle===cle) im=x; });
+  if(im) im.v+=ht; else S.immos.push({cle:cle,nom:X.nom,sv:"equipements",v:ht,c:0,t:t,duree:DUREE_BAT});
+  ch.paye+=montant;
+}
+function devisChantier(ch){
+  var X=CHANTIERS[ch.k], noms=ENTREPRENEURS.slice().sort(function(){ return Math.random()-0.5; });
+  ch.devis=OFFRES.map(function(o,i){ return {nom:noms[i],prix:Math.round(X.budget*o.prix*alea(0.95,1.05)/100)*100,jours:Math.round(X.jours*o.delai*alea(0.9,1.1)),fiab:o.fiab,type:o.nom}; });
+  ch.etape="devis";
+}
+function travauxDuJour(t){
+  var ch=S.chantier, X, d, n;
+  if(!ch) return;
+  X=CHANTIERS[ch.k];
+  if(ch.etape==="permis"&&t>=ch.decision){
+    if(!ch.recours&&Math.random()<0.12){ ch.recours=1; ch.decision=jourApres(t,entre(20,40)); noter(t,"bad","Un voisin dépose un recours contre le permis « "+X.nom.toLowerCase()+" ». Décision repoussée au "+dateCourte(ch.decision)+"."); return; }
+    if(Math.random()<0.15){ ch.etape="refus"; noter(t,"bad","La commune refuse le permis d'urbanisme pour « "+X.nom.toLowerCase()+" ». Vous pouvez faire revoir les plans et redéposer le dossier."); return; }
+    devisChantier(ch); noter(t,"ok","Permis d'urbanisme accordé pour « "+X.nom.toLowerCase()+" ». Trois entrepreneurs vous ont envoyé leur devis : à vous de choisir, dans Travaux.");
+    return;
+  }
+  if(ch.etape!=="travaux") return;
+  d=ch.devisPris;
+  // Les aléas : plus l'entrepreneur est léger, plus ils sont fréquents
+  if(Math.random()<(1-d.fiab)*0.08){ n=entre(4,14); ch.fin=jourApres(ch.fin,n); noter(t,"bad",d.nom+" prend du retard sur le chantier ("+["intempéries","livraison de matériaux en retard","ouvriers sur un autre chantier","mauvaise surprise dans les fondations"][entre(0,3)]+") : "+pl(n,"jour","jours")+" de plus."); }
+  if(Math.random()<(1-d.fiab)*0.04){ n=Math.round(d.prix*alea(0.04,0.1)/100)*100; ch.supp+=n; noter(t,"bad",d.nom+" annonce un surcoût de "+mt(n)+" ("+["prix de l'acier en hausse","imprévu technique","travaux supplémentaires demandés par les pompiers"][entre(0,2)]+"). À payer à la réception."); }
+  if(!ch.mi&&t>=ch.debut+(ch.fin-ch.debut)/2){ ch.mi=1; payerChantier(t,ch,Math.round(d.prix*0.4)); noter(t,"","Chantier à mi-parcours : deuxième tranche de "+mt(Math.round(d.prix*0.4))+" payée à "+d.nom+"."); }
+  if(t>=ch.fin){
+    if(!ch.mi) payerChantier(t,ch,Math.round(d.prix*0.4));
+    payerChantier(t,ch,d.prix-Math.round(d.prix*0.3)-Math.round(d.prix*0.4)+ch.supp);
+    S.faits[ch.k]=1; S.places+=X.places||0;
+    noter(t,"ok","Chantier terminé : "+X.nom.toLowerCase()+". "+(X.places?"Le bâtiment compte maintenant "+S.places+" places : vous pouvez acheter "+pl(X.places,"chambre","chambres")+" de plus.":"")+" Coût total : "+mt(ch.paye)+".");
+    S.chantier=null;
   }
 }
 function quitter(sj,t){
@@ -1785,7 +1844,7 @@ function cloturer(t){
   garde=cleJour(t-JOURS_GARDES*JOUR);
   for(vieux in S.cj) if(vieux<garde) delete S.cj[vieux];
   monterPalier(t);
-  absences(t); reglements(t); ajusterDemande(); prevoirSalons(t); expirerAvis(t);
+  absences(t); reglements(t); ajusterDemande(); prevoirSalons(t); expirerAvis(t); travauxDuJour(t);
   S.plaintes.slice().forEach(function(x){ if(x.limite<=t) indemniser(x,t,true); });
   prendreReservations(t); retourHabitues(t); demandesEv(t); planifierJour(t,t,true); planifierEvenement(t);
   affecterMenage(t); affecterVisites(t); reappro(t);
@@ -2061,9 +2120,10 @@ function ecranAccueil(){
     +'<div class="tuiles">'
     +tuile("g5","clients","Clients",na+" à accueillir · "+pl(nr,"demande","demandes"),"clients")
     +tuile("g4","calendrier","Agenda",pl(aPlacer().length,"réservation","réservations")+" à placer","agenda")
-    +tuile("g1","lit","Chambres",nc+" sur "+PALIERS[S.palier].chambres+" · "+pl(nl,"occupée","occupées"),"chambres")
+    +tuile("g1","lit","Chambres",nc+" sur "+maxChambres()+" · "+pl(nl,"occupée","occupées"),"chambres")
     +tuile("g3","guide","Clientèle","Profils et souhaits","clientele")
     +tuile("g8","cloche","Avis",(noteEnLigne()===null?"Aucun avis":virgule(noteEnLigne())+" ★")+" · "+pl(S.avisLigne.filter(function(a){ return !a.rep; }).length,"réponse","réponses")+" à faire","avis")
+    +tuile("g4","travaux","Travaux",S.chantier?({plans:"Plans",permis:"Permis demandé",refus:"Permis refusé",devis:"Devis à choisir",travaux:"Chantier en cours"})[S.chantier.etape]:S.places+" places","travaux")
     +tuile("g7","equipements","Équipements",ORDRE_EQUIP.filter(function(k){ return niv(k); }).length+" sur "+ORDRE_EQUIP.length+" construits","equipements")
     +tuile("g3","verre","Événements",pl(S.evenements.filter(function(x){ return x.etat==="demande"; }).length,"devis","devis")+" à faire","evenements")
     +tuile("g2","equipe","Équipe",pl(S.equipe.length,"personne","personnes"),"equipe")
@@ -2281,11 +2341,12 @@ function carteChambre(c){
     +action+'</div>';
 }
 function ecranChambres(){
-  var max=PALIERS[S.palier].chambres, A=U.achat, prix=prixAchat(A.type,A.cote), plein=S.chambres.length>=max, p=prochainPalier(), lit=TYPES[A.type].lit;
+  var max=maxChambres(), A=U.achat, prix=prixAchat(A.type,A.cote), plein=S.chambres.length>=max, p=prochainPalier(), lit=TYPES[A.type].lit;
   function groupe(k,nom,opts){ return '<div class="champ"><span>'+nom+'</span><div class="puces-choix">'+opts.map(function(o){ return '<button type="button" class="choix'+(A[k]===o[0]?" actif":"")+'" data-a="achat" data-k="'+k+'" data-d="'+o[0]+'">'+o[1]+'</button>'; }).join("")+'</div></div>'; }
   return barre()+entete("Chambres",S.chambres.length+" sur "+max+" possibles · "+occupees()+" occupées · "+pl(pretes().length,"prête","prêtes"))
     +'<div class="carte"><div class="carte-haut"><h3>Acheter une chambre<small>Elle arrive au niveau 1, prête à louer.</small></h3>'+(plein?"":'<span class="puce num">'+mt(prix)+'</span>')+'</div>'
-    +(plein?'<p class="aide">'+(p?"Le palier "+nomPalier(S.palier)+" ne permet pas plus de "+max+" chambres. Le palier "+nomPalier(S.palier+1)+" en permet "+p.chambres+".":"L'hôtel a atteint sa taille maximale.")+'</p>'
+    +(plein&&S.places<PALIERS[S.palier].chambres?'<p class="aide">Le bâtiment n\'a que '+S.places+' places. Agrandissez-le dans Travaux pour ajouter des chambres.</p><div class="actions"><button type="button" class="btn" data-a="aller" data-e="travaux">Voir les travaux</button></div>'
+      :plein?'<p class="aide">'+(p?"Le palier "+nomPalier(S.palier)+" ne permet pas plus de "+max+" chambres. Le palier "+nomPalier(S.palier+1)+" en permet "+p.chambres+".":"L'hôtel a atteint sa taille maximale.")+'</p>'
       :groupe("type","Type",ORDRE_TYPES.map(function(t){ return [t,TYPES[t].nom+" · "+TYPES[t].cap+" pers."]; }))
         +groupe("cote","Côté",[["rue","Côté rue"],["jardin","Côté jardin"]])
         +groupe("etage","Étage",[["rez","Rez-de-chaussée"],["haut","À l'étage"]])
@@ -2540,6 +2601,43 @@ function ecranAvis(){
     +'<div class="bloc"><h2>Avis'+(att?' · '+att+' à traiter':'')+'</h2>'+(liste?'<ul class="liste">'+liste+'</ul>':'<p class="vide">Pas encore d\'avis. Un client sur trois en écrit un en partant, plus souvent s\'il a adoré ou détesté.</p>')+'</div>'
     +'<div class="bloc"><h2>Habitués</h2>'+(habs?'<ul class="liste">'+habs+'</ul>':'<p class="vide">Pas encore d\'habitué.</p>')
     +'<p class="aide">Un client ravi peut devenir un habitué. Il revient de lui-même, réserve en direct (pas de commission) et aime retrouver sa chambre : donnez-la-lui. S\'il repart déçu, il ne revient plus.</p></div>';
+}
+
+/* ------------------------------------------------------------------ Travaux */
+I.travaux='<svg viewBox="0 0 24 24"><path d="M4 21V9l6-4 6 4v12M2 21h20M8 21v-5h4v5M18 21V4h3M18 7h3"/></svg>';
+function ecranTravaux(){
+  var ch=S.chantier, X=ch?CHANTIERS[ch.k]:null, t=maintenant(), cours="";
+  if(ch){
+    cours='<div class="carte"><div class="carte-haut"><h3>'+h(X.nom)+'<small>'+h(X.txt)+'</small></h3><span class="puce num">+'+pl(X.places,"place","places")+'</span></div>';
+    if(ch.etape==="permis") cours+='<p>Le dossier est à la commune. Décision attendue vers le <b>'+dateCourte(ch.decision)+'</b>.</p>'+(ch.recours?'<p class="aide">Un voisin a déposé un recours.</p>':'')
+      +'<div class="actions"><button type="button" class="btn" data-a="abandonner">Abandonner le projet</button></div>';
+    else if(ch.etape==="refus") cours+='<p>Permis refusé par la commune.</p><div class="actions"><button type="button" class="btn principal" data-a="redeposer"'+(S.caisse>=X.budget*0.02?"":" disabled")+'>Revoir les plans et redéposer · '+mt(Math.round(X.budget*0.02))+'</button><button type="button" class="btn" data-a="abandonner">Abandonner</button></div>';
+    else if(ch.etape==="devis") cours+='<p>Choisissez l\'entrepreneur. Vous payez 30 % à la signature, 40 % à mi-chantier et le reste à la réception, avec les éventuels surcoûts.</p><ul class="liste">'
+      +ch.devis.map(function(o,i){ return '<li class="cand"><div class="fiche seule"><span class="cand-nom">'+h(o.nom)+' <span class="puce">'+o.type+'</span></span><span class="equips">'+mt(o.prix)+' · '+pl(o.jours,"jour","jours")+' · fiabilité '+(o.fiab>=0.9?"excellente":o.fiab>=0.75?"correcte":"douteuse")+'</span>'
+        +'<div class="actions"><button type="button" class="btn'+(i===1?" principal":"")+'" data-a="choisirDevis" data-k="'+i+'"'+(S.caisse>=o.prix*0.3?"":" disabled")+'>Signer · acompte '+mt(Math.round(o.prix*0.3))+'</button></div></div></li>'; }).join("")+'</ul>'
+      +'<div class="actions"><button type="button" class="btn" data-a="abandonner">Abandonner le projet</button></div>';
+    else if(ch.etape==="travaux"){
+      var p=borne((t-ch.debut)/Math.max(1,ch.fin-ch.debut),0,1);
+      cours+='<div class="progres"><div class="progres-haut"><b>'+h(ch.devisPris.nom)+'</b><span>'+Math.round(p*100)+' %</span></div><div class="piste"><div class="plein" style="width:'+Math.round(p*100)+'%"></div></div></div>'
+        +ligne("Fin prévue",dateCourte(ch.fin))+ligne("Prix signé",mt(ch.devisPris.prix))+(ch.supp?ligne("Surcoûts",mt(ch.supp)):"")+ligne("Déjà payé",mt(ch.paye))
+        +'<p class="aide">Pendant le chantier, le bruit gêne les clients (−'+NUISANCE+' points sur leur note).</p>';
+    }
+    cours+='</div>';
+  }
+  var projets=ORDRE_CHANTIERS.map(function(k){
+    var Y=CHANTIERS[k], fait=S.faits[k], ok=chantierPossible(k), libre=!ch||Y.terrain, cout=Y.terrain?Math.round(Y.budget*(1+DROITS_ENREG)):Math.round(Y.budget*HONORAIRES);
+    var etat=fait?'<span class="puce ok">Fait</span>':ch&&ch.k===k?'<span class="puce warn">En cours</span>':'';
+    var bas=fait||(ch&&ch.k===k)?"":!ok?'<p class="aide">'+(Y.req&&!S.faits[Y.req]?"D'abord : "+CHANTIERS[Y.req].nom.toLowerCase()+".":"Possible au palier "+nomPalier(Y.palier)+".")+'</p>'
+      :!libre?'<p class="aide">Un chantier à la fois.</p>'
+      :'<div class="actions"><button type="button" class="btn principal" data-a="lancerChantier" data-k="'+k+'"'+(S.caisse>=cout?"":" disabled")+'>'+(Y.terrain?"Acheter · "+mt(cout):"Lancer : honoraires d'architecte · "+mt(cout))+'</button>'+manqueHtml(cout)+'</div>';
+    return '<div class="carte"><div class="carte-haut"><h3>'+h(Y.nom)+'<small>'+h(Y.txt)+'</small></h3>'+etat+'</div>'
+      +(Y.terrain?ligne("Prix",mt(Y.budget)):ligne("Places en plus",String(Y.places))+ligne("Budget des travaux","environ "+mt(Y.budget))+ligne("Durée","environ "+pl(Y.jours,"jour","jours"))+ligne("Permis d'urbanisme",Y.permis?"oui":"non"))
+      +bas+'</div>';
+  }).join("");
+  return barre()+entete("Travaux",S.places+" places · "+pl(S.chambres.length,"chambre","chambres"))
+    +'<div class="carte">'+ligne("Places dans le bâtiment",String(S.places))+ligne("Chambres",String(S.chambres.length))+ligne("Le palier "+nomPalier(S.palier)+" permet",pl(PALIERS[S.palier].chambres,"chambre","chambres"))
+    +'<p class="aide">Pour ajouter des chambres, il faut de la place. Un chantier passe par l\'architecte, le permis d\'urbanisme de la commune, puis un entrepreneur. Le bâtiment s\'amortit sur 30 ans. Le terrain ne s\'amortit pas.</p></div>'
+    +cours+projets;
 }
 function periode(vue,decal){
   var d=new Date(maintenant()), cles=[], i, q, titre, src="cm";
@@ -2820,7 +2918,7 @@ var A={
     var B=U.achat, t=maintenant(), prix, c;
     if(!TYPES[B.type]||!COTES[B.cote]||!ETAGES[B.etage]) return false;
     prix=prixAchat(B.type,B.cote);
-    if(S.chambres.length>=PALIERS[S.palier].chambres||S.caisse<prix) return false;
+    if(S.chambres.length>=maxChambres()||S.caisse<prix) return false;
     c=ajouterChambre(B.type,B.cote,B.etage); immobiliser(t,"chambres","ch"+c.id,"Chambre "+c.n,prix);
     noter(t,"ok","Nouvelle chambre "+c.n+" : "+descChambre(c).toLowerCase()+" ("+mt(prix)+").");
     return true;
@@ -2831,6 +2929,40 @@ var A={
     c.mb=1; c.mbN=0; immobiliser(t,"chambres","mb"+c.id,"Minibar, chambre "+c.n,MB_PRIX);
     noter(t,"","Minibar installé dans la chambre "+c.n+". Il sera garni au prochain ménage, s'il y a des articles à l'économat.");
     if(S.auto) reappro(t);
+    return true;
+  },
+  lancerChantier:function(d){
+    var X=CHANTIERS[d.k], t=maintenant(), prix, ht, hon;
+    if(!X||!chantierPossible(d.k)||(S.chantier&&!X.terrain)) return false;
+    if(X.terrain){
+      prix=Math.round(X.budget*(1+DROITS_ENREG)); if(S.caisse<prix) return false;
+      ht=achat(t,"k:equipements",prix,0,"g83"); S.immos.push({cle:"terrain-"+d.k,nom:X.nom.replace(/^Acheter |^Racheter /,"").replace(/^./,function(x){ return x.toUpperCase(); }),sv:"equipements",v:ht,c:0,t:t,terrain:1});
+      S.faits[d.k]=1; noter(t,"ok","Acte signé chez le notaire : "+X.nom.toLowerCase().replace(/^acheter |^racheter /,"")+" est à vous ("+mt(prix)+", droits compris).");
+      return true;
+    }
+    hon=Math.round(X.budget*HONORAIRES); if(S.caisse<hon) return false;
+    S.chantier={id:S.nChantier++,k:d.k,etape:"plans",paye:0,supp:0,depuis:t};
+    payerChantier(t,S.chantier,hon);
+    if(X.permis){ S.chantier.etape="permis"; S.chantier.decision=jourApres(t,entre(20,50)); noter(t,"","Dossier « "+X.nom.toLowerCase()+" » déposé à la commune. Décision attendue vers le "+dateCourte(S.chantier.decision)+"."); }
+    else { devisChantier(S.chantier); noter(t,"","Pas de permis nécessaire pour « "+X.nom.toLowerCase()+" » : trois devis sont arrivés, dans Travaux."); }
+    return true;
+  },
+  redeposer:function(){
+    var ch=S.chantier, t=maintenant(), n;
+    if(!ch||ch.etape!=="refus") return false;
+    n=Math.round(CHANTIERS[ch.k].budget*0.02); if(S.caisse<n) return false;
+    payerChantier(t,ch,n); ch.etape="permis"; ch.recours=0; ch.decision=jourApres(t,entre(20,45));
+    noter(t,"","Plans revus par l'architecte ("+mt(n)+") et dossier redéposé. Décision vers le "+dateCourte(ch.decision)+".");
+    return true;
+  },
+  abandonner:function(){ var ch=S.chantier; if(!ch||ch.etape==="travaux") return false; noter(maintenant(),"","Projet « "+CHANTIERS[ch.k].nom.toLowerCase()+" » abandonné. Les honoraires déjà payés sont perdus."); S.immos.forEach(function(x){ if(x.cle==="bat-"+ch.k) x.perdu=1; }); S.chantier=null; return true; },
+  choisirDevis:function(d){
+    var ch=S.chantier, t=maintenant(), o, ac;
+    if(!ch||ch.etape!=="devis"||!(o=ch.devis[+d.k])) return false;
+    ac=Math.round(o.prix*0.3); if(S.caisse<ac) return false;
+    ch.devisPris=o; ch.etape="travaux"; ch.debut=t; ch.fin=jourApres(t,o.jours);
+    payerChantier(t,ch,ac);
+    noter(t,"ok",o.nom+" commence les travaux : « "+CHANTIERS[ch.k].nom.toLowerCase()+" ». Acompte de "+mt(ac)+". Fin prévue le "+dateCourte(ch.fin)+". Pendant le chantier, le bruit gêne un peu les clients.");
     return true;
   },
   themes:function(d){ U.theme=U.theme===+d.k?null:+d.k; return false; },
@@ -3078,7 +3210,7 @@ function revenir(){
 
 /* ------------------------------------------------------------------ Boucle */
 var app=document.getElementById("app"), dernier="", dernierBattement=Date.now();
-var ECRANS={evenements:ecranEvenements,agenda:ecranAgenda,accueil:ecranAccueil,clients:ecranClients,fiche:ecranFiche,requete:ecranRequete,chambres:ecranChambres,clientele:ecranClientele,avis:ecranAvis,equipements:ecranEquipements,economat:ecranEconomat,planning:ecranPlanning,equipe:ecranEquipe,recrutement:ecranRecrutement,tarifs:ecranTarifs,finances:ecranFinances,journal:ecranJournal,moi:ecranMoi,reglages:ecranReglages};
+var ECRANS={evenements:ecranEvenements,agenda:ecranAgenda,accueil:ecranAccueil,clients:ecranClients,fiche:ecranFiche,requete:ecranRequete,chambres:ecranChambres,clientele:ecranClientele,avis:ecranAvis,travaux:ecranTravaux,equipements:ecranEquipements,economat:ecranEconomat,planning:ecranPlanning,equipe:ecranEquipe,recrutement:ecranRecrutement,tarifs:ecranTarifs,finances:ecranFinances,journal:ecranJournal,moi:ecranMoi,reglages:ecranReglages};
 function rendre(){
   var y=window.scrollY, cle=S.fondeLe?U.ecran:"fondation";
   app.innerHTML='<div class="ecran">'+(S.fondeLe?(ECRANS[U.ecran]||ecranAccueil)():ecranFondation())+'</div>'+(S.fondeLe?navigation():"");
