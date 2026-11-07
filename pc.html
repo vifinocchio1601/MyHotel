@@ -1949,14 +1949,19 @@ function replanifier(t){
 function planifierEvenement(debut){
   if(Math.random()<TAUX_EVENEMENT){ S.evts.push({t:aHeure(debut,alea(8,20))}); S.evts.sort(function(a,b){ return a.t-b.t; }); }
 }
-function monterPalier(t){
+// Le palier suivant est-il à portée ?
+function palierPret(){ var p=prochainPalier(); return !!(p&&S.finis>=p.min&&reputation()>=p.rep); }
+function monterPalier(t,force){
   var p=prochainPalier();
+  // Version PC : on ne monte pas tout seul, c'est le directeur qui décide (une fois, prévenu dans le journal)
+  if(MODE_PC&&!force){ if(palierPret()&&S.palierAnnonce!==S.palier){ S.palierAnnonce=S.palier; noter(t,"ok","Vous remplissez les conditions pour devenir « "+nomPalier(S.palier+1)+" ». Passez au palier suivant depuis l'accueil quand vous le voulez."); } return; }
   while(p&&S.finis>=p.min&&reputation()>=p.rep){
     S.palier++;
     inscrire(t,"r:divers",p.prime);
     noter(t,"ok",S.nom+" devient « "+nomPalier(S.palier)+" ». L'office du tourisme verse une prime de "+mt(p.prime)+". Vous pouvez avoir jusqu'à "+p.chambres+" chambres, et les améliorer jusqu'au niveau "+p.niv+".");
     p=prochainPalier();
     reappro(t);
+    if(force) break;
   }
 }
 // La journée d'un séminaire : la société paie sur facture, les pauses demandent un serveur et des boissons
@@ -2399,7 +2404,8 @@ function palierHtml(){
   neufs=ORDRE_EQUIP.filter(function(k){ return EQUIP[k].palier===S.palier+1; }).map(function(k){ return EQUIP[k].nom.toLowerCase(); });
   return '<div class="carte"><div class="carte-haut"><h3>Prochain palier : '+nomPalier(S.palier+1)+'<small>Jusqu\'à '+p.chambres+' chambres, chambres jusqu\'au niveau '+p.niv+', équipements jusqu\'au niveau '+Math.min(EQUIP_MAX,S.palier+2)+(neufs.length?". Nouveau : "+neufs.join(", "):"")+'.</small></h3></div>'
     +'<div class="progres '+(S.finis>=p.min?"n2":"nn")+'"><div class="progres-haut"><b>Séjours terminés</b><span>'+Math.min(S.finis,p.min)+" / "+p.min+'</span></div><div class="piste"><div class="plein" style="width:'+borne(S.finis/p.min*100,0,100)+'%"></div></div></div>'
-    +'<div class="progres '+(rep>=p.rep?"n2":"nn")+'"><div class="progres-haut"><b>Réputation</b><span>'+rep+" / "+p.rep+' au moins</span></div><div class="piste"><div class="plein" style="width:'+borne(rep/p.rep*100,0,100)+'%"></div></div></div></div>';
+    +'<div class="progres '+(rep>=p.rep?"n2":"nn")+'"><div class="progres-haut"><b>Réputation</b><span>'+rep+" / "+p.rep+' au moins</span></div><div class="piste"><div class="plein" style="width:'+borne(rep/p.rep*100,0,100)+'%"></div></div></div>'
+    +(MODE_PC?'<div class="actions"><button type="button" class="btn principal" data-a="monterPalier"'+(palierPret()?"":" disabled")+'>Passer au palier '+nomPalier(S.palier+1)+' · prime de '+mt(p.prime)+'</button></div>':"")+'</div>';
 }
 
 /* ------------------------------------------------------------------ Écrans */
@@ -3385,6 +3391,7 @@ var A={
     return true;
   },
   tdb:function(d){ U.tdb=+d.k; return false; },
+  monterPalier:function(){ if(!MODE_PC||!palierPret()) return false; monterPalier(maintenant(),true); return true; },
   hvue:function(d){ U.hVue=d.k; return false; },
   remun:function(d){ var X=holding(); if(!X) return false; X.remun=borne(X.remun+(+d.d),0,30000); return true; },
   voiture:function(d){
