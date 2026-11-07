@@ -329,6 +329,33 @@ button.option:hover:not(:disabled){border-color:var(--faint)}
 .tdb-table th{border-top:0;font-size:12.5px;color:var(--muted);font-weight:600}
 .tdb-table th:first-child,.tdb-table td:first-child{text-align:left}
 .tdb-table td small{display:block;color:var(--muted);font-size:12px}
+
+/* Version PC */
+.pc{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh}
+.pc-menu{position:sticky;top:0;height:100vh;overflow-y:auto;border-right:1px solid var(--line);background:var(--surface);padding:16px 12px;display:flex;flex-direction:column;gap:14px}
+.pc-marque{display:flex;gap:10px;align-items:center;padding:4px 6px 8px}
+.pc-marque b{display:block;font-size:15px}
+.pc-marque small{color:var(--muted);font-size:12.5px}
+.pc-g h3{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 8px 4px;font-weight:600}
+.pc-m{display:flex;align-items:center;gap:10px;width:100%;padding:7px 8px;border:0;background:none;border-radius:8px;color:var(--ink);font-size:14.5px;text-align:left}
+.pc-m svg{width:18px;height:18px;flex:none;color:var(--muted)}
+.pc-m span{flex:1}
+.pc-m b{min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--accent);color:var(--on-accent);font-size:12px;display:grid;place-items:center}
+.pc-m:hover{background:rgba(127,127,127,.08)}
+.pc-m.actif{background:var(--accent);color:var(--on-accent)}
+.pc-m.actif svg{color:var(--on-accent)}
+.pc-main{min-width:0;padding:0 28px}
+.pc-main .ecran{max-width:1120px;padding-bottom:40px}
+.pc .barre,.pc nav.bas{display:none}
+.pc-controle{position:sticky;top:0;z-index:5;max-width:1120px;margin:0 auto;padding:14px 16px;background:var(--bg);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.pc-date{display:flex;flex-direction:column;gap:4px;min-width:260px}
+.pc-date b{font-size:18px}
+.pc-date span{color:var(--muted);font-variant-numeric:tabular-nums}
+.pc-date .piste{width:260px}
+.pc-boutons{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pc-case{display:flex;gap:6px;align-items:center;font-size:14px;color:var(--muted);margin-left:6px}
+.pc-main>.alerte{max-width:1120px;margin:10px auto 0}
+.pc .accueil-groupes{display:none}
 @media (min-width:760px){
   .jauges{grid-template-columns:repeat(4,minmax(0,1fr))}
   .tuiles{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -347,6 +374,7 @@ button.option:hover:not(:disabled){border-color:var(--faint)}
 (function(){
 "use strict";
 
+var MODE_PC=false, DEBUT_PC=new Date(2012,0,1,8,0,0).getTime();
 /* ------------------------------------------------------------------ Règles de l'hôtel */
 var V=1, CLE="myhotel-v1", CLE_APP="myhotel-appareil";
 var MIN=60000, HEURE=3600000, JOUR=86400000, TRANCHE=20*MIN, PAIE_DIRECTEUR=100;
@@ -464,6 +492,17 @@ var PAYS={
   lu:{nom:"Luxembourg",tva:{chambres:0.03,resto:0.03,banquets:0.03,alim:0.03,autre:0.17},isoc:0.2387,precompte:0.15,cotis:0.13,salaire:1.4},
   es:{nom:"Espagne",tva:{chambres:0.10,resto:0.10,banquets:0.10,alim:0.10,autre:0.21},isoc:0.25,precompte:0.19,cotis:0.31,salaire:0.75},
   it:{nom:"Italie",tva:{chambres:0.10,resto:0.10,banquets:0.10,alim:0.10,autre:0.22},isoc:0.24,precompte:0.26,cotis:0.30,salaire:0.85}};
+// Les taux d'avant : chaque période vaut jusqu'à sa date de fin (incluse) et remplace les taux d'aujourd'hui. Après la dernière, ce sont ceux de PAYS.
+function tv(c,r,a,n){ return {chambres:c,resto:r,banquets:r,alim:a,autre:n}; }
+var PAYS_AVANT={
+  be:[["2012-12-31",{isoc:0.3399,precompte:0.21,cotis:0.32}],["2015-12-31",{isoc:0.3399,precompte:0.25,cotis:0.32}],["2016-12-31",{isoc:0.3399,precompte:0.27,cotis:0.30}],["2017-12-31",{isoc:0.3399,cotis:0.27}],["2019-12-31",{isoc:0.2958}]],
+  fr:[["2013-12-31",{tva:tv(0.07,0.07,0.055,0.196),isoc:0.3333,cotis:0.45}],["2018-12-31",{isoc:0.3333,cotis:0.45}],["2019-12-31",{isoc:0.31}],["2020-12-31",{isoc:0.28}],["2021-12-31",{isoc:0.265}]],
+  nl:[["2012-09-30",{tva:tv(0.06,0.06,0.06,0.19),isoc:0.25}],["2018-12-31",{tva:tv(0.06,0.06,0.06,0.21),isoc:0.25}],["2021-12-31",{tva:tv(0.09,0.09,0.09,0.21),isoc:0.25}],["2025-12-31",{tva:tv(0.09,0.09,0.09,0.21)}]],
+  lu:[["2014-12-31",{tva:tv(0.03,0.03,0.03,0.15),isoc:0.2922}],["2016-12-31",{isoc:0.2922}],["2017-12-31",{isoc:0.2708}],["2018-12-31",{isoc:0.2601}],["2024-12-31",{isoc:0.2494}]],
+  es:[["2012-08-31",{tva:tv(0.08,0.08,0.08,0.18),isoc:0.30}],["2014-12-31",{isoc:0.30}],["2015-12-31",{isoc:0.28}]],
+  it:[["2013-09-30",{tva:tv(0.10,0.10,0.10,0.21),isoc:0.275}],["2016-12-31",{isoc:0.275}]]};
+// L'indice des prix belge, moyenne de l'année (2012 = 100) : les salaires et les prix de référence suivent, chaque 1er janvier (version PC)
+var INDICE={2012:100,2013:101.1,2014:101.4,2015:102,2016:104,2017:106.2,2018:108.4,2019:109.9,2020:110.7,2021:113.4,2022:124.7,2023:129.8,2024:133.9,2025:138,2026:141,2027:143.5,2028:146,2029:148.5,2030:151};
 VILLES.paris={nom:"Paris",pays:"fr",region:"France",txt:"La ville la plus visitée du monde : du monde toute l'année, des salons, une clientèle aisée. Tout coûte cher.",prix:1.6,f:[0.95,1.1,1.15,1.05],m:{affaires:1.6,luxe:1.8,couple:1.4},salons:1.5,apport:90000,palier:2};
 VILLES.amsterdam={nom:"Amsterdam",pays:"nl",region:"Pays-Bas",txt:"Des touristes du monde entier, surtout au printemps et l'été, et des bandes d'amis le week-end. TVA de 21 % sur les nuitées.",prix:1.5,f:[0.8,1.25,1.3,0.95],m:{amis:1.8,couple:1.3,routard:1.4},we:1.15,apport:70000,palier:2};
 VILLES.luxembourg={nom:"Luxembourg",pays:"lu",region:"Luxembourg",txt:"Les banques et les institutions européennes : une clientèle d'affaires en semaine. TVA à 3 %, mais des salaires très élevés.",prix:1.45,f:[1.05,1,0.8,1.1],m:{affaires:2.4,luxe:1.4,famille:0.4,routard:0.5},we:0.7,apport:60000,palier:2};
@@ -721,9 +760,18 @@ function etatInitial(){
 var S=etatInitial();
 // L'état d'écran reste sur l'appareil : il ne fait pas partie de la partie
 // Les taux du pays de l'hôtel où l'on se trouve
-function paysDe(v){ return PAYS[(VILLES[v]&&VILLES[v].pays)||"be"]; }
+function dateIso(t){ var d=new Date(t); return d.getFullYear()+"-"+deux(d.getMonth()+1)+"-"+deux(d.getDate()); }
+// Les taux d'un pays à une date : ceux d'aujourd'hui, ou ceux de la période d'alors
+function paysAu(k,t){
+  var P=PAYS[k], l=PAYS_AVANT[k]||[], d=dateIso(t||Date.now()), i, o, x;
+  for(i=0;i<l.length;i++) if(d<=l[i][0]){ o={}; for(x in P) o[x]=P[x]; for(x in l[i][1]) o[x]=l[i][1][x]; return o; }
+  return P;
+}
+function paysDe(v){ return paysAu((VILLES[v]&&VILLES[v].pays)||"be",S&&S.horloge); }
 function pays(){ return paysDe(S&&S.ville); }
-function salaireHabituel(r){ return Math.round(ROLES[r].salaire*pays().salaire); }
+function paysK(){ return (VILLES[S.ville]&&VILLES[S.ville].pays)||"be"; }
+function indice(){ return (S&&S.indice)||1; }
+function salaireHabituel(r){ return Math.round(ROLES[r].salaire*pays().salaire*indice()); }
 function appliquerPays(){
   var P=pays(), T=P.tva;
   TVA_NORMALE=T.autre;
@@ -731,6 +779,7 @@ function appliquerPays(){
   TVA_PRODUIT={linge:T.autre,accueil:T.autre,pdj:T.alim,denrees:T.alim,boissons:T.autre,minibar:T.autre,soins:T.autre};
   GRILLE_VENTE={}; GRILLE_VENTE[String(T.autre)]="g03"; if(!GRILLE_VENTE[String(T.chambres)]) GRILLE_VENTE[String(T.chambres)]="g01"; if(!GRILLE_VENTE[String(T.resto)]) GRILLE_VENTE[String(T.resto)]="g02";
   TAUX_ISOC=P.isoc; PRECOMPTE=P.precompte; TAUX_COTISATIONS=P.cotis;
+  var B=paysAu("be",S&&S.horloge); HOLDING_ISOC=B.isoc; HOLDING_PRECOMPTE=B.precompte;
 }
 function ecranVide(){ return {ecran:"accueil",role:"receptionniste",vue:"jour",decal:0,confirme:null,resume:null,dossier:null,choix:null,retour:null,moiVue:"fiche",planVue:"reception",finPage:"resultat",div:50,resa:null,achat:{type:"double",cote:"rue",etage:"haut"},fond:{nom:"",prenom:"Vincent",devise:"$"},villeNeuve:null,apportNeuf:0,nomNeuf:"",nomHolding:"",apportHolding:5000,hVue:"apercu",tdb:30}; }
 var U=ecranVide();
@@ -1035,20 +1084,20 @@ function raisonJour(j){
 // Chambres
 function chambre(id){ return parId(S.chambres,id); }
 function multTheme(c){ return c.theme?THEME_MULT:1; }
-function prixRef(c){ return Math.round(TYPES[c.type].prix*ville().prix*COTES[c.cote].mult*NIVEAUX[c.niv].mult*multTheme(c)); }
+function prixRef(c){ return Math.round(indice()*TYPES[c.type].prix*ville().prix*COTES[c.cote].mult*NIVEAUX[c.niv].mult*multTheme(c)); }
 // Le thème plaît-il à ce client ?
 function aimeTheme(sj,c){ var T=c.theme?THEMES[c.theme]:null; return !!T&&(T.profils.indexOf(sj.profil)>=0||(T.ev&&!!sj.ev)||(T.vip&&!!sj.vip)); }
 // Le prix d'une chambre une nuit donnée (aujourd'hui par défaut) : il suit la période de cette nuit
 function prixChambre(c,j){ return Math.round(prixRef(c)*pctLe(j===undefined?jourHotel(S.horloge):j)/100); }
 function typePour(n){ return n<=1?"simple":n===2?"double":"familiale"; }
 // Un client logé dans une chambre plus grande que nécessaire paie le prix d'une chambre à sa taille
-function prixPourNuit(sj,c,j){ return Math.min(prixChambre(c,j),Math.round(TYPES[typePour(sj.pers)].prix*ville().prix*COTES[c.cote].mult*NIVEAUX[c.niv].mult*(aimeTheme(sj,c)?multTheme(c):1)*pctLe(j)/100)); }
+function prixPourNuit(sj,c,j){ return Math.min(prixChambre(c,j),Math.round(indice()*TYPES[typePour(sj.pers)].prix*ville().prix*COTES[c.cote].mult*NIVEAUX[c.niv].mult*(aimeTheme(sj,c)?multTheme(c):1)*pctLe(j)/100)); }
 // Les nuits d'un séjour : le prix de chacune, selon sa période
 function nuitsDe(sj){ var j0=jourHotel(Math.max(S.horloge,sj.arrive)), l=[], d; for(d=0;d<Math.max(1,sj.nuits);d++) l.push(jourApres(j0,d)); return l; }
 function prixNuits(sj,c){ return nuitsDe(sj).map(function(j){ return prixPourNuit(sj,c,j); }); }
 // Le prix moyen d'une nuit sur tout le séjour
 function prixPour(sj,c){ var l=prixNuits(sj,c), n=0; l.forEach(function(x){ n+=x; }); return Math.round(n/l.length); }
-function prixAchat(type,cote){ return Math.round(TYPES[type].achat*COTES[cote].achat/50)*50; }
+function prixAchat(type,cote){ return Math.round(indice()*TYPES[type].achat*COTES[cote].achat/50)*50; }
 function pretes(){ return S.chambres.filter(function(c){ return !c.sj&&c.etat==="propre"; }); }
 function occupees(){ var n=0; S.chambres.forEach(function(c){ if(c.sj) n++; }); return n; }
 function equipementsDe(c){ var l=[], i; for(i=2;i<=c.niv;i++) l.push(NIVEAUX[i].nom); return l; }
@@ -1135,7 +1184,7 @@ function produitsConnus(){
 }
 function lot(){ return LOTS[S.palier]; }
 function seuilStock(){ return Math.round(lot()*0.3); }
-function prixLot(k,n,auto){ return Math.round(PRODUITS[k].cout*n*(n>=lot()*FOIS_GROS?REMISE_GROS:1)*(auto?SURCOUT_AUTO:1)*(forme("negociateur")?0.9:1)*(k==="linge"?1-0.08*niv("buanderie"):1)*(siege("acheteur")?0.9:1)); }
+function prixLot(k,n,auto){ return Math.round(indice()*PRODUITS[k].cout*n*(n>=lot()*FOIS_GROS?REMISE_GROS:1)*(auto?SURCOUT_AUTO:1)*(forme("negociateur")?0.9:1)*(k==="linge"?1-0.08*niv("buanderie"):1)*(siege("acheteur")?0.9:1)); }
 function enCommande(k){ var n=0; S.commandes.forEach(function(c){ if(c.p===k) n+=c.n; }); return n; }
 function commander(k,n,t,auto){
   var prix=prixLot(k,n,auto);
@@ -1151,7 +1200,7 @@ function reappro(t){
 function manquer(k){ S.stat.ruptures[k]=(S.stat.ruptures[k]||0)+1; }
 
 // Prix et fréquentation
-function refDe(k){ return k==="chambre"?100:Math.round(REF[k]*MULT_REF[k][niv(EQUIP_DE[k])]); }
+function refDe(k){ return k==="chambre"?100:Math.round(indice()*REF[k]*MULT_REF[k][niv(EQUIP_DE[k])]); }
 function cibleR(R){ return Math.max(0.2,R<=1?1+0.4*(1-R):1/(1+ELASTICITE*(R-1)*(R-1))); }
 // La fréquentation vers laquelle tend un prix. Pour les chambres, chaque période a la sienne (ch0, chambre, ch2, ch3).
 function demandeCible(d){
@@ -1542,6 +1591,15 @@ function suitesDepart(sj,note,t){
     } else noter(t,"",nomComplet(sj)+" était un inspecteur du "+GUIDE+". Rien ne change cette fois"+(note>=70?" : encore un effort.":"."));
   }
 }
+// L'indexation du 1er janvier : salaires et prix de référence suivent l'indice des prix
+function indexer(t){
+  var a=new Date(t).getFullYear(), r=(INDICE[a]||0)/(INDICE[a-1]||0), k;
+  if(!(r>0)||(S.indexe||0)>=a) return;
+  S.indexe=a; S.indice=indice()*r;
+  for(k in S.postes) S.postes[k].salaire=Math.round(S.postes[k].salaire*r);
+  noter(t,"",(r>=1?"Indexation du 1er janvier : +":"Indexation du 1er janvier : ")+String(Math.round((r-1)*1000)/10).replace(".",",")+" % sur les salaires. Les clients s'attendent aussi à des prix un peu plus hauts : pensez à vos tarifs.");
+}
+
 /* ------------------------------------------------------------------ Travaux */
 function maxChambres(){ return Math.min(PALIERS[S.palier].chambres,S.places); }
 function enTravaux(){ return !!(S.chantier&&S.chantier.etape==="travaux"); }
@@ -1972,7 +2030,8 @@ function cloturer(t){
   garde=cleJour(t-JOURS_GARDES*JOUR);
   for(vieux in S.cj) if(vieux<garde) delete S.cj[vieux];
   monterPalier(t);
-  absences(t); reglements(t); ajusterDemande(); prevoirSalons(t); expirerAvis(t); travauxDuJour(t); holdingJour(t);
+  absences(t); reglements(t); ajusterDemande(); prevoirSalons(t); expirerAvis(t); travauxDuJour(t); holdingJour(t); appliquerPays();
+  if(MODE_PC&&new Date(t).getDate()===1&&new Date(t).getMonth()===0) indexer(t);
   S.plaintes.slice().forEach(function(x){ if(x.limite<=t) indemniser(x,t,true); });
   prendreReservations(t); retourHabitues(t); demandesEv(t); planifierJour(t,t,true); planifierEvenement(t);
   affecterMenage(t); affecterVisites(t); reappro(t);
@@ -2147,10 +2206,10 @@ function holdingJour(t){
       frais=Math.round(ca*X.frais/100);
       if(frais>0){
         S.fraisFactures[pm]=frais;
-        if(pays()===PAYS.be){ achat(t,"e:direction",Math.round(frais*1.21),0.21,"g82"); X.tva+=Math.round(frais*0.21); X.caisse+=Math.round(frais*0.21); }
+        if(paysK()==="be"){ achat(t,"e:direction",Math.round(frais*1.21),0.21,"g82"); X.tva+=Math.round(frais*0.21); X.caisse+=Math.round(frais*0.21); }
         else achat(t,"e:direction",frais,0,"g82");
         holdingRecoit(t,"f",frais);
-        noter(t,"",X.nom+" facture "+mt(frais)+" de frais de gestion ("+X.frais+" % du chiffre d'affaires de "+new Date(j-JOUR).toLocaleDateString("fr-BE",{month:"long"})+")"+(pays()===PAYS.be?", plus la TVA":"")+".");
+        noter(t,"",X.nom+" facture "+mt(frais)+" de frais de gestion ("+X.frais+" % du chiffre d'affaires de "+new Date(j-JOUR).toLocaleDateString("fr-BE",{month:"long"})+")"+(paysK()==="be"?", plus la TVA":"")+".");
       }
     }
     if(S.pretH>0&&!S.fraisFactures["i"+pm]){ n=Math.round(S.pretH*TAUX_INTRA/12); S.fraisFactures["i"+pm]=n; inscrire(t,"x:pret",n); holdingRecoit(t,"i",n); }
@@ -2167,7 +2226,7 @@ function holdingJour(t){
   }
 }
 // Impôt des sociétés : taux réduit de 20 % sur les premiers 25 000 du trimestre si le dirigeant s'est versé au moins 11 250 de rémunération sur le trimestre
-function impotH(base,remun){ if(base<=0) return 0; if(remun>=REMUN_MIN_TAUX_REDUIT/4) return Math.round(Math.min(base,25000)*0.20+Math.max(0,base-25000)*HOLDING_ISOC); return Math.round(base*HOLDING_ISOC); }
+function impotH(base,remun){ if(base<=0) return 0; if(remun>=REMUN_MIN_TAUX_REDUIT/4&&new Date(S.horloge).getFullYear()>=2018) return Math.round(Math.min(base,25000)*0.20+Math.max(0,base-25000)*HOLDING_ISOC); return Math.round(base*HOLDING_ISOC); }
 function clotureH(t){
   var X=holding(), mois=moisDuTrimestre(t-JOUR), R=resultatH(mois), dna=sommeH(mois,"dna"), rem=sommeH(mois,"r"), base=Math.max(0,R+dna-X.pertes), impot=impotH(base,rem), tva=Math.round(X.tva);
   if(R+dna<0) X.pertes+=-(R+dna); else X.pertes=Math.max(0,X.pertes-(R+dna));
@@ -3290,7 +3349,7 @@ function ajouterChambre(type,cote,etage){
 var A={
   aller:function(d){ U.resa=null; if(d.e==="societes"||d.e==="tva"||d.e==="exercice"){ U.finPage=d.e; d={e:"finances"}; } U.ecran=d.e; U.confirme=null; U.retour=null; U.dossier=null; U.choix=null; if(d.e==="recrutement"){ candidatsDe(roleCourant()); return true; } return false; },
   devise:function(d){ U.fond.devise=d.k; return false; },
-  fonder:function(){ fonderHotel(Date.now(),(U.fond.nom||"").trim()||"Hôtel des Tilleuls",(U.fond.prenom||"").trim()||"Vincent",U.fond.devise,"siege",null,0); U.ecran="accueil"; return true; },
+  fonder:function(){ fonderHotel(MODE_PC?DEBUT_PC:Date.now(),(U.fond.nom||"").trim()||"Hôtel des Tilleuls",(U.fond.prenom||"").trim()||"Vincent",U.fond.devise,"siege",null,0); if(MODE_PC){ S.moi.temps=S.horloge; S.pcArrets=true; } U.ecran="accueil"; return true; },
   apportHolding:function(d){ U.apportHolding=borne((U.apportHolding||5000)+(+d.d),5000,Math.max(5000,Math.floor(S.moi.argent/5000)*5000)); return false; },
   creerHolding:function(){
     var t=maintenant(), n=U.apportHolding||5000, nom=(U.nomHolding||"").trim()||S.prenom+" Holding", X, nature=0;
@@ -3733,7 +3792,8 @@ var app=document.getElementById("app"), dernier="", dernierBattement=Date.now();
 var ECRANS={evenements:ecranEvenements,agenda:ecranAgenda,accueil:ecranAccueil,clients:ecranClients,fiche:ecranFiche,requete:ecranRequete,chambres:ecranChambres,clientele:ecranClientele,avis:ecranAvis,travaux:ecranTravaux,chaine:ecranChaine,holding:ecranHolding,tableau:ecranTableau,equipements:ecranEquipements,economat:ecranEconomat,planning:ecranPlanning,equipe:ecranEquipe,recrutement:ecranRecrutement,tarifs:ecranTarifs,finances:ecranFinances,journal:ecranJournal,moi:ecranMoi,reglages:ecranReglages};
 function rendre(){
   var y=window.scrollY, cle=S.fondeLe?U.ecran:"fondation";
-  app.innerHTML='<div class="ecran">'+(S.fondeLe?(ECRANS[U.ecran]||ecranAccueil)():ecranFondation())+'</div>'+(S.fondeLe?navigation():"");
+  if(MODE_PC&&S.fondeLe) app.innerHTML='<div class="pc"><aside class="pc-menu">'+menuPC()+'</aside><main class="pc-main">'+controlePC()+'<div class="ecran">'+(ECRANS[U.ecran]||ecranAccueil)()+'</div></main></div>';
+  else app.innerHTML='<div class="ecran">'+(S.fondeLe?(ECRANS[U.ecran]||ecranAccueil)():ecranFondation())+'</div>'+(S.fondeLe?navigation():"");
   if(cle!==dernier){ window.scrollTo(0,0); dernier=cle; } else window.scrollTo(0,y);
   sauver();
 }
@@ -3753,6 +3813,7 @@ function battement(retour){
   var n=Date.now(), ecoule=Math.min(n-dernierBattement,2000), paye, avant, change;
   dernierBattement=n;
   if(!S.fondeLe||gel||document.hidden) return;
+  if(MODE_PC){ tic(); pousser(false); return; }
   avant=instantane();
   paye=activite(ecoule);
   change=avancer(maintenant());
