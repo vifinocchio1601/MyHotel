@@ -354,6 +354,8 @@ button.option:hover:not(:disabled){border-color:var(--faint)}
 .pc-date span{color:var(--muted);font-variant-numeric:tabular-nums}
 .pc-date .piste{width:260px}
 .pc-boutons{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.choix-auto{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.retenir{margin:12px 0 0}
 .pc-case{display:flex;gap:6px;align-items:center;font-size:14px;color:var(--muted);margin-left:6px}
 .pc-main>.alerte{max-width:1120px;margin:10px auto 0}
 .pc .accueil-groupes{display:none}
@@ -1766,6 +1768,16 @@ function ouvrirRequete(sj,t){
   var c=chambre(sj.ch), cles=Object.keys(REQUETES).filter(function(k){ return !REQUETES[k].si||REQUETES[k].si(sj,c); });
   if(S.requetes.some(function(r){ return r.sj===sj.id; })) return;
   S.requetes.push({id:S.nRequete++,sj:sj.id,k:tirer(cles),t:t,limite:t+DELAI_REQ,auto:t+RELAIS_REQ});
+  reponseAuto(S.requetes[S.requetes.length-1],t);
+}
+// Vos réponses automatiques : pour chaque type de demande, la réponse choisie. Si elle est impossible sur le moment, la suivante possible dans la liste.
+function reponseAuto(r,t){
+  var R=REQUETES[r.k], i=S.autoRep?S.autoRep[r.k]:undefined, o=null, j, sj=parId(S.sejours,r.sj), res;
+  if(i===undefined||i===null||!R||!sj) return;
+  for(j=0;j<R.o.length;j++){ var x=R.o[(i+j)%R.o.length]; if(!optionDispo(r,x)){ o=x; break; } }
+  if(!o) return;
+  res=repondre(r,o,t,false);
+  noter(t,res&&res.bon?"ok":"","Réponse automatique à "+nomComplet(sj)+" (« "+R.txt.replace(/\.$/,"")+" ») : "+o.nom.toLowerCase()+(o!==R.o[i]?" (votre premier choix était impossible)":"")+".");
 }
 // Une chambre libre et prête où déplacer un client : n'importe laquelle d'aussi bien, une côté jardin, ou une de meilleur niveau
 function chambrePour(sj,mode){
@@ -2662,7 +2674,9 @@ function ecranRequete(){
     +'<div class="carte"><h2>Votre réponse</h2><div class="liste">'+R.o.map(function(o,i){
       var raison=optionDispo(r,o), d=raison||detailOption(sj,o);
       return '<button type="button" class="option" data-a="repondre" data-k="'+i+'"'+(raison?" disabled":"")+'><b>'+o.nom+'</b>'+(d?'<small>'+d+'</small>':"")+'</button>';
-    }).join("")+'</div><p class="aide">La meilleure réponse dépend de ce que l\'hôtel a sous la main : personnel en poste, chambre prête, stock.</p></div>';
+    }).join("")+'</div><p class="aide">La meilleure réponse dépend de ce que l\'hôtel a sous la main : personnel en poste, chambre prête, stock.</p>'
+    +'<label class="pc-case retenir"><input type="checkbox" data-a="retenir"'+(U.retenir?" checked":"")+'> Toujours répondre ainsi à ce type de demande</label>'
+    +'<div class="actions"><button type="button" class="btn" data-a="aller" data-e="reponses">Voir toutes mes réponses automatiques</button></div></div>';
 }
 function etatChambreHtml(c){
   var sj=sejourDe(c);
@@ -3495,11 +3509,15 @@ var A={
     U.retour={c:sj.reserve?"bad":"",m:nomComplet(sj)+" est envoyé dans un autre hôtel."+(sj.reserve?" L'hôtel paie sa nuit.":"")}; U.ecran="clients"; U.dossier=null; U.choix=null; return true;
   },
   requete:function(d){ U.dossier=+d.k; U.retour=null; U.ecran="requete"; return false; },
+  retenir:function(){ U.retenir=!U.retenir; return false; },
+  autoRep:function(d){ if(!S.autoRep) S.autoRep={}; if(d.d==="moi") delete S.autoRep[d.k]; else S.autoRep[d.k]=+d.d; return true; },
+  autoRepTout:function(d){ if(!S.autoRep) S.autoRep={}; Object.keys(REQUETES).forEach(function(k){ if(d.d==="moi") delete S.autoRep[k]; else S.autoRep[k]=0; }); return true; },
   repondre:function(d){
     var r=parId(S.requetes,U.dossier), o, res, sj;
     if(!r) return false;
     o=REQUETES[r.k].o[+d.k]; if(!o||optionDispo(r,o)) return false;
     sj=parId(S.sejours,r.sj);
+    if(U.retenir){ if(!S.autoRep) S.autoRep={}; S.autoRep[r.k]=+d.k; U.retenir=false; }
     res=repondre(r,o,maintenant(),false);
     if(res) U.retour={c:res.bon?"ok":o.e>0?"":"warn",m:(res.bon?"Bonne réponse":o.e>0?"Réponse correcte":"Le client est déçu")+(sj?" ("+nomComplet(sj)+")":"")+"."+(res.bon||!res.mieux?"":" Mieux valait : « "+res.mieux.nom.charAt(0).toLowerCase()+res.mieux.nom.slice(1)+" ».")};
     U.ecran="clients"; U.dossier=null; return true;
@@ -3864,7 +3882,7 @@ function menuPC(){
   function g(t,l){ return '<div class="pc-g"><h3>'+t+'</h3>'+l.join("")+'</div>'; }
   return '<div class="pc-marque"><span class="logo">H</span><div><b>'+h(S.nom)+'</b><small>'+PALIERS[S.palier].nom+(S.groupe.length?" · "+h(ville().nom):"")+'</small></div></div>'
     +g("",[e("accueil","Accueil","accueil",0)])
-    +g("Clients",[e("clients","Clients","clients",na+nr),e("calendrier","Agenda","agenda",ap),e("verre","Événements","evenements",dv),e("cloche","Avis","avis",av),e("guide","Clientèle","clientele",0)])
+    +g("Clients",[e("clients","Clients","clients",na+nr),e("calendrier","Agenda","agenda",ap),e("verre","Événements","evenements",dv),e("cloche","Réponses auto","reponses",0),e("cloche","Avis","avis",av),e("guide","Clientèle","clientele",0)])
     +g("L'hôtel",[e("lit","Chambres","chambres",0),e("tarifs","Tarifs","tarifs",0),e("caisse","Économat","economat",0),e("equipements","Équipements","equipements",0),e("travaux","Travaux","travaux",0)])
     +g("L'équipe",[e("equipe","Équipe","equipe",0),e("horloge","Planning","planning",0),e("recrut","Recrutement","recrutement",0)])
     +g("L'argent et le groupe",[e("finances","Finances","finances",0),e("finances","Tableau de bord","tableau",0),e("chaine","Mes hôtels","chaine",0),e("equipements","Holding","holding",0),e("moi","Ma fiche","moi",0),e("journal","Journal","journal",0)])
@@ -3887,7 +3905,20 @@ document.addEventListener("pointerdown",function(ev){
 
 /* ------------------------------------------------------------------ Boucle */
 var app=document.getElementById("app"), dernier="", dernierBattement=Date.now();
-var ECRANS={evenements:ecranEvenements,agenda:ecranAgenda,accueil:ecranAccueil,clients:ecranClients,fiche:ecranFiche,requete:ecranRequete,chambres:ecranChambres,clientele:ecranClientele,avis:ecranAvis,travaux:ecranTravaux,chaine:ecranChaine,holding:ecranHolding,tableau:ecranTableau,equipements:ecranEquipements,economat:ecranEconomat,planning:ecranPlanning,equipe:ecranEquipe,recrutement:ecranRecrutement,tarifs:ecranTarifs,finances:ecranFinances,journal:ecranJournal,moi:ecranMoi,reglages:ecranReglages};
+function ecranReponses(){
+  var A2=S.autoRep||{}, n=Object.keys(A2).length;
+  return barre()+entete("Réponses automatiques",n+" sur "+Object.keys(REQUETES).length+" types de demandes","clients","Clients")
+    +'<div class="carte"><p class="aide">Pour chaque type de demande, choisissez la réponse donnée tout de suite, sans vous déranger. Si elle est impossible sur le moment (personne en poste, pas de chambre libre, plus de stock), c\'est la suivante possible dans la liste. « Moi » : la demande vous attend, comme avant.</p>'
+    +'<div class="actions"><button type="button" class="btn" data-a="autoRepTout" data-d="premier">Tout sur la première réponse</button><button type="button" class="btn" data-a="autoRepTout" data-d="moi">Tout remettre sur « Moi »</button></div></div>'
+    +Object.keys(REQUETES).map(function(k){
+      var R=REQUETES[k], i=A2[k];
+      return '<div class="carte"><h3>« '+R.txt+' »</h3><div class="choix-auto">'
+        +'<button type="button" class="btn petit'+(i===undefined?" principal":"")+'" data-a="autoRep" data-k="'+k+'" data-d="moi">Moi</button>'
+        +R.o.map(function(o,j){ return '<button type="button" class="btn petit'+(i===j?" principal":"")+'" data-a="autoRep" data-k="'+k+'" data-d="'+j+'">'+o.nom+(o.cout?" · "+mt(o.cout):"")+'</button>'; }).join("")
+        +'</div></div>';
+    }).join("");
+}
+var ECRANS={reponses:ecranReponses,evenements:ecranEvenements,agenda:ecranAgenda,accueil:ecranAccueil,clients:ecranClients,fiche:ecranFiche,requete:ecranRequete,chambres:ecranChambres,clientele:ecranClientele,avis:ecranAvis,travaux:ecranTravaux,chaine:ecranChaine,holding:ecranHolding,tableau:ecranTableau,equipements:ecranEquipements,economat:ecranEconomat,planning:ecranPlanning,equipe:ecranEquipe,recrutement:ecranRecrutement,tarifs:ecranTarifs,finances:ecranFinances,journal:ecranJournal,moi:ecranMoi,reglages:ecranReglages};
 function rendre(){
   var y=window.scrollY, cle=S.fondeLe?U.ecran:"fondation";
   if(MODE_PC&&S.fondeLe) app.innerHTML='<div class="pc"><aside class="pc-menu">'+menuPC()+'</aside><main class="pc-main">'+controlePC()+'<div class="ecran">'+(ECRANS[U.ecran]||ecranAccueil)()+'</div></main></div>';
