@@ -744,7 +744,7 @@ var NOMS=["Marchetti","Roche","El Amrani","Vasseur","Lemoine","Bertin","Okafor",
 /* ------------------------------------------------------------------ État */
 function moiVide(){ return {argent:0,gagne:0,actif:0,tranche:0,formations:{},place:0,taux:4.5,gainsPlace:0,pret:0,interets:0,gainsPret:0,dons:0,dividendes:0,biens:{}}; }
 function tvaVide(){ return {g01:0,g02:0,g03:0,g54:0,g81:0,g82:0,g83:0,g59:0}; }
-function statVide(){ return {arrives:0,departs:0,repartis:0,deloges:0,complet:0,couverts:0,visites:{},rates:{},ruptures:{},sansReponse:0,minibar:0,mbVentes:0,rs:0,rsRates:0}; }
+function statVide(){ return {arrives:0,departs:0,repartis:0,deloges:0,complet:0,couverts:0,visites:{},rates:{},raisons:{},ruptures:{},sansReponse:0,minibar:0,mbVentes:0,rs:0,rsRates:0}; }
 function etatInitial(){
   var postes={}, k;
   for(k in ROLES) postes[k]={salaire:ROLES[k].salaire,heures:8};
@@ -1707,6 +1707,17 @@ function finMenage(c,t){
 }
 
 /* ------------------------------------------------------------------ Restaurant, bar et spa */
+// Pourquoi les clients d'un service sont repartis aujourd'hui, en clair
+var NOMS_BLOQUE={serveur:["aucun serveur en poste","serveurs tous occupés"],cuisinier:["personne en cuisine","cuisiniers tous occupés"],barman:["aucun barman en poste","barmans tous occupés"],praticien:["aucun praticien en poste","praticiens tous occupés"]};
+function raisonsTxt(sv){
+  var R=(S.stat.raisons||{})[sv]||{}, l=[], k, p, n;
+  for(k in R){ n=R[k];
+    if(k==="place") l.push(n+" faute de place ("+capDe(sv)+" "+(EQUIP[sv].unite?EQUIP[sv].unite[1]:"places")+" au niveau actuel)");
+    else if(k==="moi") l.push(n+" parce que vous serviez déjà deux tables");
+    else { p=k.split(":"); l.push(n+" : "+(NOMS_BLOQUE[p[1]]?NOMS_BLOQUE[p[1]][p[0]==="absent"?0:1]:p[1])); }
+  }
+  return l.join(", ");
+}
 function enService(sv){ var n=0; S.visites.forEach(function(v){ if(v.sv===sv&&v.etat==="service") n++; }); return n; }
 function enFile(sv){ var n=0; S.visites.forEach(function(v){ if(v.sv===sv&&v.etat==="attente") n++; }); return n; }
 function moiCharge(){ var n=0; S.visites.forEach(function(v){ if(v.etat==="service"&&v.moi) n++; }); return n; }
@@ -1728,13 +1739,14 @@ function affecterVisites(t){
   var file=S.visites.filter(function(v){ return v.etat==="attente"; }).sort(function(a,b){ return a.arrive-b.arrive; }), fait=false;
   file.forEach(function(v){
     var X=SV[v.k], a=null, b=null, moi=false, d, i;
-    if(enService(v.sv)>=capDe(v.sv)) return;
+    function bloque(l,nom){ v.bloque=(enPosteRole(l,t).length?"occupe:":"absent:")+nom; }
+    if(enService(v.sv)>=capDe(v.sv)){ v.bloque="place"; return; }
     if(v.sv==="resto"){
       a=dispo(["serveur"],t);
-      if(v.k==="pdj"){ if(!a){ if(enPosteRole(["serveur"],t).length||moiCharge()>=2) return; moi=true; } }
-      else { b=dispo(CUISINE,t); if(!a||!b) return; }
-    } else if(v.sv==="bar"){ a=dispo(["barman"],t); if(!a) return; }
-    else { a=dispo(["praticien"],t); if(!a) return; }
+      if(v.k==="pdj"){ if(!a){ if(enPosteRole(["serveur"],t).length){ bloque(["serveur"],"serveur"); return; } if(moiCharge()>=2){ v.bloque="moi"; return; } moi=true; } }
+      else { b=dispo(CUISINE,t); if(!a){ bloque(["serveur"],"serveur"); return; } if(!b){ bloque(CUISINE,"cuisinier"); return; } }
+    } else if(v.sv==="bar"){ a=dispo(["barman"],t); if(!a){ bloque(["barman"],"barman"); return; } }
+    else { a=dispo(["praticien"],t); if(!a){ bloque(["praticien"],"praticien"); return; } }
     d=X.duree*(moi?1.2:remplace(a,t)?1:(1+EXP[a.exp].vitesse)/2);
     v.etat="service"; v.debut=t; v.fin=t+Math.max(10,Math.round(d))*MIN; v.staff=[a,b].filter(Boolean).map(function(e){ return e.id; });
     v.moi=moi; v.q=moi?0.95:b?(qualite(a)+qualite(b))/2:qualite(a); v.att=(t-v.arrive)/MIN; fait=true;
@@ -1757,6 +1769,9 @@ function finVisite(v,t){
 function visiteRatee(v,t){
   var sj=v.sj?parId(S.sejours,v.sj):null;
   S.stat.rates[v.sv]=(S.stat.rates[v.sv]||0)+1;
+  if(!S.stat.raisons) S.stat.raisons={};
+  if(!S.stat.raisons[v.sv]) S.stat.raisons[v.sv]={};
+  S.stat.raisons[v.sv][v.bloque||"place"]=(S.stat.raisons[v.sv][v.bloque||"place"]||0)+1;
   if(sj) sj.plus=(sj.plus||0)-6; else if(Math.random()<0.25) avis(20);
   oterVisite(v);
 }
@@ -2388,7 +2403,7 @@ function alertes(){
   ORDRE_EQUIP.forEach(function(k){
     var b=besoinEquip(k), r=S.stat.rates[k];
     if(b) a("warn",b[0],"recrutement","Recruter");
-    else if(r&&k!=="parking") a("warn",EQUIP[k].nom+" : "+pl(r,"client est reparti","clients sont repartis")+" sans être servi aujourd'hui. L'équipe ou la place ne suit pas.","equipements","Voir les équipements");
+    else if(r&&k!=="parking") a("warn",EQUIP[k].nom+" : "+pl(r,"client est reparti","clients sont repartis")+" sans être servi aujourd'hui"+(raisonsTxt(k)?" : "+raisonsTxt(k):"")+".","equipements","Voir les équipements");
   });
   if(S.stat.rates.parking) a("warn","Parking complet : "+pl(S.stat.rates.parking,"client n'a pas eu","clients n'ont pas eu")+" de place aujourd'hui.","equipements","Voir les équipements");
   n=Object.keys(S.stat.ruptures).map(function(k){ return PRODUITS[k].nom+" ("+S.stat.ruptures[k]+")"; });
@@ -2846,7 +2861,7 @@ function carteEquip(k){
   }
   if(n&&(k==="resto"||k==="bar"||k==="spa")){
     fait=k==="resto"?pl(S.stat.couverts,"couvert servi","couverts servis"):pl(S.stat.visites[k]||0,"client servi","clients servis");
-    vie='<p class="aide">En ce moment : '+enService(k)+' sur '+capDe(k)+' '+E.unite[1]+(enFile(k)?' · '+enFile(k)+' en attente':"")+'. Aujourd\'hui : '+fait+(rate?' · '+pl(rate,"reparti","repartis")+' sans être servi'+(rate>1?"s":""):"")+'.</p>';
+    vie='<p class="aide">En ce moment : '+enService(k)+' sur '+capDe(k)+' '+E.unite[1]+(enFile(k)?' · '+enFile(k)+' en attente':"")+'. Aujourd\'hui : '+fait+(rate?' · '+pl(rate,"reparti","repartis")+' sans être servi'+(rate>1?"s":"")+(raisonsTxt(k)?' ('+raisonsTxt(k)+')':''):"")+'.</p>';
   } else if(n&&k==="parking") vie='<p class="aide">'+(capDe(k)-placesLibres())+' sur '+pl(capDe(k),"place occupée","places occupées")+'.</p>';
   return '<div class="carte"><div class="carte-haut"><div class="entete"><span class="tuile-icone '+E.g+'">'+I[E.ic]+'</span><h3>'+E.nom+'<small>'+(n?E.niveaux[n-1]+' · '+effetNiveau(k,n):"Pas encore construit")+'</small></h3></div>'+etat+'</div>'
     +(verrou?"":'<p class="aide">'+E.txt+'</p>')+vie
