@@ -381,6 +381,10 @@ var MODE_PC=true, DEBUT_PC=new Date(2012,0,1,8,0,0).getTime();
 /* ------------------------------------------------------------------ Règles de l'hôtel */
 var V=1, CLE="myhotel-pc-v1", CLE_APP="myhotel-appareil";
 var MIN=60000, HEURE=3600000, JOUR=86400000, TRANCHE=20*MIN, PAIE_DIRECTEUR=100;
+// La banque de l'hôtel : taux de base d'un crédit d'investissement et d'un compte d'épargne, année par année (valeurs approximatives)
+var TAUX_CREDIT={2012:3.0,2013:2.8,2014:2.4,2015:2.0,2016:1.8,2017:1.7,2018:1.7,2019:1.6,2020:1.5,2021:1.5,2022:2.8,2023:4.8,2024:4.6,2025:4.0,2026:3.8};
+var TAUX_EPARGNE={2012:1.5,2013:1.0,2014:0.8,2015:0.3,2016:0.11,2017:0.11,2018:0.11,2019:0.11,2020:0.11,2021:0.11,2022:0.11,2023:1.0,2024:1.5,2025:1.2,2026:1.0};
+var DUREES_CREDIT=[1,3,5,10,15,20], FRAIS_DOSSIER=0.005;
 var CAISSE_DEPART=5000, TAUX_DECOUVERT=0.002, TAUX_EVENEMENT=0.4, DECOUVERT_MAX=3000;
 var JOURNAL_MAX=120, REGISTRE_MAX=60, AVIS_MAX=40, JOURS_GARDES=40;
 var DEVISES=["$","€","£","fl","¥"];
@@ -986,12 +990,51 @@ function payerImpot(x,t,retard){
   noter(t,retard?"bad":"","Impôt des sociétés du "+x.nom+" : "+mt(x.m)+" payés"+(retard?" d'office, en retard, plus "+mt(maj)+" de majoration.":"."));
 }
 // Le bilan. Les capitaux propres se détaillent ; le résultat de l'exercice en cours est ce qui reste une fois le reste retiré.
+/* ------------------------------------------------------------------ La banque */
+function anBanque(t,T){ var a=new Date(t||S.horloge).getFullYear(), k=Object.keys(T).map(Number); return T[Math.max(Math.min(a,Math.max.apply(null,k)),Math.min.apply(null,k))]; }
+function detteBanque(){ var n=0; (S.emprunts||[]).forEach(function(e){ n+=e.restant; }); return Math.round(n); }
+function mensualiteDe(m,tauxAn,mois){ var i=tauxAn/100/12; return i?m*i/(1-Math.pow(1+i,-mois)):m/mois; }
+function mensualitesBanque(){ var n=0; (S.emprunts||[]).forEach(function(e){ n+=e.mens; }); return n; }
+// Ce que la banque regarde : le résultat des 90 derniers jours (plus les amortissements, qui ne sortent pas de la caisse), les capitaux propres, les dettes
+function etudeCredit(montant,ans,caution){
+  var t=S.horloge, h=(S.histo||[]).filter(function(x){ return x.j>=t-90*JOUR; }), res=0, am=0, jours=h.length, mois=ans*12, b=bilan(), nouveau=jours<30, taux, mens, cap, plafond, raison=null, dettes;
+  h.forEach(function(x){ res+=x.res; });
+  S.immos.forEach(function(im){ if(!im.terrain&&im.c<im.v) am+=im.v/(im.duree||DUREE_AMORT)*30; });
+  cap=nouveau?0:Math.max(0,res/jours*30+am);
+  taux=anBanque(t,TAUX_CREDIT)+(nouveau?1.5:caution?0.9:1.2)+Math.max(0,ans-5)*0.1-(S.palier*0.1);
+  taux=Math.round(taux*100)/100;
+  mens=Math.round(mensualiteDe(montant,taux,mois));
+  plafond=0.5*cap+(caution?Math.min(S.moi.argent,montant)*0.03:0);
+  dettes=detteBanque()+(S.pret||0)+(S.pretH||0)+montant;
+  if(montant<1000) raison="La banque ne prête pas moins de "+mt(1000)+".";
+  else if(nouveau&&!caution) raison="L'hôtel n'a pas encore 30 jours de chiffres : la banque demande votre caution personnelle.";
+  else if(mensualitesBanque()+mens>plafond) raison="Mensualités trop lourdes : l'hôtel dégage environ "+mt(Math.round(cap))+" par mois, la banque accepte au plus "+mt(Math.round(plafond))+" de mensualités au total"+(caution?"":" (votre caution l'aiderait)")+".";
+  else if(dettes>4*Math.max(b.propres,2500)+(caution?S.moi.argent:0)) raison="L'hôtel est trop endetté par rapport à ses capitaux propres ("+mt(Math.round(b.propres))+").";
+  return {montant:montant,ans:ans,mois:mois,taux:taux,mens:mens,cap:Math.round(cap),plafond:Math.round(plafond),frais:Math.max(150,Math.round(montant*FRAIS_DOSSIER)),raison:raison,caution:caution};
+}
+// Chaque 1er du mois : les mensualités, les intérêts de l'épargne. Si la caisse est à sec et que vous vous êtes porté caution, la banque se tourne vers vous.
+function banqueJour(t){
+  var d=new Date(t), m=cleMois(t), n, M=S.moi;
+  if(d.getDate()!==1) return;
+  if(!S.bqMois) S.bqMois={};
+  if(S.bqMois[m]) return;
+  S.bqMois[m]=1;
+  (S.emprunts||[]).slice().forEach(function(e){
+    var i=Math.round(e.restant*e.taux/100/12), c=Math.round(Math.min(e.restant,e.mens-i));
+    if(e.payes+1>=e.mois) c=Math.round(e.restant);
+    if(S.caisse-e.mens<-DECOUVERT_MAX&&e.caution&&M.argent>=e.mens){ M.argent-=e.mens; S.pret=(S.pret||0)+e.mens; M.pret=(M.pret||0)+e.mens; inscrire(t,"p:pret",e.mens); noter(t,"bad","La caisse ne suffit pas : la banque appelle votre caution et prend la mensualité de "+mt(Math.round(e.mens))+" sur votre fiche. Elle devient un prêt de votre part à l'hôtel."); }
+    else if(S.caisse-e.mens<-DECOUVERT_MAX){ inscrire(t,"x:banque",Math.round(e.mens*0.02)); noter(t,"bad","Mensualité payée en dépassant le découvert autorisé : intérêts de retard de "+mt(Math.round(e.mens*0.02))+"."); }
+    inscrire(t,"x:banque",i); inscrire(t,"q:banque",c); e.restant-=c; e.payes++;
+    if(e.restant<1){ S.emprunts.splice(S.emprunts.indexOf(e),1); noter(t,"ok","Dernière mensualité payée : le crédit « "+e.nom+" » est remboursé."); }
+  });
+  if(S.epargne>0){ n=Math.round(S.epargne*anBanque(t,TAUX_EPARGNE)/100/12); if(n>=1){ S.epargne+=n; inscrire(t,"r:divers",n); S.caisse-=n; } }
+}
 function bilan(){
-  var tva=soldeTva(), b={brut:0,amort:0,stock:valeurStock(),creances:creances(),tresorerie:Math.max(0,S.caisse),decouvert:Math.max(0,-S.caisse),pret:(S.pret||0)+(S.pretH||0)};
+  var tva=soldeTva(), b={brut:0,amort:0,stock:valeurStock(),creances:creances(),tresorerie:Math.max(0,S.caisse)+(S.epargne||0),decouvert:Math.max(0,-S.caisse),pret:(S.pret||0)+(S.pretH||0),banque:detteBanque()};
   S.immos.forEach(function(im){ b.brut+=im.v; b.amort+=im.c; });
   b.tvaActif=Math.max(0,-tva); b.tvaPassif=Math.max(0,tva); b.impots=dettesImpot(); b.acomptes=S.acomptes||0;
   b.actif=b.brut-b.amort+b.stock+b.creances+b.tvaActif+b.tresorerie;
-  b.propres=b.actif-b.pret-b.decouvert-b.tvaPassif-b.impots-b.acomptes;
+  b.propres=b.actif-b.pret-b.banque-b.decouvert-b.tvaPassif-b.impots-b.acomptes;
   b.capital=S.capital; b.reserve=S.reserve; b.reporte=S.reporte; b.aAffecter=S.affectation?S.affectation.net:0;
   b.exercice=b.propres-b.capital-b.reserve-b.reporte-b.aAffecter;
   return b;
@@ -2067,7 +2110,7 @@ function cloturer(t){
   garde=cleJour(t-JOURS_GARDES*JOUR);
   for(vieux in S.cj) if(vieux<garde) delete S.cj[vieux];
   monterPalier(t);
-  absences(t); reglements(t); ajusterDemande(); prevoirSalons(t); expirerAvis(t); travauxDuJour(t); holdingJour(t); appliquerPays();
+  absences(t); reglements(t); ajusterDemande(); prevoirSalons(t); expirerAvis(t); travauxDuJour(t); banqueJour(t); holdingJour(t); appliquerPays();
   if(MODE_PC&&new Date(t).getDate()===1&&new Date(t).getMonth()===0) indexer(t);
   S.plaintes.slice().forEach(function(x){ if(x.limite<=t) indemniser(x,t,true); });
   prendreReservations(t); retourHabitues(t); demandesEv(t); planifierJour(t,t,true); planifierEvenement(t);
@@ -3206,7 +3249,7 @@ function pageResultat(){
   lignes+=rang("Total des charges",mt(dT),mt(dA),"total");
   lignes+='<tr class="total"><td>Résultat</td><td class="'+(rT-dT>=0?"plus-c":"moins-c")+'">'+signeM(rT-dT)+'</td><td class="avant">'+signeM(rA-dA)+'</td></tr>';
   fT=flux(T); fA=flux(A);
-  [["amort","Amortissements (non payés)",1],["creances","Factures en attente chez les sociétés",-1],["stock","Stock de l'économat",-1],["invest","Investissements",-1],["tva","TVA encaissée, moins celle payée",1],["impot","Impôt compté, pas encore payé",1],["dividende","Dividende versé",-1],["acomptes","Acomptes reçus, moins ceux soldés",1],["pret","Prêts du directeur, nets",1],["apport","Apport en capital",1]].forEach(function(l){
+  [["amort","Amortissements (non payés)",1],["creances","Factures en attente chez les sociétés",-1],["stock","Stock de l'économat",-1],["invest","Investissements",-1],["tva","TVA encaissée, moins celle payée",1],["impot","Impôt compté, pas encore payé",1],["dividende","Dividende versé",-1],["acomptes","Acomptes reçus, moins ceux soldés",1],["pret","Prêts reçus, nets des remboursements",1],["apport","Apport en capital",1]].forEach(function(l){
     if(fT[l[0]]||fA[l[0]]) tresorerie+=rang(l[1],cel(fT[l[0]]*l[2],true),cel(fA[l[0]]*l[2],true));
   });
   if(tresorerie) lignes+='<tr class="sous"><td colspan="3">Du résultat à la caisse</td></tr>'+tresorerie+rang("Variation de la caisse",signeM(fT.total),signeM(fA.total),"total");
@@ -3227,11 +3270,11 @@ function pageBilan(){
   S.immos.forEach(function(im){ if(im.sv==="chambres"){ ch.v+=im.v; ch.c+=im.c; } else biens.push(im); });
   return '<div class="carte"><div class="tableau"><table><thead><tr><th>Actif</th><th>Aujourd\'hui</th></tr></thead><tbody>'
     +rang("Chambres et équipements, à l'achat",mt(b.brut))+rang("Amortissements",b.amort?"−"+mt(b.amort):"–")+rang("Chambres et équipements, valeur nette",mt(b.brut-b.amort),"total")
-    +rang("Stock de l'économat",mt(b.stock))+rang("À recevoir des sociétés",mt(b.creances))+(b.tvaActif?rang("TVA à récupérer",mt(b.tvaActif)):"")+rang("Caisse",mt(b.tresorerie))+rang("Total de l'actif",mt(b.actif),"total")
+    +rang("Stock de l'économat",mt(b.stock))+rang("À recevoir des sociétés",mt(b.creances))+(b.tvaActif?rang("TVA à récupérer",mt(b.tvaActif)):"")+rang(S.epargne?"Caisse et compte d'épargne":"Caisse",mt(b.tresorerie))+rang("Total de l'actif",mt(b.actif),"total")
     +'</tbody></table></div></div>'
     +'<div class="carte"><div class="tableau"><table><thead><tr><th>Passif</th><th>Aujourd\'hui</th></tr></thead><tbody>'
     +rang("Capital",mt(b.capital))+(b.reserve?rang("Réserve légale",mt(b.reserve)):"")+(b.reporte?rang(b.reporte>0?"Bénéfice reporté":"Perte reportée",signeM(b.reporte)):"")+(b.aAffecter?rang("Résultat à affecter",mt(b.aAffecter)):"")+rang("Résultat de l'exercice en cours",signeM(b.exercice))+rang("Capitaux propres",mt(b.propres),"total")
-    +(b.pret?rang("Prêt du directeur",mt(b.pret)):"")+(b.acomptes?rang("Acomptes reçus des clients",mt(b.acomptes)):"")+(b.tvaPassif?rang("TVA à payer",mt(b.tvaPassif)):"")+(b.impots?rang("Impôt des sociétés à payer",mt(b.impots)):"")+(b.decouvert?rang("Découvert à la banque",mt(b.decouvert)):"")+rang("Total du passif",mt(b.actif),"total")
+    +(b.banque?rang("Emprunts à la banque",mt(b.banque)):"")+(b.pret?rang("Prêt du directeur",mt(b.pret)):"")+(b.acomptes?rang("Acomptes reçus des clients",mt(b.acomptes)):"")+(b.tvaPassif?rang("TVA à payer",mt(b.tvaPassif)):"")+(b.impots?rang("Impôt des sociétés à payer",mt(b.impots)):"")+(b.decouvert?rang("Découvert à la banque",mt(b.decouvert)):"")+rang("Total du passif",mt(b.actif),"total")
     +'</tbody></table></div></div>'
     +(S.immos.length?'<div class="bloc"><h2>Immobilisations</h2><div class="carte"><div class="tableau serre"><table><thead><tr><th>Bien</th><th>Achat</th><th>Amorti</th><th>Net</th></tr></thead><tbody>'+biens.map(function(im){ return '<tr><td>'+h(im.nom)+'</td><td>'+nombre(im.v)+'</td><td>'+nombre(im.c)+'</td><td>'+nombre(im.v-im.c)+'</td></tr>'; }).join("")+'</tbody></table></div></div></div>':"")
     +'<p class="aide">Une chambre, une amélioration ou un équipement ne sont pas des charges le jour de l\'achat : ils sont amortis sur cinq ans, pour leur prix hors TVA. Les capitaux propres sont ce qui reste à l\'hôtel une fois ses dettes retirées.</p>';
@@ -3423,6 +3466,26 @@ var A={
   },
   tdb:function(d){ U.tdb=+d.k; return false; },
   monterPalier:function(){ if(!MODE_PC||!palierPret()) return false; monterPalier(maintenant(),true); return true; },
+  bq:function(d){ if(!U.bq) U.bq={montant:20000,ans:5,caution:false,nom:""}; if(d.k==="montant") U.bq.montant=borne(U.bq.montant+(+d.d),1000,2000000); else if(d.k==="ans") U.bq.ans=+d.d; else if(d.k==="caution") U.bq.caution=!U.bq.caution; return false; },
+  emprunter:function(){
+    var B=U.bq||{montant:20000,ans:5,caution:false}, E=etudeCredit(B.montant,B.ans,B.caution), t=maintenant();
+    if(E.raison) return false;
+    if(!S.emprunts) S.emprunts=[]; S.nEmprunt=(S.nEmprunt||0)+1;
+    S.emprunts.push({id:S.nEmprunt,nom:(B.ans<=1?"Crédit de caisse":"Crédit d'investissement")+" n° "+S.nEmprunt,montant:B.montant,restant:B.montant,taux:E.taux,mois:E.mois,mens:Math.round(mensualiteDe(B.montant,E.taux,E.mois)),payes:0,debut:t,caution:B.caution});
+    inscrire(t,"p:banque",B.montant); inscrire(t,"x:banque",E.frais);
+    noter(t,"ok","Crédit signé : "+mt(B.montant)+" sur "+pl(B.ans,"an","ans")+" à "+String(E.taux).replace(".",",")+" %, "+mt(E.mens)+" par mois"+(B.caution?", avec votre caution personnelle":"")+". Frais de dossier : "+mt(E.frais)+".");
+    return true;
+  },
+  rembourser:function(d){
+    var e=null, t=maintenant(), ind;
+    (S.emprunts||[]).forEach(function(x){ if(x.id===+d.k) e=x; }); if(!e) return false;
+    ind=Math.round(e.restant*e.taux/100/12*3);
+    if(S.caisse<e.restant+ind) return false;
+    inscrire(t,"q:banque",Math.round(e.restant)); inscrire(t,"x:banque",ind); S.emprunts.splice(S.emprunts.indexOf(e),1);
+    noter(t,"ok","Crédit « "+e.nom+" » remboursé par anticipation, avec "+mt(ind)+" d'indemnité (trois mois d'intérêts).");
+    return true;
+  },
+  epargne:function(d){ var n=+d.d; if(n>0){ if(S.caisse<n) return false; S.caisse-=n; S.epargne=(S.epargne||0)+n; } else { n=Math.min(-n,S.epargne||0); if(n<=0) return false; S.epargne-=n; S.caisse+=n; } return true; },
   hvue:function(d){ U.hVue=d.k; return false; },
   remun:function(d){ var X=holding(); if(!X) return false; X.remun=borne(X.remun+(+d.d),0,30000); return true; },
   voiture:function(d){
@@ -3900,7 +3963,7 @@ function menuPC(){
     +g("Clients",[e("clients","Clients","clients",na+nr),e("calendrier","Agenda","agenda",ap),e("verre","Événements","evenements",dv),e("cloche","Réponses auto","reponses",0),e("cloche","Avis","avis",av),e("guide","Clientèle","clientele",0)])
     +g("L'hôtel",[e("lit","Chambres","chambres",0),e("tarifs","Tarifs","tarifs",0),e("caisse","Économat","economat",0),e("equipements","Équipements","equipements",0),e("travaux","Travaux","travaux",0)])
     +g("L'équipe",[e("equipe","Équipe","equipe",0),e("horloge","Planning","planning",0),e("recrut","Recrutement","recrutement",0)])
-    +g("L'argent et le groupe",[e("finances","Finances","finances",0),e("finances","Tableau de bord","tableau",0),e("chaine","Mes hôtels","chaine",0),e("equipements","Holding","holding",0),e("moi","Ma fiche","moi",0),e("journal","Journal","journal",0)])
+    +g("L'argent et le groupe",[e("finances","Finances","finances",0),e("caisse","Banque","banque",0),e("finances","Tableau de bord","tableau",0),e("chaine","Mes hôtels","chaine",0),e("equipements","Holding","holding",0),e("moi","Ma fiche","moi",0),e("journal","Journal","journal",0)])
     +g("",[e("reglages","Aide et réglages","reglages",0)]);
 }
 // Pendant que le temps défile, l'écran est redessiné sans cesse : un clic (appui puis relâchement) tomberait sur un bouton déjà remplacé.
@@ -3933,7 +3996,27 @@ function ecranReponses(){
         +'</div></div>';
     }).join("");
 }
-var ECRANS={reponses:ecranReponses,evenements:ecranEvenements,agenda:ecranAgenda,accueil:ecranAccueil,clients:ecranClients,fiche:ecranFiche,requete:ecranRequete,chambres:ecranChambres,clientele:ecranClientele,avis:ecranAvis,travaux:ecranTravaux,chaine:ecranChaine,holding:ecranHolding,tableau:ecranTableau,equipements:ecranEquipements,economat:ecranEconomat,planning:ecranPlanning,equipe:ecranEquipe,recrutement:ecranRecrutement,tarifs:ecranTarifs,finances:ecranFinances,journal:ecranJournal,moi:ecranMoi,reglages:ecranReglages};
+function ecranBanque(){
+  var B=U.bq||(U.bq={montant:20000,ans:5,caution:false}), E=etudeCredit(B.montant,B.ans,B.caution), t=S.horloge, ta=anBanque(t,TAUX_EPARGNE);
+  var prets=(S.emprunts||[]).map(function(e){ var ind=Math.round(e.restant*e.taux/100/12*3);
+    return '<li class="rang"><div><b>'+h(e.nom)+'</b><small>'+mt(e.montant)+' à '+String(e.taux).replace(".",",")+' % · '+mt(Math.round(e.mens))+' par mois · '+(e.mois-e.payes)+' mensualités restantes'+(e.caution?' · avec votre caution':'')+'</small></div>'
+      +'<div class="droite"><span class="puce num">reste '+mt(Math.round(e.restant))+'</span><button type="button" class="btn petit" data-a="rembourser" data-k="'+e.id+'"'+(S.caisse>=e.restant+ind?"":" disabled")+'>Tout rembourser · '+mt(Math.round(e.restant+ind))+'</button></div></li>'; }).join("");
+  return barre()+entete("Banque","Taux de "+new Date(t).getFullYear()+" : crédit à partir de "+String(anBanque(t,TAUX_CREDIT)).replace(".",",")+" %, épargne "+String(ta).replace(".",",")+" %")
+    +'<div class="carte"><h2>Compte courant</h2>'+ligne("Caisse",mt(S.caisse))+ligne("Découvert autorisé",mt(DECOUVERT_MAX))+'<p class="aide">Sous zéro, la banque compte des intérêts chaque jour.</p></div>'
+    +'<div class="carte"><h2>Compte d\'épargne</h2>'+ligne("Épargne",mt(S.epargne||0))+ligne("Taux",String(ta).replace(".",",")+" % par an, intérêts le 1er du mois")
+    +'<div class="actions"><button type="button" class="btn" data-a="epargne" data-d="1000"'+(S.caisse>=1000?"":" disabled")+'>Placer 1 000</button><button type="button" class="btn" data-a="epargne" data-d="5000"'+(S.caisse>=5000?"":" disabled")+'>Placer 5 000</button><button type="button" class="btn" data-a="epargne" data-d="-1000"'+((S.epargne||0)>0?"":" disabled")+'>Retirer 1 000</button><button type="button" class="btn" data-a="epargne" data-d="-1000000000"'+((S.epargne||0)>0?"":" disabled")+'>Tout retirer</button></div></div>'
+    +'<div class="bloc"><h2>Emprunts en cours'+(S.emprunts&&S.emprunts.length?' · '+mt(detteBanque())+' à rembourser':'')+'</h2>'+(prets?'<ul class="liste">'+prets+'</ul>':'<p class="vide">Aucun emprunt.</p>')+'</div>'
+    +'<div class="carte"><h2>Demander un crédit</h2>'
+    +'<div class="reglage"><div><b>Montant</b></div>'+pas("bq","montant",mt(B.montant),B.montant>=50000?10000:5000,B.montant>1000,true,"le montant")+'</div>'
+    +'<div class="reglage"><div><b>Durée</b></div><div class="choix-auto">'+DUREES_CREDIT.map(function(a){ return '<button type="button" class="btn petit'+(B.ans===a?" principal":"")+'" data-a="bq" data-k="ans" data-d="'+a+'">'+pl(a,"an","ans")+'</button>'; }).join("")+'</div></div>'
+    +'<label class="pc-case"><input type="checkbox" data-a="bq" data-k="caution"'+(B.caution?" checked":"")+'> Je me porte caution personnellement</label>'
+    +ligne("Taux proposé",String(E.taux).replace(".",",")+" %")+ligne("Mensualité",mt(E.mens))+ligne("Coût total des intérêts",mt(Math.max(0,E.mens*E.mois-B.montant)))+ligne("Frais de dossier",mt(E.frais))
+    +ligne("Ce que l'hôtel dégage par mois",E.cap?mt(E.cap):"pas encore assez de recul")
+    +(E.raison?'<div class="alerte bad"><span>'+E.raison+'</span></div>':'<div class="alerte ok"><span>La banque est d\'accord.</span></div>')
+    +'<div class="actions"><button type="button" class="btn principal" data-a="emprunter"'+(E.raison?" disabled":"")+'>Signer le crédit</button></div>'
+    +'<p class="aide">La banque regarde ce que l\'hôtel a gagné ces 90 derniers jours, ses capitaux propres et ses dettes. Sur 1 an, c\'est un crédit de caisse ; au-delà, un crédit d\'investissement. Votre caution l\'aide à dire oui ; si la caisse ne suffit plus, la banque prend la mensualité sur votre fiche. Rembourser plus tôt coûte trois mois d\'intérêts.</p></div>';
+}
+var ECRANS={banque:ecranBanque,reponses:ecranReponses,evenements:ecranEvenements,agenda:ecranAgenda,accueil:ecranAccueil,clients:ecranClients,fiche:ecranFiche,requete:ecranRequete,chambres:ecranChambres,clientele:ecranClientele,avis:ecranAvis,travaux:ecranTravaux,chaine:ecranChaine,holding:ecranHolding,tableau:ecranTableau,equipements:ecranEquipements,economat:ecranEconomat,planning:ecranPlanning,equipe:ecranEquipe,recrutement:ecranRecrutement,tarifs:ecranTarifs,finances:ecranFinances,journal:ecranJournal,moi:ecranMoi,reglages:ecranReglages};
 function rendre(){
   var y=window.scrollY, cle=S.fondeLe?U.ecran:"fondation";
   if(MODE_PC&&S.fondeLe) app.innerHTML='<div class="pc"><aside class="pc-menu">'+menuPC()+'</aside><main class="pc-main">'+controlePC()+'<div class="ecran">'+(ECRANS[U.ecran]||ecranAccueil)()+'</div></main></div>';
