@@ -696,7 +696,7 @@ var AIDE_ROLE={
   receptionniste:"Accueille les clients et répond à leurs demandes quand vous n'êtes pas là. Un réceptionniste accueille environ "+PAR_ACCUEIL+" arrivées par jour travaillé.",
   concierge:"Répond aux demandes mieux qu'un réceptionniste, et peut se charger des courses des clients.",
   femme:"Refait une chambre en une demi-heure après un départ, et entretient environ "+PAR_FEMME+" chambres occupées par jour travaillé.",
-  gouvernante:"Dirige les étages : le ménage va plus vite et il est mieux fait. Elle refait aussi des chambres. Une seule par hôtel.",
+  gouvernante:"Dirige les étages : le ménage va plus vite et il est mieux fait. Elle refait aussi des chambres, et répond pour vous aux avis en ligne. Une seule par hôtel.",
   technicien:"Répare ce qui tombe en panne dans les chambres. Sans lui, vous n'avez que des excuses à offrir.",
   serveur:"Tient jusqu'à quatre tables à la fois, et sert le petit-déjeuner et les pauses des séminaires.",
   cuisinier:"Indispensable pour le déjeuner et le dîner. Tient jusqu'à six tables à la fois.",
@@ -1588,6 +1588,8 @@ function publierAvis(sj,note,c,t){
   if(Math.random()>=(e===1||e===5?0.6:0.3)) return;
   S.avisLigne.unshift({id:S.nAvisL++,t:t,nom:sj.prenom+" "+sj.nom.charAt(0)+".",profil:nomProfil(sj),e:e,txt:texteAvis(sj,note,c),canal:sj.canal,rep:null,limite:jourApres(t,DELAI_REPONSE),hab:sj.hab||null,femme:sj.femme,prenomC:sj.prenom,nomC:sj.nom,profilK:sj.profil,pers:sj.pers});
   if(S.avisLigne.length>AVIS_LIGNE_MAX) S.avisLigne.length=AVIS_LIGNE_MAX;
+  // Avec une gouvernante, c'est elle qui répond : un merci aux contents, des excuses aux déçus, un geste aux très mécontents
+  if(nb("gouvernante")){ var a=S.avisLigne[0]; A.repondreAvis({k:a.id,d:a.e>=4?"merci":a.e===3?"excuse":"geste"}); a.parGouv=1; }
 }
 // Ce que voient les lecteurs : la note, corrigée par vos réponses
 function etoilesVues(a){ return borne(a.e+(a.rep==="excuse"||a.rep==="geste"?(a.e<=3?0.8:0):a.rep==="merci"?(a.e<=2?-0.4:0.1):a.rep==="aucune"&&a.e<=2?-0.3:0),1,5); }
@@ -3002,7 +3004,7 @@ function ecranAvis(){
     return '<li class="cand"><div class="fiche seule"><span class="cand-nom">'+h(a.nom)+' <span class="puce '+(a.e>=4?"ok":a.e===3?"warn":"bad")+'">'+etoiles(a.e)+'</span></span>'
       +'<span class="equips">'+h(a.profil)+' · '+dateCourte(a.t)+' · '+CANAUX[a.canal]+(a.hab?' · habitué':'')+'</span>'
       +'<p>« '+h(a.txt)+' »</p>'
-      +(a.rep?'<p class="aide">'+(a.rep==="aucune"?"Sans réponse.":"Votre réponse : "+REPONSES_AVIS[a.rep].toLowerCase()+".")+'</p>':boutons)+'</div></li>';
+      +(a.rep?'<p class="aide">'+(a.rep==="aucune"?"Sans réponse.":(a.parGouv?"Réponse de la gouvernante : ":"Votre réponse : ")+REPONSES_AVIS[a.rep].toLowerCase()+".")+'</p>':boutons)+'</div></li>';
   }).join("");
   var habs=S.habitues.map(function(x){
     var c=x.pref?chambre(x.pref):null, r=S.sejours.filter(function(s){ return s.hab===x.id; })[0];
